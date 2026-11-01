@@ -354,8 +354,15 @@ class PaperShell(cmd.Cmd):
             rows.append([coin, green(f"LONG {lev}x") if p["size"] > 0 else red(f"SHORT {lev}x"),
                          f"{abs(p['size']):g}", usd(abs(p["size"]) * m.mark), fpx(p["entry"]),
                          fpx(m.mark), pnl(u), pnl(u / margin * 100 if margin else 0, "{:+.1f}%"),
-                         fpx(self.ex.liq_price(coin)), pnl(p["funding"], "{:+,.4f}")])
+                         self._liq(coin), pnl(p["funding"], "{:+,.4f}")])
         return rows
+
+    def _liq(self, coin):
+        px = self.ex.liq_price(coin)
+        if px is None:
+            return "none"
+        dist = abs(px / self.ex.market(coin).mark - 1)
+        return f"{fpx(px)} ({dist * 100:.0f}% away)"
 
     def _pos_line(self, coin):
         p = self.ex.state["positions"].get(coin)
@@ -363,7 +370,9 @@ class PaperShell(cmd.Cmd):
             print(dim(f"  {coin} position closed."))
             return
         print(dim(f"  {coin}: {'long' if p['size'] > 0 else 'short'} {abs(p['size']):g} @ {fpx(p['entry'])}"
-                  f"  liq {fpx(self.ex.liq_price(coin))}  available {usd(self.ex.available())}"))
+                  f"  liq {self._liq(coin)}  available {usd(self.ex.available())}"))
+        if self.ex.liq_price(coin) is None:
+            print(dim("  (no liquidation price: your whole balance backs this position - cross margin)"))
 
     def do_positions(self, arg):
         """positions   - open positions with uPnL, ROE, liquidation price"""
