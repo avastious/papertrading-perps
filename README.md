@@ -2,7 +2,7 @@
 
 Paper-trade **Hyperliquid perpetuals** with **live Hyperliquid market data**: real prices, real order books, real funding. All fills are simulated against your own fake USDC balance. No wallet, no API key, no real orders. It only reads Hyperliquid's public `info` endpoint.
 
-**Live site: https://avastious.github.io/papertrading-perps/**. Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their own browser.
+**Live site: https://avastious.github.io/papertrading-perps/**. Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their browser or, once they sign in, to their account.
 
 You can also run it on your own computer, as a local website or in the terminal. Those two share one paper account, kept in a file.
 
@@ -22,6 +22,23 @@ On Windows use `py -m pip install -e .`. With no Git, download the ZIP from GitH
 The site is static files (`aureous/web/`) on GitHub Pages. The trading engine is `aureous/web/engine.js`, a JavaScript port of the Python engine, and runs inside the visitor's browser. The page fetches live data straight from Hyperliquid's public API and stores the paper account in `localStorage`, so there's no server and no sign-up. Orders, stops and funding only run while the page is open. Clearing browser data erases the account.
 
 To publish changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which GitHub Pages serves. One-time setup: in the repo, go to Settings → Pages → Build and deployment, choose "Deploy from a branch", then pick `gh-pages` and `/ (root)`.
+
+## Accounts (sign in with Google, GitHub or email)
+
+The public site can let people sign in so their paper account follows them across devices. This uses Firebase (Auth + Firestore), which is free at this scale. Guests can still trade without signing in. The first time someone signs in, their guest account moves into their new account.
+
+Accounts stay off until `aureous/web/firebase-config.js` has a config. To switch them on:
+
+1. Go to https://console.firebase.google.com, choose **Create a project** and name it (e.g. `aureous`). Google Analytics isn't needed.
+2. **Add an app → Web** (the `</>` icon) and register it. Don't tick Firebase Hosting. Copy the `firebaseConfig` values into `config` in `aureous/web/firebase-config.js`.
+3. **Build → Authentication → Get started → Sign-in method**: enable **Google** and **Email/Password**.
+4. **Authentication → Settings → Authorized domains → Add domain**: `avastious.github.io`.
+5. **Build → Firestore Database → Create database** in production mode (e.g. `australia-southeast1`). Then open **Rules**, paste in `firestore.rules` from this repo, and click **Publish**.
+6. Commit, then run `scripts/publish_pages.sh`.
+
+**Optional: GitHub sign-in.** Create an OAuth app at https://github.com/settings/developers with homepage `https://avastious.github.io/papertrading-perps/`. Use the callback URL that Firebase shows under Sign-in method → GitHub, paste the client ID and secret back into Firebase, and add `"github"` to `providers`. Microsoft works the same way with `"microsoft"`.
+
+What's stored: one document per person at `accounts/{uid}`, holding the paper account as JSON. The rules only let a signed-in person read and write their own document. Since the account lives on the person's side, someone technical could edit their own paper balance. That doesn't matter for practice trading, but it would for a public leaderboard, which would need a server to check trades.
 
 ## The website on your own computer
 
@@ -113,6 +130,8 @@ The tests run both engines against a mock Hyperliquid client (no network needed)
 - `aureous/server.py`: local web server and JSON API
 - `aureous/web/index.html`: the website (same page for the public site and the local server)
 - `aureous/web/engine.js`: the browser engine used by the public site
+- `aureous/web/auth.js`, `aureous/web/firebase-config.js`: sign-in and cloud-saved accounts (Firebase)
+- `firestore.rules`: who can read and write account data
 - `scripts/publish_pages.sh`: publish the site to GitHub Pages
 - `tests/`: engine and web API tests
 

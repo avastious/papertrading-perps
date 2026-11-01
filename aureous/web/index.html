@@ -10,6 +10,7 @@
 <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script src="lightweight-charts.js"></script>
 <script src="engine.js"></script>
+<script src="firebase-config.js"></script>
 <style>
 @font-face{font-family:"IBM Plex Sans";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"IBM Plex Sans";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-sans-latin-500-normal.woff2) format("woff2")}
@@ -192,6 +193,31 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn.danger{background:var(--short);color:#fff;border-color:var(--short)}
 
+.who{display:flex;align-items:center}
+.btn.sm{padding:5px 12px;font-size:13px}
+.user{position:relative}
+.user-btn{display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);border-radius:16px;padding:3px 12px 3px 3px;font-size:13px;max-width:220px}
+.user-btn:hover{border-color:var(--muted)}
+.user-btn #userName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;font-size:12px;overflow:hidden;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.user-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:45;background:var(--raise);border:1px solid var(--line);border-radius:6px;min-width:220px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.user-email{padding:6px 8px 8px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+.user-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 8px;border-radius:4px}
+.user-menu button:hover{background:var(--line-soft)}
+.auth{position:relative;display:flex;flex-direction:column;gap:12px}
+.auth p{margin:0}
+.dlg-x{position:absolute;top:-8px;right:-6px;background:none;border:0;font-size:22px;color:var(--muted);padding:2px 6px}
+.dlg-x:hover{color:var(--text)}
+.auth-providers{display:flex;flex-direction:column;gap:8px}
+.auth-providers button{background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:9px;font-weight:500}
+.auth-providers button:hover{border-color:var(--muted)}
+.or{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:12px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+#authForm{display:flex;flex-direction:column;gap:12px}
+.auth-msg{font-size:13px;color:var(--short)}
+.auth-msg.ok{color:var(--long)}
+.auth-links{display:flex;justify-content:space-between}
 .mk-close{display:none}
 @media (max-width:1279px){
   .app{grid-template-columns:minmax(0,1fr) 232px 300px}
@@ -204,6 +230,7 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 @media (max-width:899px){
   .app{display:flex;flex-direction:column;height:auto;min-height:100vh}
   header{gap:14px 20px}
+  .who{margin-left:auto}
   header{order:0} .chartbox{order:1;height:360px} .side{order:2} .book{order:3;height:auto} .bk-side{max-height:180px}
   .bottom{order:4;height:420px}
 }
@@ -222,6 +249,16 @@ dialog form{display:flex;flex-direction:column;gap:12px}
     <div class="hstat"><span>24h volume</span><span id="hVol">–</span></div>
     <div class="hstat"><span>Open interest</span><span id="hOI">–</span></div>
     <div class="conn" id="conn"><span class="dot"></span><span id="connText">Live</span></div>
+    <div class="who" id="who" hidden>
+      <button class="btn primary sm" id="signInBtn" type="button">Sign in</button>
+      <div class="user" id="userBox" hidden>
+        <button class="user-btn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"><span class="avatar" id="avatar"></span><span id="userName"></span></button>
+        <div class="user-menu" id="userMenu" role="menu" hidden>
+          <div class="user-email" id="userEmail"></div>
+          <button type="button" role="menuitem" id="signOutBtn">Sign out</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <aside class="markets" id="markets" aria-label="Markets">
@@ -342,6 +379,24 @@ dialog form{display:flex;flex-direction:column;gap:12px}
     <label class="field"><span>Stop loss at</span><div class="inp"><input id="dSl" inputmode="decimal" placeholder="None"></div></label>
     <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Save</button></div>
   </form>
+</dialog>
+
+<dialog id="authDlg" aria-labelledby="authTitle">
+  <div class="auth">
+    <button class="dlg-x" id="authClose" type="button" aria-label="Close">&times;</button>
+    <h3 id="authTitle">Sign in to Aureous</h3>
+    <p id="authSub">Keep your paper account and pick it up on any device.</p>
+    <div class="auth-providers" id="authProviders"></div>
+    <div class="or" id="authOr"><span>or use email</span></div>
+    <form id="authForm" novalidate>
+      <label class="field" id="authNameField" hidden><span>Name</span><div class="inp"><input id="authName" autocomplete="name"></div></label>
+      <label class="field"><span>Email</span><div class="inp"><input id="authEmail" type="email" autocomplete="email"></div></label>
+      <label class="field" id="authPwField"><span>Password</span><div class="inp"><input id="authPw" type="password" autocomplete="current-password"></div></label>
+      <p class="auth-msg" id="authMsg" hidden></p>
+      <button class="btn primary" id="authSubmit" type="submit">Sign in</button>
+      <div class="auth-links"><button type="button" class="link-btn" id="authForgot">Forgot password?</button><button type="button" class="link-btn" id="authSwitch">Create an account</button></div>
+    </form>
+  </div>
 </dialog>
 
 <dialog id="resetDlg">
@@ -695,13 +750,7 @@ function renderAccount(){
   $("#aMargin").textContent = usd(a.margin_used);
   $("#aAvail").textContent = usd(a.available);
   $("#aMaint").textContent = usd(a.maintenance);
-  if (MODE === "browser") {
-    const n = $("#saveNote"); n.hidden = false;
-    n.classList.toggle("warn", a.saved === false);
-    n.textContent = a.saved === false
-      ? "This browser isn't letting the page save, so your account resets when you close the tab."
-      : "Paper money only. Your account is saved in this browser, and orders, stops and funding run while this page is open.";
-  }
+  if (MODE === "browser") renderSaveNote();
   const np = a.positions.length, no = a.orders.length;
   $('[data-t="positions"]').textContent = np ? `Positions (${np})` : "Positions";
   $('[data-t="orders"]').textContent = no ? `Open orders (${no})` : "Open orders";
@@ -851,6 +900,119 @@ $("#resetDlg").addEventListener("close", () => {
   act("/api/reset", {balance: num($("#dBal").value)}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
 });
 
+// ---------- accounts (driven by auth.js) ----------
+const ACCOUNT_KEY = "aureous.account";
+let AUTH = null;
+S.user = null; S.authPhase = null; S.saveStatus = "saved"; S.authMode = "signin";
+function renderSaveNote(){
+  const n = $("#saveNote"), a = S.acct; if (!a) return;
+  n.hidden = false;
+  let text, warn = false;
+  if (S.user && S.authPhase === "loading") text = "Loading your account…";
+  else if (S.user && S.authPhase === "error") { text = "Couldn't load your account, so you're trading as a guest in this browser."; warn = true; }
+  else if (S.user && S.saveStatus === "error") { text = "Couldn't save to your account. Retrying…"; warn = true; }
+  else if (S.user) text = `Saved to your account${S.user.email ? " (" + S.user.email + ")" : ""}. Orders, stops and funding run while this page is open.`;
+  else if (a.saved === false) { text = "This browser isn't letting the page save, so your account resets when you close the tab."; warn = true; }
+  else if (AUTH) text = "Trading as a guest, saved in this browser. Sign in to keep your account on any device.";
+  else text = "Paper money only. Your account is saved in this browser, and orders, stops and funding run while this page is open.";
+  n.textContent = text; n.classList.toggle("warn", warn);
+}
+function renderUser(){
+  $("#who").hidden = !AUTH;
+  const u = S.user;
+  $("#signInBtn").hidden = !!u; $("#userBox").hidden = !u;
+  if (!u) { $("#userMenu").hidden = true; return; }
+  const label = u.name || (u.email ? u.email.split("@")[0] : "Account");
+  $("#userName").textContent = label;
+  $("#userEmail").textContent = u.email || label;
+  const av = $("#avatar"); av.textContent = label.charAt(0).toUpperCase();
+  if (u.photo) { const img = new Image(); img.alt = ""; img.referrerPolicy = "no-referrer"; img.onload = () => { av.textContent = ""; av.appendChild(img); }; img.src = u.photo; }
+}
+const PROVIDER_NAMES = {google: "Google", github: "GitHub", microsoft: "Microsoft"};
+function setAuthMode(mode){
+  S.authMode = mode;
+  const up = mode === "signup", reset = mode === "reset";
+  $("#authTitle").textContent = up ? "Create your Aureous account" : reset ? "Reset your password" : "Sign in to Aureous";
+  $("#authSub").textContent = reset ? "We'll email you a link to choose a new password." : "Keep your paper account and pick it up on any device.";
+  $("#authNameField").hidden = !up; $("#authPwField").hidden = reset;
+  $("#authPw").autocomplete = up ? "new-password" : "current-password";
+  $("#authSubmit").textContent = up ? "Create account" : reset ? "Send reset link" : "Sign in";
+  $("#authSwitch").textContent = up || reset ? "I already have an account" : "Create an account";
+  $("#authForgot").hidden = up || reset;
+  $("#authProviders").hidden = $("#authOr").hidden = reset || !AUTH.providers.some(p => p !== "email");
+  if (!AUTH.providers.includes("email")) $("#authOr").hidden = true;
+  authMsg("");
+}
+function authMsg(text, ok = false){ const m = $("#authMsg"); m.hidden = !text; m.textContent = text; m.classList.toggle("ok", ok); }
+function openAuth(){
+  const social = AUTH.providers.filter(p => p !== "email");
+  $("#authProviders").innerHTML = social.map(p => `<button type="button" data-provider="${p}">Continue with ${PROVIDER_NAMES[p] || p}</button>`).join("");
+  $("#authForm").hidden = !AUTH.providers.includes("email");
+  setAuthMode("signin");
+  $("#authDlg").showModal();
+}
+async function authBusy(fn){
+  const btns = document.querySelectorAll("#authDlg button"); btns.forEach(b => b.disabled = true);
+  try { await fn(); } catch (e) { authMsg(e.message); } finally { btns.forEach(b => b.disabled = false); }
+}
+$("#signInBtn").addEventListener("click", openAuth);
+$("#authClose").addEventListener("click", () => $("#authDlg").close());
+$("#authProviders").addEventListener("click", e => {
+  const b = e.target.closest("[data-provider]"); if (!b) return;
+  authBusy(async () => { if (await AUTH.signInWith(b.dataset.provider)) $("#authDlg").close(); });
+});
+$("#authSwitch").addEventListener("click", () => setAuthMode(S.authMode === "signin" ? "signup" : "signin"));
+$("#authForgot").addEventListener("click", () => setAuthMode("reset"));
+$("#authForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const email = $("#authEmail").value.trim(), pw = $("#authPw").value, name = $("#authName").value.trim();
+  if (!email) { authMsg("Enter your email."); return; }
+  authBusy(async () => {
+    if (S.authMode === "reset") { await AUTH.resetPassword(email); authMsg("Check your inbox for a reset link.", true); return; }
+    if (!pw) { authMsg("Enter your password."); return; }
+    if (S.authMode === "signup") await AUTH.signUpEmail(email, pw, name); else await AUTH.signInEmail(email, pw);
+    $("#authPw").value = ""; $("#authDlg").close();
+  });
+});
+$("#userBtn").addEventListener("click", e => {
+  e.stopPropagation(); const m = $("#userMenu"); m.hidden = !m.hidden; $("#userBtn").setAttribute("aria-expanded", String(!m.hidden));
+});
+document.addEventListener("click", e => { if (!e.target.closest("#userBox")) { $("#userMenu").hidden = true; $("#userBtn").setAttribute("aria-expanded", "false"); } });
+$("#signOutBtn").addEventListener("click", async () => {
+  $("#userMenu").hidden = true;
+  try { await AUTH.signOut(); toast("Signed out. You're trading as a guest in this browser."); } catch (e) { toast(e.message, "error"); }
+});
+async function reloadAccountView(){
+  S.lastEvent = null; S.linesKey = null;
+  await refreshMarkets().catch(() => {}); syncLeverage();
+  await refreshState().catch(() => {});
+}
+window.AureousUI = {
+  mode: MODE, toast,
+  guestStorage: LOCAL ? LOCAL.ex.storage : null,
+  guestState(){
+    try {
+      const raw = this.guestStorage && this.guestStorage.getItem(ACCOUNT_KEY); if (!raw) return null;
+      const st = JSON.parse(raw);
+      return {state: st, active: st.trades.length > 0 || Object.keys(st.positions).length > 0 || st.orders.length > 0};
+    } catch { return null; }
+  },
+  clearGuest(){ try { this.guestStorage && this.guestStorage.removeItem(ACCOUNT_KEY); } catch {} },
+  async useStorage(store, seed){
+    let created = false;
+    await LOCAL.locked(async () => { created = LOCAL.ex.attach(store, seed); LOCAL.events = []; });
+    await reloadAccountView();
+    return created;
+  },
+  adopt(json){
+    LOCAL.locked(async () => { LOCAL.ex.state = JSON.parse(json); })
+      .then(reloadAccountView).then(() => toast("Updated with changes from your other tab or device."));
+  },
+  setUser(user, phase){ S.user = user; S.authPhase = phase || null; S.saveStatus = "saved"; renderUser(); renderSaveNote(); },
+  saveStatus(status, msg){ S.saveStatus = status; renderSaveNote(); if (status === "error") console.warn("Account save failed:", msg); },
+  enableAccounts(api){ AUTH = api; renderUser(); renderSaveNote(); },
+};
+
 // ---------- loops ----------
 function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) { $("#conn").classList.add("bad"); $("#connText").textContent = "Offline"; } setTimeout(run, ms); }; run(); }
 (async function init(){
@@ -868,5 +1030,6 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   countdown(); setInterval(countdown, 1000);
 })();
 </script>
+<script type="module" src="auth.js"></script>
 </body>
 </html>

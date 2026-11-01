@@ -14,7 +14,8 @@
 
   const HOUR_MS = 3600000, EPS = 1e-12, DEFAULT_LEVERAGE = 10, MAX_SLIPPAGE = 0.05;
   const INTERVAL_SECS = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400};
-  const MAX_TRADES = 5000, MAX_FUNDING = 5000, MAX_CURVE = 5000;
+  // History caps keep a whole account small enough for browser storage and one cloud document.
+  const MAX_TRADES = 2000, MAX_FUNDING = 2000, MAX_CURVE = 3000;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   class PaperError extends Error {}
@@ -120,6 +121,17 @@
       catch { this.saveOk = false; }
     }
     reset(balance) { this.state = this.newState(balance || this.state.starting_balance); this.save(); }
+    /** Switch to another account store (guest browser storage <-> signed-in cloud account).
+     *  If the store is empty, start from `seed` (e.g. the guest account) or a fresh account. */
+    attach(storage, seed = null) {
+      this.storage = storage;
+      this.saveOk = !!storage;
+      const loaded = this.load();
+      this.state = loaded || (seed ? JSON.parse(JSON.stringify(seed)) : this.newState(10000));
+      if (!loaded) this.save();
+      return !loaded;
+    }
+    hasActivity() { return this.state.trades.length > 0 || Object.keys(this.state.positions).length > 0 || this.state.orders.length > 0; }
 
     // ------------------------------------------------------ market data
     async refresh(force = false) {

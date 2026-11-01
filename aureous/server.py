@@ -22,6 +22,8 @@ STATIC = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/lightweight-charts.js": ("lightweight-charts.js", "application/javascript"),  # TradingView, Apache-2.0
     "/engine.js": ("engine.js", "application/javascript"),  # browser engine; unused in server mode
+    "/auth.js": ("auth.js", "application/javascript"),  # accounts for the public site; inert in server mode
+    "/firebase-config.js": ("firebase-config.js", "application/javascript"),
 }
 INTERVAL_SECS = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
 
