@@ -90,6 +90,10 @@ const MESSAGES = {
   "auth/too-many-requests": "Too many attempts. Wait a minute and try again.",
   "auth/account-exists-with-different-credential": "This email already signed up with a different method. Use that one.",
   "auth/operation-not-allowed": "That sign-in method isn't switched on in Firebase yet.",
+  "auth/configuration-not-found": "Sign-in isn't set up yet. In Firebase, open Authentication, click Get started and enable a sign-in method.",
+  "permission-denied": "Firestore refused access. Check that the rules from firestore.rules are published.",
+  "failed-precondition": "Firestore isn't ready. In Firebase, create the Firestore database.",
+  "not-found": "Firestore isn't set up. In Firebase, create the Firestore database.",
   "auth/unauthorized-domain": "This website isn't in the Firebase project's authorized domains yet.",
   "auth/network-request-failed": "Couldn't reach the sign-in service. Check your connection.",
 };
