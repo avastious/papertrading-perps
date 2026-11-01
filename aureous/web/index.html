@@ -1780,35 +1780,79 @@ $("#shZoom").addEventListener("change", () => { S.share.video = null; refreshSha
 $("#shareDlg").addEventListener("close", () => { if (BG.kind === "video" && !S.recording) BG.media.pause(); });
 
 // ---- video: play the background from the start and record the card over it
-function videoType(audio){
-  if (!window.MediaRecorder) return null;
-  // X wants H.264 video with AAC sound in an MP4; ask for exactly that first
-  const list = audio ? ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1.4D401F,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2",
-                        "video/mp4;codecs=avc1.42E01E,opus", "video/mp4;codecs=avc1,opus", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
-                     : ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1.4D401F", "video/mp4;codecs=avc1", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
-  return list.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } }) || null;
+// Formats to try, best first. X wants H.264 video with AAC sound in an MP4. Browsers can claim
+// support for a format and still fail to record it (AAC needs an encoder from the computer), so each
+// attempt is checked within a few seconds and the next format is tried if nothing comes out.
+const supported = t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } };
+function videoAttempts(sound){
+  if (!window.MediaRecorder) return [];
+  const pick = list => list.find(supported);
+  const aac = pick(["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1.4D401F,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2"]);
+  const opus = pick(["video/mp4;codecs=avc1.42E01E,opus", "video/mp4;codecs=avc1,opus"]);
+  const mp4 = pick(["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1.4D401F", "video/mp4;codecs=avc1"]);
+  const webmSound = pick(["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]);
+  const webm = pick(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
+  const out = [];
+  if (sound) { if (aac) out.push([aac, true]); if (opus) out.push([opus, true]); if (!mp4 && webmSound) out.push([webmSound, true]); }
+  if (mp4) out.push([mp4, false]); else if (webm) out.push([webm, false]);
+  return out;
 }
+class NoVideoData extends Error {}
 async function recordCardVideo(){
-  const v = BG.media, a = BG.sound ? audioFor(v) : null, type = videoType(!!a);
-  if (!type) throw new Error("Your browser can't make videos. Try Chrome, Edge or Safari.");
+  const v = BG.media, btn = $("#shVideo");
+  const a = BG.sound ? audioFor(v) : null;
+  if (a) { a.ctx.resume().catch(() => {}); a.out.gain.value = 1; }     // still inside the click, so sound is allowed
+  const bad = store.get("videoBad", []);
+  const attempts = videoAttempts(!!a).filter(([t]) => !bad.includes(t));
+  if (!attempts.length) throw new Error("Your browser can't make videos. Try Chrome, Edge or Safari.");
+  let lastErr = null;
+  for (let i = 0; i < attempts.length; i++) {
+    const [type, withSound] = attempts[i];
+    if (i) btn.textContent = "Trying another format…";
+    try {
+      const r = await recordOnce(type, withSound ? a : null);
+      r.noSound = !!a && !withSound;
+      return r;
+    } catch (e) {
+      if (!(e instanceof NoVideoData)) throw e;
+      lastErr = e; console.warn("card video: no data from", type, e.message);
+      store.set("videoBad", [...new Set([...store.get("videoBad", []), type])].slice(-8));   // skip it next time
+    }
+  }
+  throw new Error("Your browser couldn't make the video. Try again with this tab in front, or use Download still.");
+}
+async function recordOnce(type, a){
+  const v = BG.media, btn = $("#shVideo");
   const cv = document.createElement("canvas"); cv.width = 1280; cv.height = 720;     // 16:9 with even sides, as video needs
   const g = cv.getContext("2d"), canvasStream = cv.captureStream(30);
-  if (a) { try { await a.ctx.resume(); } catch {} v.muted = false; a.out.gain.value = 1; }
-  const stream = new MediaStream([...canvasStream.getVideoTracks(), ...(a ? a.dest.stream.getAudioTracks() : [])]);
   g.scale(1280 / 1200, 720 / 675);
-  const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: 8e6, audioBitsPerSecond: 160000}), chunks = [];
-  let recError = null;
+  if (a) { try { await a.ctx.resume(); } catch {} }
+  v.muted = !a;
+  const stream = new MediaStream([...canvasStream.getVideoTracks(), ...(a ? a.dest.stream.getAudioTracks() : [])]);
+  let rec;
+  try { rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: 8e6, ...(a ? {audioBitsPerSecond: 160000} : {})}); }
+  catch (e) { canvasStream.getTracks().forEach(t => t.stop()); throw new NoVideoData(e.message); }
+  const chunks = []; let recError = null;
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   rec.onerror = e => { recError = (e && e.error && e.error.message) || "recording error"; };
   const secs = Math.min(isFinite(v.duration) && v.duration > 0 ? v.duration : VIDEO_MAX_S, VIDEO_MAX_S);
   S.recording = true; v.loop = false; v.pause(); v.currentTime = 0;
   await new Promise(r => { v.onseeked = r; setTimeout(r, 1500); });
   composeCard(g, S.share.fg);
-  rec.start(250); await v.play().catch(() => {});
-  const t0 = performance.now(), btn = $("#shVideo");
+  const cleanup = () => { canvasStream.getTracks().forEach(t => t.stop()); S.recording = false; v.loop = true; v.muted = !(BG.sound && AUD.el === v); v.play().catch(() => {}); drawSharePreview(); };
+  const stopRec = () => new Promise(r => {          // wait for the recorder, but never forever
+    let over = false; const end = () => { if (!over) { over = true; r(); } };
+    rec.onstop = end;
+    try { if (rec.state === "recording") rec.requestData(); } catch {}
+    try { if (rec.state !== "inactive") rec.stop(); else end(); } catch { end(); }
+    setTimeout(end, 5000);
+  });
+  try { rec.start(250); } catch (e) { cleanup(); throw new NoVideoData(e.message); }
+  v.play().catch(() => {});
+  const t0 = performance.now();
   // Draw on every animation frame, with a timer as backup: browsers pause animation frames when the
   // tab is hidden or the window is covered. The recording ends on a clock, never on drawing.
-  await new Promise(done => {
+  const ok = await new Promise(done => {
     let finished = false, last = 0;
     const draw = () => {
       if (finished) return;
@@ -1819,26 +1863,22 @@ async function recordCardVideo(){
     };
     const frame = () => { draw(); if (!finished) requestAnimationFrame(frame); };
     const backup = setInterval(() => { if (performance.now() - last > 120) draw(); }, 100);
-    const finish = () => { if (finished) return; finished = true; clearInterval(backup); clearTimeout(timer); v.onended = null; done(); };
-    const timer = setTimeout(finish, secs * 1000 + 50);
-    v.onended = finish;
+    const finish = result => { if (finished) return; finished = true; clearInterval(backup); clearTimeout(timer); clearTimeout(probe); clearTimeout(probeCheck); v.onended = null; done(result); };
+    const timer = setTimeout(() => finish(true), secs * 1000 + 50);
+    // After ~1.5 s ask the recorder for what it has so far; if a second later there's still nothing
+    // (or an error), this format doesn't work in this browser and the next one is tried.
+    const probe = setTimeout(() => {
+      try { if (rec.state === "recording") rec.requestData(); } catch {}
+      probeCheck = setTimeout(() => { if (!chunks.length || recError) finish(false); }, 1200);
+    }, Math.min(1500, Math.max(300, secs * 1000 - 1500)));
+    let probeCheck = null;
+    v.onended = () => finish(true);
     requestAnimationFrame(frame);
   });
-  btn.textContent = "Saving video…";
-  await new Promise(r => {                          // wait for the recorder, but never forever
-    let over = false; const end = () => { if (!over) { over = true; r(); } };
-    rec.onstop = end;
-    try { if (rec.state === "recording") rec.requestData(); } catch {}
-    try { if (rec.state !== "inactive") rec.stop(); else end(); } catch { end(); }
-    setTimeout(end, 5000);
-  });
-  canvasStream.getTracks().forEach(t => t.stop());   // (the audio track stays: it belongs to the shared audio graph)
-  S.recording = false; v.loop = true; v.play().catch(() => {}); drawSharePreview();
-  if (!chunks.length) {
-    console.error("card video: no data", {type, recError, state: rec.state});
-    throw new Error(a ? "Your browser couldn't finish the video with sound. Turn Sound off and try again, or use Download still."
-                      : "Your browser couldn't finish the video. Try again with this tab in front, or use Download still.");
-  }
+  btn.textContent = ok ? "Saving video…" : "Trying another format…";
+  await stopRec();
+  cleanup();
+  if (!ok || !chunks.length || (recError && !chunks.length)) throw new NoVideoData(recError || "no data");
   const mime = type.split(";")[0], ext = mime === "video/mp4" ? "mp4" : "webm";
   const blob = new Blob(chunks, {type: mime});
   return {blob, ext, opusInMp4: ext === "mp4" && /opus/.test(type), file: new File([blob], "aureous." + ext, {type: mime}), url: URL.createObjectURL(blob)};
@@ -1853,7 +1893,8 @@ $("#shVideo").addEventListener("click", async () => {
     btn.textContent = "Download video";
     saveFile(S.share.video.url, "aureous." + S.share.video.ext);
     toast("Video ready. If it didn't download, press Download video again.");
-    if (S.share.video.ext === "webm") toast("Saved as WebM, which X doesn't accept. Chrome, Edge or Safari save MP4.", "error");
+    if (S.share.video.noSound) toast("Your browser couldn't record the sound, so this video is silent. The picture is fine.");
+    else if (S.share.video.ext === "webm") toast("Saved as WebM, which X doesn't accept. Chrome, Edge or Safari save MP4.", "error");
     else if (S.share.video.opusInMp4) toast("Your browser saved the sound in a format X may refuse. If the upload fails, turn Sound off and download again.");
     if (navigator.canShare && navigator.canShare({files: [S.share.video.file]})) $("#shNative").hidden = false;
   } catch (e) { S.recording = false; if (BG.media) { BG.media.loop = true; BG.media.play().catch(() => {}); } toast(e.message, "error"); }
