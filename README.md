@@ -2,7 +2,7 @@
 
 Paper-trade **Hyperliquid perpetuals** with **live Hyperliquid market data**: real prices, real order books, real funding. All fills are simulated against your own fake USDC balance. No wallet, no API key, no real orders. It only reads Hyperliquid's public `info` endpoint.
 
-**Live site: https://aureous.trade** (also at https://avastious.github.io/papertrading-perps/). Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their browser or, once they sign in, to their account.
+**Live site: https://aureous.trade** (also https://aureous.pages.dev). X: [@aureoustrade](https://x.com/aureoustrade). Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their browser or, once they sign in, to their account.
 
 You can also run it on your own computer, as a local website or in the terminal. Those two share one paper account, kept in a file.
 

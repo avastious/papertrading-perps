@@ -5,7 +5,8 @@ import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aureous", "web")
 FAV = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E"
 NAV = [("./#leaderboard", "Leaderboard", None), ("how-it-works.html", "How it works", "how"), ("about.html", "About", "about")]
-ISSUES = "https://github.com/avastious/papertrading-perps/issues"
+X_URL = "https://x.com/aureoustrade"
+X_HANDLE = "@aureoustrade"
 SITE_URL = "https://aureous.trade/"   # change with scripts/set_domain.py
 
 def slug_file(slug):
@@ -29,6 +30,7 @@ def page(slug, title, desc, body, extra_head=""):
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@aureoustrade">
 <meta name="twitter:image" content="{SITE_URL}og.png">
 <link rel="icon" href="{FAV}">
 <script src="theme.js"></script>
@@ -44,7 +46,7 @@ def page(slug, title, desc, body, extra_head=""):
 {body.strip()}
 </main>
 <footer class="site-foot">
-  <nav aria-label="Footer"><a href="./">Trade</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="{ISSUES}">Report a problem</a></nav>
+  <nav aria-label="Footer"><a href="./">Trade</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="{X_URL}" rel="me">X {X_HANDLE}</a></nav>
   <span class="note">Paper trading only. Not financial advice. Not affiliated with Hyperliquid.</span>
 </footer>
 </body>
@@ -86,8 +88,9 @@ ABOUT = """
 <h2>Who's behind it</h2>
 <p>Aureous is an independent project. It isn't affiliated with, endorsed by or connected to Hyperliquid. The name comes from the Latin <em>aureus</em>, golden, and the gold coin of ancient Rome.</p>
 
-<h2>Get in touch</h2>
-<p>Found a bug, or have an idea? <a href="https://github.com/avastious/papertrading-perps/issues">Open an issue on GitHub</a>. The code is public too, if you'd like to see exactly how fills, funding and liquidations are calculated.</p>
+<h2>Follow along</h2>
+<p>News, leaderboard highlights and new features go out first on X at <a href="https://x.com/aureoustrade" rel="me">@aureoustrade</a>. Found a bug or have an idea? Send us a message there. We read everything.</p>
+<div class="cta"><a class="btn" href="https://x.com/aureoustrade" rel="me">Follow @aureoustrade on X</a></div>
 """
 
 HOW = """
@@ -168,7 +171,7 @@ TERMS = """
 <ul>
   <li>You're responsible for activity on your account. Keep your sign-in secure.</li>
   <li>Use one account. Don't create accounts to manipulate the leaderboard.</li>
-  <li>Don't use bots or scripts against the service, overload it, probe it for weaknesses, or exploit bugs. If you find one, please <a href="https://github.com/avastious/papertrading-perps/issues">report it</a>.</li>
+  <li>Don't use bots or scripts against the service, overload it, probe it for weaknesses, or exploit bugs. If you find one, please <a href="https://x.com/aureoustrade">tell us on X</a>.</li>
   <li>Leaderboard names must not be offensive, misleading or impersonate anyone.</li>
 </ul>
 <p>We may rename, reset, suspend or remove accounts that break these rules.</p>
@@ -183,7 +186,7 @@ TERMS = """
 <p>Aureous isn't affiliated with Hyperliquid. Hyperliquid and other names belong to their owners and are used here only to describe where market data comes from.</p>
 
 <h2>Contact</h2>
-<p>Questions about these terms: <a href="https://github.com/avastious/papertrading-perps/issues">open an issue on GitHub</a>.</p>
+<p>Questions about these terms: message <a href="https://x.com/aureoustrade">@aureoustrade</a> on X.</p>
 """
 
 PRIVACY = """
@@ -216,7 +219,6 @@ PRIVACY = """
   <li><strong>Google Firebase</strong>: sign-in.</li>
   <li><strong>Cloudflare</strong>: hosts the website and the trading server. Like any web host, it handles your IP address and basic request details to deliver the site.</li>
   <li><strong>Hyperliquid</strong>: your browser loads market data directly from Hyperliquid's public data service, so Hyperliquid receives your IP address, as with any website you visit. No account information is sent to it.</li>
-  <li><strong>GitHub</strong>: hosts the code and a copy of the website.</li>
 </ul>
 
 <h2>Keeping and deleting your data</h2>
@@ -226,7 +228,7 @@ PRIVACY = """
 <p>Aureous isn't intended for children under 13, and we don't knowingly collect their information.</p>
 
 <h2>Changes and contact</h2>
-<p>If this policy changes, the date above will change too. Questions or requests: <a href="https://github.com/avastious/papertrading-perps/issues">open an issue on GitHub</a>.</p>
+<p>If this policy changes, the date above will change too. Questions or requests: message <a href="https://x.com/aureoustrade">@aureoustrade</a> on X.</p>
 """
 
 NOTFOUND = """
