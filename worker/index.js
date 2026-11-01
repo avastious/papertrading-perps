@@ -7,6 +7,7 @@
 //   POST /api/profile {name}       set your leaderboard name
 //   POST /api/privacy {private}    hide (or show) your positions and trades on your profile
 //   POST /api/delete               delete your account data
+//   /api/admin/...                 owner-only dashboard data (overview, user detail, rename/reset/remove)
 //
 // Every request except the leaderboard needs "Authorization: Bearer <Firebase ID token>".
 import {verifyIdToken, AuthError} from "./firebase-auth.js";
@@ -47,6 +48,24 @@ export default {
       const tm = /^\/api\/trader\/([0-9a-f]{12})$/.exec(url.pathname);
       if (tm && req.method === "GET") return reply(await ex.trader(tm[1], user ? user.uid : null));
       if (!user) return json({ok: false, error: "Sign in to trade."}, 401, cors);
+
+      // ---- admin: only the site owner's verified sign-in email (ADMIN_EMAILS in wrangler.jsonc)
+      if (url.pathname.startsWith("/api/admin/")) {
+        const admins = (env.ADMIN_EMAILS || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+        if (!user.emailVerified || !user.email || !admins.includes(user.email.toLowerCase())) {
+          return json({ok: false, error: "This page is only for the site owner."}, 403, cors);
+        }
+        if (url.pathname === "/api/admin/overview" && req.method === "GET") return reply(await ex.adminOverview());
+        const um = /^\/api\/admin\/user\/([\w-]{1,128})$/.exec(url.pathname);
+        if (um && req.method === "GET") return reply(await ex.adminUser(um[1]));
+        const am = /^\/api\/admin\/(rename|reset|remove)$/.exec(url.pathname);
+        if (am && req.method === "POST") {
+          let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
+          if (typeof b.uid !== "string") return json({ok: false, error: "Missing trader."}, 400, cors);
+          return reply(await ex.adminAction(am[1], b.uid, b));
+        }
+        return json({ok: false, error: "Not found"}, 404, cors);
+      }
 
       if (url.pathname === "/api/account" && req.method === "GET") {
         return reply(await ex.account(user.uid, {name: user.name}, +url.searchParams.get("since") || 0));

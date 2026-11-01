@@ -12,7 +12,7 @@ const API_URL = (settings.apiUrl || "").replace(/\/$/, "");
 const SYNC_MS = 15000;
 
 // ------------------------------------------------------------------ Firebase sign-in
-async function firebaseBackend(cfg, appCheckSiteKey) {
+export async function firebaseBackend(cfg, appCheckSiteKey) {
   const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/`;
   const [{initializeApp}, A] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js")]);
   const app = initializeApp(cfg);

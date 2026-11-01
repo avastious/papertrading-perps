@@ -198,7 +198,9 @@ PRIVACY = """
 <h3>When you sign in</h3>
 <p>Sign-in is handled by Google Firebase Authentication. Firebase keeps your email address, your name and profile photo if your sign-in provider shares them (Google does), and a user ID. If you sign up with email, Firebase stores your password securely; Aureous never sees it.</p>
 <h3>Your trading account</h3>
-<p>The Aureous server, which runs on Cloudflare, stores your paper account under your user ID: your balance, positions, orders, trade and funding history, account-value history, recent notifications, badges and milestones, the leaderboard name you choose, and whether you've hidden your trades. It doesn't store your email address.</p>
+<p>The Aureous server, which runs on Cloudflare, stores your paper account under your user ID: your balance, positions, orders, trade and funding history, account-value history, recent notifications, badges and milestones, the leaderboard name you choose, whether you've hidden your trades, and when you were last active. It doesn't store your email address.</p>
+<h3>What the site owner can see</h3>
+<p>The site owner has a private dashboard showing each account's leaderboard name, user ID, sign-up date, when it was last active, its trading activity and its account details, so the site can be run and moderated. Your email address is visible only in the sign-in service, Firebase.</p>
 <h3>In your browser</h3>
 <p>Your display settings, favourite markets and last-viewed market are saved in your browser's local storage. They never leave your device. Firebase also keeps you signed in using your browser's storage.</p>
 

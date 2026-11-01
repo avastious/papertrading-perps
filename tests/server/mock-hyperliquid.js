@@ -9,10 +9,10 @@ let funding = [];   // {coin, fundingRate, time}
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'test-key-1', alg: 'RS256', use: 'sig' };
 const b64u = b => Buffer.from(b).toString('base64url');
-function token({ uid, name, email, aud = PROJECT, exp = 3600, key = privateKey, kid = 'test-key-1' }) {
+function token({ uid, name, email, verified, aud = PROJECT, exp = 3600, key = privateKey, kid = 'test-key-1' }) {
   const now = Math.floor(Date.now() / 1000);
   const h = b64u(JSON.stringify({ alg: 'RS256', kid, typ: 'JWT' }));
-  const p = b64u(JSON.stringify({ iss: `https://securetoken.google.com/${aud}`, aud, auth_time: now, user_id: uid, sub: uid, iat: now, exp: now + exp, name, email }));
+  const p = b64u(JSON.stringify({ iss: `https://securetoken.google.com/${aud}`, aud, auth_time: now, user_id: uid, sub: uid, iat: now, exp: now + exp, name, email, email_verified: verified === '1' }));
   return `${h}.${p}.${b64u(crypto.sign('RSA-SHA256', Buffer.from(h + '.' + p), key))}`;
 }
 let rnd = 7; const rand = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
@@ -53,7 +53,7 @@ http.createServer((req, res) => {
     if (u.pathname === '/token') {
       const q = Object.fromEntries(u.searchParams);
       if (q.forge === '1') { const { privateKey: other } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }); return send({ token: token({ ...q, key: other }) }); }
-      return send({ token: token({ uid: q.uid, name: q.name, email: q.email, aud: q.aud || PROJECT, exp: q.exp ? +q.exp : 3600 }) });
+      return send({ token: token({ uid: q.uid, name: q.name, email: q.email, verified: q.verified, aud: q.aud || PROJECT, exp: q.exp ? +q.exp : 3600 }) });
     }
     if (u.pathname === '/set') { const q = JSON.parse(body); if (q.px) Object.assign(px, q.px); if (q.funding) funding = q.funding; return send({ ok: true, px }); }
     send({ error: 'not found' }, 404);

@@ -72,6 +72,16 @@ Endpoints:
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
+## Admin dashboard
+
+`https://aureous.trade/admin.html` is a private dashboard. Sign in there with an email listed in `ADMIN_EMAILS` (in `wrangler.jsonc`); Google must have verified it. Everyone else is refused. It shows:
+
+- traders online now (anyone whose page talked to the server in the last minute), total traders, sign-ups (today, this week, 30-day chart), active traders, trades, volume and liquidations today, open positions, popular markets and badges earned;
+- every trader, searchable, filterable and sortable: last seen, joined, account value, return, positions and orders, trades, volume and resets;
+- each trader's full detail (positions, orders, trades, notifications), with **Rename**, **Reset to $10,000** and **Remove**.
+
+Emails stay in Firebase → Authentication → Users. Look a trader up there by the user ID the dashboard shows.
+
 ## Accounts (sign in with Google or email)
 
 Sign-in uses Firebase Auth (project `aureous-14551`). In the Firebase console:
@@ -202,6 +212,7 @@ npx wrangler dev --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
   --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 &
 node tests/server/api.check.mjs          # sign-in, trading, every-minute job, cheating attempts, leaderboard
 node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, hiding trades (run after api.check on a fresh server)
+node tests/server/admin.check.mjs        # owner-only dashboard (start wrangler dev with --var ADMIN_EMAILS:owner@example.com)
 ```
 
 ## Files

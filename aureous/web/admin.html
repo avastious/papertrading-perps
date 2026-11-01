@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin | Aureous</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
+<script src="theme.js"></script>
+<script src="engine.js"></script>
+<script src="firebase-config.js"></script>
+<link rel="stylesheet" href="site.css">
+<style>
+body{font-size:14px;line-height:1.45}
+.wrap{width:100%;max-width:1320px;margin:0 auto;padding:24px clamp(14px,3vw,32px) 48px}
+.chip{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 7px;margin-left:10px;vertical-align:3px}
+.who{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:13px;color:var(--muted)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.gate{max-width:460px;margin:12vh auto;text-align:center}
+.gate h1{font-size:28px;margin:0 auto 10px;max-width:none}
+.gate p{color:var(--muted);margin:0 auto 22px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tile{background:var(--panel);padding:14px 16px}
+.tile span{display:block;font-size:12px;color:var(--muted)}
+.tile b{display:block;font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.tile small{color:var(--faint);font-size:12px}
+.tile.live b{color:var(--long)}
+.row{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+.card h2{font-size:14px;font-weight:600;margin:0 0 12px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:120px}
+.bars div{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;position:relative}
+.bars div:hover{filter:brightness(1.2)}
+.bars-x{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:6px}
+.list{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.list .li{display:grid;grid-template-columns:1fr auto auto;gap:12px}
+.list .li span:not(:first-child){color:var(--muted);text-align:right}
+.users{margin-top:16px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.tools input,.tools select{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:var(--text);font:inherit;font-size:13px}
+.tools input{min-width:220px;flex:1;max-width:340px}
+.tools .meta{margin-left:auto;color:var(--faint);font-size:12px}
+.tbl{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--panel);text-align:right;color:var(--faint);font-weight:500;font-size:12px;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+th.on{color:var(--text)}
+td{text-align:right;padding:8px 10px;border-top:1px solid var(--line-soft)}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--raise)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);margin-right:8px;vertical-align:1px}
+.dot.on{background:var(--long);box-shadow:0 0 0 3px var(--long-wash,rgba(47,165,125,.15))}
+.up{color:var(--long)} .down{color:var(--short)} .muted{color:var(--muted)}
+.tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-left:6px}
+.badge{display:inline-block;vertical-align:-3px;margin-right:2px}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:0;width:min(940px,calc(100vw - 24px));max-height:calc(100vh - 40px)}
+dialog::backdrop{background:rgba(5,8,12,.65)}
+.dhead{padding:18px 20px 12px;border-bottom:1px solid var(--line-soft);position:relative}
+.dhead h3{margin:0;font-size:20px}
+.dhead p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.dbody{padding:14px 20px 20px;overflow:auto;max-height:calc(100vh - 140px)}
+.x{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--muted);font-size:24px;cursor:pointer}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.kv span{display:block;font-size:12px;color:var(--muted)}
+.kv b{font-weight:600}
+.dbody h4{font-size:13px;margin:16px 0 6px}
+.dbody table{border:1px solid var(--line-soft);border-radius:6px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.btn.danger{background:var(--short);border-color:var(--short);color:#fff}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);padding:16px;text-align:center}
+#toast{position:fixed;right:16px;bottom:16px;background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:5px;padding:10px 14px;font-size:13px;max-width:380px}
+@media (max-width:900px){ .row{grid-template-columns:1fr} .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="wordmark" href="./">Aureous</a><span class="chip">Admin</span>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="gate" id="gate">
+  <h1 id="gateTitle">Loading…</h1>
+  <p id="gateText"></p>
+  <div id="gateBtns"></div>
+</div>
+
+<div class="wrap" id="dash" hidden>
+  <div class="tiles" id="tiles"></div>
+  <div class="row">
+    <div class="card"><h2>New traders, last 30 days</h2><div class="bars" id="bars"></div><div class="bars-x"><span id="barsFrom"></span><span>today</span></div></div>
+    <div class="card"><h2>Markets today</h2><div class="list" id="markets"></div></div>
+    <div class="card"><h2>Badges earned</h2><div class="list" id="badges"></div></div>
+  </div>
+  <div class="users">
+    <div class="tools">
+      <input id="q" placeholder="Search name or ID" aria-label="Search traders">
+      <select id="filter" aria-label="Filter traders">
+        <option value="all">All traders</option><option value="online">Online now</option><option value="24h">Active in last 24 hours</option>
+        <option value="new">Joined in last 7 days</option><option value="positions">With open positions</option><option value="private">Trades hidden</option>
+      </select>
+      <span class="meta" id="meta"></span>
+    </div>
+    <div class="tbl"><table><thead><tr id="cols"></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+</div>
+
+<dialog id="dlg"><div class="dhead"><button class="x" id="dClose" aria-label="Close">&times;</button><h3 id="dName"></h3><p id="dSub"></p></div><div class="dbody" id="dBody"></div></dialog>
+<div id="toast" hidden></div>
+
+<script type="module">
+import {firebaseBackend} from "./auth.js";
+const $ = s => document.querySelector(s);
+const cfg = window.AUREOUS_FIREBASE || {}, API = (cfg.apiUrl || "").replace(/\/$/, "");
+const TIERS = (window.Aureous && Aureous.TIERS) || [];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const usd = x => (x < 0 ? "-$" : "$") + Math.abs(x).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const usd0 = x => (x < 0 ? "-$" : "$") + Math.round(Math.abs(x)).toLocaleString("en-US");
+const pct = x => { const v = (x * 100).toFixed(1); return +v === 0 ? "0.0%" : (x > 0 ? "+" : "") + v + "%"; };
+const cls = x => Math.abs(x) < 5e-4 ? "" : x > 0 ? "up" : "down";
+const num = x => Number(x).toLocaleString("en-US");
+const when = ms => ms ? new Date(ms).toLocaleString(undefined, {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : "–";
+function ago(ms){ if (!ms) return "never"; const s = Math.round((Date.now() - ms) / 1000); if (s < 60) return "just now"; const m = Math.round(s / 60); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; }
+const badge = (id, n = 15) => { const t = TIERS.find(t => t.id === id); return t ? `<svg class="badge" width="${n}" height="${n}" viewBox="0 0 20 20"><title>${t.name}</title><circle cx="10" cy="10" r="9.2" fill="${t.color}"/><text x="10" y="13.6" text-anchor="middle" font-family="Georgia,serif" font-weight="600" font-size="9" fill="rgba(0,0,0,.6)">${t.letter}</text></svg>` : ""; };
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 4000); }
+
+const backend = window.AUREOUS_TEST_BACKEND || (cfg.config ? await firebaseBackend(cfg.config, cfg.appCheckSiteKey) : null);
+let user = null, data = null, timer = null, sort = {key: "last_seen", dir: -1};
+
+async function call(path, body){
+  const r = await fetch(API + path, {method: body ? "POST" : "GET", headers: {"Content-Type": "application/json", Authorization: "Bearer " + await backend.token()}, body: body ? JSON.stringify(body) : undefined});
+  const j = await r.json().catch(() => ({ok: false, error: `Server error (${r.status})`}));
+  if (!r.ok || j.ok === false) { const e = new Error(j.error || `Server error (${r.status})`); e.status = r.status; throw e; }
+  return j;
+}
+function gate(title, text, btns = ""){ $("#dash").hidden = true; $("#gate").hidden = false; $("#gateTitle").textContent = title; $("#gateText").textContent = text; $("#gateBtns").innerHTML = btns; }
+function renderWho(){
+  $("#who").innerHTML = user ? `<span>${esc(user.email || user.name)}</span><button class="btn sm" id="out">Sign out</button><a class="btn sm" href="./">Open the app</a>` : `<a class="btn sm" href="./">Open the app</a>`;
+  if (user) $("#out").onclick = () => backend.signOut();
+}
+
+async function load(){
+  try { data = await call("/api/admin/overview"); render(); }
+  catch (e) {
+    clearInterval(timer);
+    if (e.status === 403) gate("This page is for the site owner", "You're signed in with an account that isn't allowed to see the admin dashboard.", `<button class="btn" id="sw">Sign in with a different account</button>`), $("#sw").onclick = () => backend.signOut();
+    else toast("Couldn't load: " + e.message);
+  }
+}
+function render(){
+  $("#gate").hidden = true; $("#dash").hidden = false;
+  const t = data.totals;
+  const tiles = [["Online now", num(t.online), "live", "using the site this minute"], ["Traders", num(t.traders), "", `${num(t.private_profiles)} with trades hidden`],
+    ["New today", num(t.new_today), "", `${num(t.new_7d)} this week`], ["Active today", num(t.active_24h), "", `last 24 hours, ${num(t.active_1h)} in the last hour`],
+    ["Trades today", num(t.trades_today), "", `${num(t.trades_7d)} this week`], ["Volume today", usd0(t.volume_today), "", `${num(t.liquidations_today)} liquidations`],
+    ["Open positions", num(t.open_positions), "", `across ${num(data.users.filter(u => u.positions).length)} traders`], ["Active this week", num(t.active_7d), "", "signed-in traders"]];
+  $("#tiles").innerHTML = tiles.map(([k, v, c, sub]) => `<div class="tile ${c}"><span>${k}</span><b>${v}</b><small>${esc(sub)}</small></div>`).join("");
+  const max = Math.max(1, ...data.signups.map(d => d.signups));
+  $("#bars").innerHTML = data.signups.map(d => `<div style="height:${d.signups / max * 100}%" title="${d.day}: ${d.signups} new"></div>`).join("");
+  $("#barsFrom").textContent = new Date(data.signups[0].day).toLocaleDateString(undefined, {day: "numeric", month: "short"});
+  $("#markets").innerHTML = data.markets.length ? data.markets.map(m => `<div class="li"><span>${esc(m.coin)}</span><span>${m.trades} trade${m.trades === 1 ? "" : "s"}</span><span>${m.positions} open</span></div>`).join("") : `<div class="muted">No trades yet today.</div>`;
+  $("#badges").innerHTML = TIERS.map(tr => `<div class="li"><span>${badge(tr.id)} ${tr.name}</span><span>$${num(tr.at)}</span><span>${num(data.badges[tr.id] || 0)}</span></div>`).join("");
+  renderUsers();
+  $("#meta").textContent = `Updated ${new Date(data.at).toLocaleTimeString()}, refreshes every 15 seconds`;
+}
+const COLS = [["name", "Trader", "l"], ["last_seen", "Last seen"], ["created", "Joined"], ["equity", "Account value"], ["return", "Return"],
+  ["positions", "Positions"], ["trades", "Trades"], ["trades_today", "Today"], ["volume", "Volume"], ["resets", "Resets"]];
+function renderUsers(){
+  const q = $("#q").value.trim().toLowerCase(), f = $("#filter").value, now = Date.now();
+  let list = data.users.filter(u => !q || u.name.toLowerCase().includes(q) || u.uid.toLowerCase().includes(q) || u.pid.includes(q));
+  list = list.filter(u => f === "all" || (f === "online" && u.online) || (f === "24h" && now - u.last_seen < 864e5) ||
+    (f === "new" && now - u.created < 7 * 864e5) || (f === "positions" && u.positions) || (f === "private" && u.private));
+  list.sort((a, b) => { const x = a[sort.key], y = b[sort.key]; return (typeof x === "string" ? x.localeCompare(y) : x - y) * sort.dir; });
+  $("#cols").innerHTML = COLS.map(([k, label, c]) => `<th class="${c || ""}${sort.key === k ? " on" : ""}" data-k="${k}">${label}${sort.key === k ? (sort.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("");
+  $("#rows").innerHTML = list.map(u => `<tr data-uid="${esc(u.uid)}">
+    <td class="l"><span class="dot${u.online ? " on" : ""}" title="${u.online ? "Online now" : "Offline"}"></span>${u.badges.length ? badge(u.badges[u.badges.length - 1]) : ""}${esc(u.name)}${u.private ? `<span class="tag">hidden</span>` : ""}${u.spotlight ? `<span class="tag">spotlight</span>` : ""}</td>
+    <td>${u.online ? `<span class="up">online</span>` : ago(u.last_seen)}</td><td>${when(u.created)}</td><td>${usd(u.equity)}</td><td class="${cls(u.return)}">${pct(u.return)}</td>
+    <td>${u.positions}${u.orders ? ` <span class="muted">+${u.orders} orders</span>` : ""}</td><td>${num(u.trades)}</td><td>${num(u.trades_today)}</td><td>${usd0(u.volume)}</td><td>${u.resets}</td></tr>`).join("")
+    || `<tr><td colspan="${COLS.length}" class="empty">No traders match.</td></tr>`;
+}
+$("#cols").addEventListener("click", e => { const th = e.target.closest("th"); if (!th) return; const k = th.dataset.k;
+  sort = {key: k, dir: sort.key === k ? -sort.dir : (k === "name" ? 1 : -1)}; renderUsers(); });
+$("#q").addEventListener("input", renderUsers); $("#filter").addEventListener("change", renderUsers);
+$("#rows").addEventListener("click", e => { const tr = e.target.closest("tr[data-uid]"); if (tr) openUser(tr.dataset.uid); });
+
+async function openUser(uid){
+  $("#dName").textContent = "Loading…"; $("#dSub").textContent = ""; $("#dBody").innerHTML = ""; if (!$("#dlg").open) $("#dlg").showModal();
+  let d; try { d = await call("/api/admin/user/" + encodeURIComponent(uid)); } catch (e) { $("#dBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#dName").innerHTML = `${(d.badges || []).map(b => badge(b.tier, 20)).join("")} ${esc(d.name)}`;
+  $("#dSub").innerHTML = `${d.online ? `<span class="up">Online now</span>` : "Last seen " + ago(d.last_seen)}. Joined ${when(d.created)}. Rank ${d.rank ? "#" + d.rank + " of " + d.total : "–"}.`;
+  const st = d.stats || {};
+  const kv = [["Account value", usd(d.equity)], ["Return", `<span class="${cls(d.return)}">${pct(d.return)}</span>`], ["Best value", usd(d.peak)], ["Closed PnL", `<span class="${cls(st.realized)}">${usd(st.realized || 0)}</span>`],
+    ["Fees paid", usd(st.fees || 0)], ["Win rate", st.win_rate == null ? "–" : Math.round(st.win_rate * 100) + "%"], ["Trades", num(st.trades || 0)], ["Volume", usd0(st.volume || 0)],
+    ["Resets", d.resets], ["Trades visible", d.private ? "Hidden" : "Public"], ["Firebase user ID", `<span class="mono">${esc(d.uid)}</span>`], ["Public ID", `<span class="mono">${esc(d.pid)}</span>`]];
+  let html = `<div class="kv">${kv.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>`;
+  const tbl = (head, rows) => rows.length ? `<div class="tbl"><table><thead><tr>${head.map((h, i) => `<th class="${i ? "" : "l"}">${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>` : `<div class="muted">None.</div>`;
+  html += `<h4>Open positions</h4>` + tbl(["Market", "Side", "Size", "Value", "Entry", "Mark", "PnL", "Opened"], (d.positions || []).map(p =>
+    `<tr><td class="l">${esc(p.coin)}</td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td><td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${p.entry.toPrecision(6)}</td><td>${p.mark.toPrecision(6)}</td><td class="${cls(p.upnl)}">${usd(p.upnl)}</td><td>${ago(p.opened)}</td></tr>`));
+  html += `<h4>Open orders</h4>` + tbl(["Market", "Type", "Side", "Size", "Price"], (d.orders || []).map(o =>
+    `<tr><td class="l">${esc(o.coin)}</td><td>${o.type === "limit" ? "Limit" : o.type === "tp" ? "Take profit" : "Stop loss"}</td><td>${o.side}</td><td>${o.sz ?? "all"}</td><td>${o.px ?? o.trigger_px}</td></tr>`));
+  html += `<h4>Recent trades</h4>` + tbl(["Time", "Market", "Side", "Size", "Price", "PnL", "Type"], (d.trades || []).map(t =>
+    `<tr><td class="l">${when(t.ts)}</td><td>${esc(t.coin)}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side}</td><td>${t.sz}</td><td>${t.px.toPrecision(6)}</td><td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? usd(t.realized) : "–"}</td><td>${esc(t.kind)}</td></tr>`));
+  html += `<h4>Recent notifications</h4>` + ((d.events || []).length ? `<div class="list">${d.events.slice(-10).reverse().map(e => `<div class="li"><span>${esc(e.msg)}</span><span>${ago(e.ts)}</span><span></span></div>`).join("")}</div>` : `<div class="muted">None.</div>`);
+  html += `<div class="actions"><button class="btn" id="aRename">Rename</button><button class="btn" id="aReset">Reset to $10,000</button><button class="btn danger" id="aRemove">Remove from Aureous</button></div>`;
+  $("#dBody").innerHTML = html;
+  const act = async (action, body, msg) => { try { const r = await call("/api/admin/" + action, {uid: d.uid, ...body}); toast((r.messages || [msg])[0]); await load(); if (action === "remove") $("#dlg").close(); else openUser(d.uid); } catch (e) { toast(e.message); } };
+  $("#aRename").onclick = () => { const n = prompt(`New leaderboard name for ${d.name}:`, d.name); if (n && n.trim() !== d.name) act("rename", {name: n.trim()}); };
+  $("#aReset").onclick = () => { if (confirm(`Reset ${d.name}'s account to $10,000? Positions, orders and history are erased. Badges stay.`)) act("reset", {}); };
+  $("#aRemove").onclick = () => { if (confirm(`Remove ${d.name} from Aureous? Their trading data, badges and leaderboard entry are deleted. Their login stays in Firebase (delete it there if needed).`)) act("remove", {}, "Removed."); };
+}
+$("#dClose").onclick = () => $("#dlg").close();
+$("#dlg").addEventListener("click", e => { if (e.target === $("#dlg")) $("#dlg").close(); });
+
+if (!backend || !API) gate("Admin isn't set up", "Sign-in and the trading server need to be configured in firebase-config.js.");
+else backend.onUser(u => {
+  user = u; renderWho(); clearInterval(timer);
+  if (!u) { gate("Aureous admin", "Sign in with the site owner's Google account.", `<button class="btn primary" id="in">Sign in with Google</button>`);
+    $("#in").onclick = () => backend.signInWith("google").catch(e => toast(e.message)); return; }
+  gate("Loading…", "");
+  load(); timer = setInterval(() => { if (document.visibilityState === "visible") load(); }, 15000);
+});
+</script>
+</body>
+</html>

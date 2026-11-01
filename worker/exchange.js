@@ -66,12 +66,23 @@ export class Exchange extends DurableObject {
     const add = (name, def) => { if (!cols.has(name)) this.sql.exec(`ALTER TABLE accounts ADD COLUMN ${name} ${def}`); };
     add("pid", "TEXT"); add("badges", "TEXT NOT NULL DEFAULT '[]'"); add("peak", "REAL NOT NULL DEFAULT 10000");
     add("spotlight_until", "INTEGER NOT NULL DEFAULT 0"); add("resets", "INTEGER NOT NULL DEFAULT 0"); add("private", "INTEGER NOT NULL DEFAULT 0");
+    add("last_seen", "INTEGER NOT NULL DEFAULT 0");
     for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
     this.client = new SharedClient(env.HL_API_URL || "https://api.hyperliquid.xyz");
     this.locks = new Map();      // one operation at a time per account (fetches can interleave otherwise)
     this.rate = new Map();
     this.board = null;
+    this.seen = new Map();       // uid -> last request time (who's online), saved to SQL at most every 5 minutes
+    this.adminCache = null;
+  }
+  touch(uid) {
+    const now = Date.now(), prev = this.seen.get(uid);
+    this.seen.set(uid, now);
+    if (!prev || now - (this.seenSaved?.get(uid) || 0) > 300000) {
+      (this.seenSaved ||= new Map()).set(uid, now);
+      this.sql.exec("UPDATE accounts SET last_seen = ? WHERE uid = ?", now, uid);
+    }
   }
 
   // ------------------------------------------------------------------ storage
@@ -178,6 +189,7 @@ export class Exchange extends DurableObject {
     return this.withLock(uid, async () => {
       try {
         const row = this.row(uid) || this.create(uid, profile);
+        this.touch(uid);
         const ex = this.exchangeFor(row);
         this.addEvents(uid, await this.catchUp(ex));
         this.persist(row, ex, true);
@@ -192,6 +204,7 @@ export class Exchange extends DurableObject {
     return this.withLock(uid, async () => {
       try {
         const row = this.row(uid) || this.create(uid, profile);
+        this.touch(uid);
         const ex = this.exchangeFor(row);
         const app = new LocalApp(ex);
         const events = await this.catchUp(ex);
@@ -239,8 +252,8 @@ export class Exchange extends DurableObject {
       this.sql.exec("DELETE FROM accounts WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM milestones WHERE uid = ?", uid);
-      this.board = null;
-      return {ok: true};
+      this.board = null; this.adminCache = null; this.seen.delete(uid);
+      return {ok: true, messages: ["Account removed."]};
     });
   }
 
@@ -305,6 +318,95 @@ export class Exchange extends DurableObject {
       }
       return out;
     } catch (e) { return fail(e); }
+  }
+
+  // ------------------------------------------------------------------ admin (site owner only)
+  lastSeen(r) { return Math.max(this.seen.get(r.uid) || 0, r.last_seen || 0); }
+  async adminOverview() {
+    try {
+      if (this.adminCache && Date.now() - this.adminCache.t < 15000) return this.adminCache.data;
+      const ex = new PaperExchange(this.client, {storage: null, refreshMs: 0});
+      await ex.refresh();
+      const now = Date.now(), day0 = new Date(); day0.setUTCHours(0, 0, 0, 0);
+      const today = day0.getTime(), DAY = 864e5;
+      const rows = this.sql.exec("SELECT uid, pid, name, core, history, badges, created, last_seen, resets, private, spotlight_until FROM accounts").toArray();
+      const users = [], markets = new Map(), signups = new Map(), badgeCount = {};
+      let tradesToday = 0, trades7 = 0, volumeToday = 0, openPositions = 0, liquidationsToday = 0;
+      for (const r of rows) {
+        const core = JSON.parse(r.core), hist = JSON.parse(r.history), trades = hist.trades || [];
+        let equity = core.balance;
+        for (const [coin, p] of Object.entries(core.positions)) {
+          let mark = p.entry; try { mark = ex.market(coin).mark; } catch {}
+          equity += p.size * (mark - p.entry);
+          const m = markets.get(coin) || {coin, positions: 0, trades: 0, volume: 0}; m.positions++; markets.set(coin, m);
+        }
+        openPositions += Object.keys(core.positions).length;
+        let tToday = 0, vToday = 0, volume = 0;
+        for (const t of trades) {
+          const v = t.sz * t.px; volume += v;
+          if (t.ts >= now - 7 * DAY) trades7++;
+          if (t.ts >= today) {
+            tToday++; vToday += v; if (t.kind === "liquidation") liquidationsToday++;
+            const m = markets.get(t.coin) || {coin: t.coin, positions: 0, trades: 0, volume: 0}; m.trades++; m.volume += v; markets.set(t.coin, m);
+          }
+        }
+        tradesToday += tToday; volumeToday += vToday;
+        const dayKey = new Date(r.created).toISOString().slice(0, 10);
+        signups.set(dayKey, (signups.get(dayKey) || 0) + 1);
+        const badges = JSON.parse(r.badges || "[]");
+        for (const b of badges) badgeCount[b.tier] = (badgeCount[b.tier] || 0) + 1;
+        const seen = this.lastSeen(r);
+        users.push({uid: r.uid, pid: r.pid, name: r.name, created: r.created, last_seen: seen, online: now - seen < 60000,
+                    equity, return: equity / START_BALANCE - 1, positions: Object.keys(core.positions).length, orders: core.orders.length,
+                    trades: trades.length, trades_today: tToday, volume, resets: r.resets, private: !!r.private,
+                    badges: badges.map(b => b.tier), spotlight: r.spotlight_until > now});
+      }
+      users.sort((a, b) => b.last_seen - a.last_seen);
+      const days = [];
+      for (let i = 29; i >= 0; i--) { const k = new Date(today - i * DAY).toISOString().slice(0, 10); days.push({day: k, signups: signups.get(k) || 0}); }
+      const count = ms => users.filter(u => u.last_seen >= now - ms).length;
+      const data = {
+        ok: true, at: now,
+        totals: {traders: users.length, online: users.filter(u => u.online).length, active_1h: count(3600000), active_24h: count(DAY), active_7d: count(7 * DAY),
+                 new_today: users.filter(u => u.created >= today).length, new_7d: users.filter(u => u.created >= now - 7 * DAY).length,
+                 trades_today: tradesToday, trades_7d: trades7, volume_today: volumeToday, open_positions: openPositions,
+                 liquidations_today: liquidationsToday, private_profiles: users.filter(u => u.private).length},
+        signups: days, badges: badgeCount,
+        markets: [...markets.values()].sort((a, b) => b.volume - a.volume || b.positions - a.positions).slice(0, 12),
+        users,
+      };
+      this.adminCache = {t: now, data};
+      return data;
+    } catch (e) { return fail(e); }
+  }
+  async adminUser(uid) {
+    const row = this.row(uid);
+    if (!row) return {ok: false, status: 404, error: "No such trader."};
+    const pub = await this.trader(row.pid, row.uid);           // full view (as if the trader were looking)
+    if (!pub.ok) return pub;
+    const core = JSON.parse(row.core);
+    return {...pub, uid, created: row.created, last_seen: this.lastSeen(row), online: Date.now() - this.lastSeen(row) < 60000,
+            orders: core.orders, events: this.eventsSince(uid, 0)};
+  }
+  async adminAction(action, uid, body = {}) {
+    const row = this.row(uid);
+    if (!row) return {ok: false, status: 404, error: "No such trader."};
+    this.adminCache = null;
+    if (action === "rename") return this.setName(uid, body.name);
+    if (action === "remove") return this.remove(uid);
+    if (action === "reset") {
+      return this.withLock(uid, async () => {
+        const ex = this.exchangeFor(this.row(uid));
+        await ex.refresh();
+        ex.reset(null);
+        this.persist(this.row(uid), ex, true);
+        this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid);
+        this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
+        this.addEvents(uid, [{kind: "event", msg: "Your account was reset to $10,000 by Aureous."}]);
+        return {ok: true, messages: [`${row.name}'s account was reset to $10,000.`]};
+      });
+    }
+    return {ok: false, status: 404, error: "Unknown action."};
   }
 
   // every minute (Cron Trigger): settle all accounts with open positions or orders
