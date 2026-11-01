@@ -24,7 +24,7 @@ python -m aureous web        # Windows: py -m aureous web
 Your browser opens at http://127.0.0.1:8321. Keep the terminal window open while you trade; Ctrl+C stops it. The site is only reachable from your own computer.
 
 - **Markets list** (left): search and sort every Hyperliquid perp; click one to trade it.
-- **Chart:** 1m to 1d candles, with your entry, liquidation, take-profit, stop-loss and limit-order lines drawn on it.
+- **Chart:** 1m to 1d candles with volume. Drag to move, scroll to zoom, drag either axis to stretch it, double-click or "Reset view" to snap back. Older history loads as you scroll left. Your entry, liquidation, take-profit, stop-loss and limit-order prices are drawn as lines.
 - **Order book:** live depth. Click any price to place a limit order there.
 - **Order ticket:** long/short, market/limit, size in dollars or coins, quick 10/25/50/Max buttons, leverage slider, reduce-only, post-only, and optional take-profit/stop-loss.
 - **Account:** equity, a bar showing how much margin you're using with the liquidation line marked, balance and available margin.
@@ -104,3 +104,8 @@ The tests run the engine against a mock Hyperliquid client (no network needed).
 - `aureous/server.py`: local web server and JSON API
 - `aureous/web/index.html`: the website
 - `tests/`: engine and web API tests
+
+## Third-party
+
+- Charts: [TradingView Lightweight Charts](https://github.com/tradingview/lightweight-charts) (Apache-2.0), bundled in `aureous/web/`.
+- Fonts: IBM Plex Sans and Cinzel (SIL Open Font License), bundled in `aureous/web/fonts/` so the site works without Google Fonts.

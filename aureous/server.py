@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 import traceback
@@ -16,6 +17,11 @@ from .api import HyperliquidAPIError
 from .engine import EPS, PaperError, PaperExchange
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+STATIC = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/lightweight-charts.js": ("lightweight-charts.js", "application/javascript"),  # TradingView, Apache-2.0
+}
 INTERVAL_SECS = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
 
 
@@ -103,13 +109,13 @@ class App:
         bids, asks = self.ex.book(name)
         return {"coin": name, "bids": bids[:14], "asks": asks[:14]}
 
-    def candles(self, coin: str, interval: str, n: int):
+    def candles(self, coin: str, interval: str, n: int, end: int | None = None):
         secs = INTERVAL_SECS.get(interval)
         if not secs:
             raise PaperError("Unsupported interval")
         with self.lock:
             name = self.ex.market(coin).name
-        end = int(time.time() * 1000)
+        end = end or int(time.time() * 1000)
         raw = self.ex.client.candles(name, interval, end - n * secs * 1000, end)
         return [[k["t"], float(k["o"]), float(k["h"]), float(k["l"]), float(k["c"]), float(k["v"])]
                 for k in raw][-n:]
@@ -247,14 +253,21 @@ def make_handler(app: App):
         def do_GET(self):
             url = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
-            if url.path in ("/", "/index.html"):
-                with open(os.path.join(WEB_DIR, "index.html"), "rb") as f:
-                    return self._send(200, f.read(), "text/html; charset=utf-8")
+            if url.path.startswith("/fonts/") and re.fullmatch(r"/fonts/[\w.-]+\.woff2", url.path):
+                fp = os.path.join(WEB_DIR, "fonts", os.path.basename(url.path))
+                if os.path.exists(fp):
+                    with open(fp, "rb") as f:
+                        return self._send(200, f.read(), "font/woff2")
+            if url.path in STATIC:
+                name, ctype = STATIC[url.path]
+                with open(os.path.join(WEB_DIR, name), "rb") as f:
+                    return self._send(200, f.read(), ctype)
             routes = {
                 "/api/markets": lambda: app.markets(),
                 "/api/state": lambda: app.state(int(q.get("since", 0))),
                 "/api/book": lambda: app.book(q["coin"]),
-                "/api/candles": lambda: app.candles(q["coin"], q.get("interval", "1h"), min(int(q.get("n", 120)), 500)),
+                "/api/candles": lambda: app.candles(q["coin"], q.get("interval", "1h"), min(int(q.get("n", 120)), 1000),
+                                                    int(q["end"]) if q.get("end") else None),
             }
             if url.path in routes:
                 return self._guard(routes[url.path])

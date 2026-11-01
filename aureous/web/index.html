@@ -4,31 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aureous</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23D8AD4F'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='800' font-size='15' text-anchor='middle' fill='%2315120E'%3EAu%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<script src="/lightweight-charts.js"></script>
 <style>
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-display:swap;src:url(/fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:500;font-display:swap;src:url(/fonts/ibm-plex-sans-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:600 700;font-display:swap;src:url(/fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Cinzel";font-weight:600;font-display:swap;src:url(/fonts/cinzel-latin-600-normal.woff2) format("woff2")}
 :root{
-  --bg:#15120E; --panel:#1C1814; --raise:#252019; --line:#342C22; --line-soft:#2A241C;
-  --text:#EEE5D1; --muted:#998C74; --faint:#6E6352;
-  --gold:#D8AD4F; --gold-deep:#8E6E2C; --gold-wash:rgba(216,173,79,.12);
-  --long:#4DB088; --long-wash:rgba(77,176,136,.14);
-  --short:#E0644E; --short-wash:rgba(224,100,78,.14);
-  --font:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --bg:#0E131B; --panel:#121924; --raise:#19222F; --line:#232E3D; --line-soft:#1B2431;
+  --text:#D5DCE5; --muted:#7F8B9B; --faint:#58647A;
+  --accent:#5B8DEF; --accent-wash:rgba(91,141,239,.12);
+  --long:#2FA57D; --long-wash:rgba(47,165,125,.13);
+  --short:#DB5A55; --short-wash:rgba(219,90,85,.13);
+  --font:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --brand:"Cinzel","Trajan Pro",Georgia,serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 var(--font);font-variant-numeric:tabular-nums}
+html,body{margin:0;background:var(--bg);color:var(--text);font:13.5px/1.4 var(--font);font-variant-numeric:tabular-nums}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
-.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .up{color:var(--long)} .down{color:var(--short)} .muted{color:var(--muted)}
 
 /* ---------- layout ---------- */
 .app{display:grid;height:100vh;gap:1px;background:var(--line);
-  grid-template-columns:228px minmax(0,1fr) 244px 316px;
-  grid-template-rows:auto minmax(360px,1fr) minmax(220px,34vh)}
+  grid-template-columns:224px minmax(0,1fr) 244px 312px;
+  grid-template-rows:auto minmax(360px,1fr) minmax(220px,33vh)}
 .app>*{background:var(--panel);min-width:0;min-height:0}
 header{grid-column:1/-1}
 .markets{grid-column:1;grid-row:2/4}
@@ -38,17 +41,13 @@ header{grid-column:1/-1}
 .bottom{grid-column:2/4;grid-row:3}
 
 /* ---------- header ---------- */
-header{display:flex;align-items:center;gap:28px;padding:10px 18px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;margin-right:6px}
-.tile{width:34px;height:38px;border-radius:4px;background:var(--gold);color:var(--bg);position:relative;
-  display:grid;place-items:center;font-weight:800;font-size:17px;letter-spacing:-.02em}
-.tile small{position:absolute;top:2px;left:4px;font-size:8.5px;font-weight:600;opacity:.75}
-.wordmark{font-weight:700;font-size:19px;letter-spacing:-.025em}
-.coin-btn{display:flex;align-items:baseline;gap:10px;background:none;border:0;padding:4px 6px;border-radius:6px}
+header{display:flex;align-items:center;gap:26px;padding:9px 18px;flex-wrap:wrap}
+.wordmark{font-family:var(--brand);font-weight:600;font-size:19px;letter-spacing:.09em;margin-right:8px;color:var(--text)}
+.coin-btn{display:flex;align-items:baseline;gap:9px;background:none;border:0;padding:4px 6px;border-radius:5px}
 .coin-btn:hover{background:var(--raise)}
-.coin-name{font-size:22px;font-weight:700;letter-spacing:-.02em}
-.lev-chip{font-size:11px;color:var(--gold);border:1px solid var(--gold-deep);padding:1px 6px;border-radius:3px}
-.bigprice{font-size:30px;font-weight:600;letter-spacing:-.03em;line-height:1;transition:color .25s}
+.coin-name{font-size:19px;font-weight:600}
+.lev-chip{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:1px 6px;border-radius:3px}
+.bigprice{font-size:24px;font-weight:500;line-height:1;transition:color .25s;min-width:7ch}
 .bigprice.tick-up{color:var(--long)} .bigprice.tick-down{color:var(--short)}
 .hstat{display:flex;flex-direction:column;gap:1px}
 .hstat span:first-child{font-size:11.5px;color:var(--muted)}
@@ -60,29 +59,36 @@ header{display:flex;align-items:center;gap:28px;padding:10px 18px;flex-wrap:wrap
 /* ---------- markets ---------- */
 .markets{display:flex;flex-direction:column}
 .mk-tools{display:flex;gap:6px;padding:10px}
-.mk-tools input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:6px 9px}
-.mk-tools select{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:4px 4px;font-size:12.5px}
-.mk-head,.mk-row{display:grid;grid-template-columns:1fr auto 62px;gap:8px;padding:5px 12px;align-items:center}
+.mk-tools input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 9px}
+.mk-tools select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px;font-size:12.5px}
+.mk-head,.mk-row{display:grid;grid-template-columns:1fr auto 60px;gap:8px;padding:5px 12px;align-items:center}
 .mk-head{font-size:11.5px;color:var(--faint)}
 .mk-list{overflow:auto;flex:1}
 .mk-row{width:100%;background:none;border:0;text-align:left;border-left:2px solid transparent}
 .mk-row:hover{background:var(--raise)}
-.mk-row.on{background:var(--gold-wash);border-left-color:var(--gold)}
+.mk-row.on{background:var(--accent-wash);border-left-color:var(--accent)}
 .mk-row b{font-weight:600}
 .mk-row .r{text-align:right}
 
 /* ---------- chart ---------- */
 .chartbox{display:flex;flex-direction:column}
-.chart-tools{display:flex;gap:2px;padding:8px 10px 0}
-.chart-tools button,.tabs button{background:none;border:0;padding:5px 9px;border-radius:4px;color:var(--muted);font-size:12.5px}
+.chart-tools{display:flex;align-items:center;gap:2px;padding:7px 10px;border-bottom:1px solid var(--line-soft)}
+.chart-tools button,.tabs button{background:none;border:0;padding:4px 9px;border-radius:4px;color:var(--muted);font-size:12.5px}
+.chart-tools button:hover,.tabs button:hover{color:var(--text)}
 .chart-tools button.on,.tabs button.on{color:var(--text);background:var(--raise)}
+.chart-tools .sep{width:1px;height:16px;background:var(--line);margin:0 6px}
+.chart-tools .hint{margin-left:auto;font-size:11.5px;color:var(--faint)}
 .chart-wrap{flex:1;position:relative;min-height:0}
-#chart{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+#chartEl{position:absolute;inset:0}
+.legend{position:absolute;top:8px;left:10px;z-index:3;font-size:12px;color:var(--muted);pointer-events:none;display:flex;gap:10px;flex-wrap:wrap}
+.legend b{color:var(--text);font-weight:600}
+.legend span i{font-style:normal;color:var(--text)}
+.chart-msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);z-index:2;pointer-events:none}
 
 /* ---------- book ---------- */
 .book{display:flex;flex-direction:column;font-size:12.5px}
 .panel-title{padding:10px 12px 6px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:baseline}
-.panel-title small{font-weight:400;color:var(--muted);font-size:11.5px}
+.panel-title small{font-weight:400;color:var(--faint);font-size:11.5px}
 .bk-head,.bk-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:2px 12px}
 .bk-head{color:var(--faint);font-size:11.5px}
 .bk-row{position:relative;background:none;border:0;width:100%;text-align:right}
@@ -100,44 +106,45 @@ header{display:flex;align-items:center;gap:28px;padding:10px 18px;flex-wrap:wrap
 /* ---------- ticket ---------- */
 .side{display:flex;flex-direction:column}
 .ticket{padding:14px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)}
-.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border-radius:7px;padding:3px}
-.seg button{border:0;background:none;padding:8px;border-radius:5px;font-weight:600;color:var(--muted)}
-.seg button.on[data-side=buy]{background:var(--long);color:#0E1A14}
-.seg button.on[data-side=sell]{background:var(--short);color:#1F0D09}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border-radius:5px;padding:3px}
+.seg button{border:0;background:none;padding:7px;border-radius:4px;font-weight:600;color:var(--muted)}
+.seg button.on[data-side=buy]{background:var(--long);color:#fff}
+.seg button.on[data-side=sell]{background:var(--short);color:#fff}
 .tabs{display:flex;gap:2px}
 .field{display:flex;flex-direction:column;gap:5px}
 .field>span,.lev-row span{font-size:12px;color:var(--muted)}
-.inp{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding-right:4px}
-.inp:focus-within{border-color:var(--gold-deep)}
-.inp input{flex:1;min-width:0;background:none;border:0;padding:9px 10px;outline:none;font-size:15px}
-.tiny{border:1px solid var(--line);background:var(--raise);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--muted)}
+.inp{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding-right:4px}
+.inp:focus-within{border-color:var(--accent)}
+.inp input{flex:1;min-width:0;background:none;border:0;padding:8px 10px;outline:none;font-size:14.5px}
+.tiny{border:1px solid var(--line);background:var(--raise);border-radius:3px;padding:3px 8px;font-size:12px;color:var(--muted)}
 .tiny:hover{color:var(--text)}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.chips button{background:var(--raise);border:1px solid var(--line-soft);border-radius:4px;padding:4px 0;font-size:12px;color:var(--muted)}
-.chips button:hover{color:var(--text);border-color:var(--gold-deep)}
+.chips button{background:var(--raise);border:1px solid var(--line-soft);border-radius:3px;padding:4px 0;font-size:12px;color:var(--muted)}
+.chips button:hover{color:var(--text);border-color:var(--line)}
 .lev-row{display:flex;justify-content:space-between;align-items:baseline}
-.lev-row output{font-weight:700;color:var(--gold);font-size:15px}
-input[type=range]{width:100%;accent-color:var(--gold)}
+.lev-row output{font-weight:600;font-size:14px}
+input[type=range]{width:100%;accent-color:var(--accent)}
 .checks{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
 .checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
-.checks input{accent-color:var(--gold)}
+.checks input{accent-color:var(--accent)}
 .tpsl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .summary{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:0;font-size:12.5px}
 .summary dt{color:var(--muted)} .summary dd{margin:0;text-align:right}
-.submit{border:0;border-radius:7px;padding:12px;font-weight:700;font-size:15px}
-.submit.long{background:var(--long);color:#0E1A14} .submit.short{background:var(--short);color:#1F0D09}
+.submit{border:0;border-radius:5px;padding:11px;font-weight:600;font-size:14.5px;color:#fff}
+.submit.long{background:var(--long)} .submit.short{background:var(--short)}
+.submit:hover{filter:brightness(1.08)}
 .submit:disabled{opacity:.55;cursor:wait}
 [hidden]{display:none!important}
 
-/* ---------- account / ingot ---------- */
+/* ---------- account ---------- */
 .acct{padding:14px;display:flex;flex-direction:column;gap:10px}
 .acct-top{display:flex;justify-content:space-between;align-items:baseline}
 .acct-top h2{margin:0;font-size:13px;font-weight:600}
-.equity{font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
-.ingot{position:relative;height:16px;border-radius:3px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
-.ingot .fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(180deg,#E9C56B,#B88A32);transition:width .4s}
-.ingot .mm{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--short)}
-.ingot-legend{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+.equity{font-size:22px;font-weight:600;line-height:1.15}
+.meter{position:relative;height:6px;border-radius:3px;background:var(--raise);overflow:visible}
+.meter .fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent);transition:width .4s}
+.meter .mm{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--short)}
+.meter-legend{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
 .kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:0;font-size:13px}
 .kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right}
 .link-btn{background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;text-underline-offset:3px;padding:0}
@@ -145,56 +152,54 @@ input[type=range]{width:100%;accent-color:var(--gold)}
 
 /* ---------- bottom tables ---------- */
 .bottom{display:flex;flex-direction:column}
-.bottom .tabs{padding:8px 10px 6px;border-bottom:1px solid var(--line-soft);align-items:center}
+.bottom .tabs{padding:7px 10px;border-bottom:1px solid var(--line-soft);align-items:center}
 .bottom .tabs .grow{flex:1}
 .tbl-wrap{overflow:auto;flex:1}
 table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
-th{position:sticky;top:0;background:var(--panel);color:var(--faint);font-weight:500;text-align:right;padding:7px 8px;font-size:11.5px}
+th{position:sticky;top:0;background:var(--panel);color:var(--faint);font-weight:500;text-align:right;padding:7px 8px;font-size:11.5px;z-index:1}
 td{text-align:right;padding:6px 8px;border-top:1px solid var(--line-soft)}
-th:first-child,td:first-child{text-align:left}
+th:first-child,td:first-child{text-align:left;padding-left:12px}
 td .coinlink{background:none;border:0;padding:0;font-weight:600}
-td .coinlink:hover{color:var(--gold)}
+td .coinlink:hover{color:var(--accent)}
 .act{display:inline-flex;gap:4px}
-.act button{background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:3px 8px;font-size:12px}
-.act button:hover{border-color:var(--gold-deep)}
+.act button{background:var(--raise);border:1px solid var(--line);border-radius:3px;padding:3px 8px;font-size:12px}
+.act button:hover{border-color:var(--muted)}
 .empty{padding:28px;text-align:center;color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:14px}
 .stats div span{display:block;font-size:11.5px;color:var(--muted)}
-.stats div b{font-size:17px;font-weight:600}
+.stats div b{font-size:16px;font-weight:600}
 #curve{width:100%;height:120px;display:block}
 
 /* ---------- toasts, dialogs, banner ---------- */
 #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50;max-width:min(380px,calc(100vw - 32px))}
-.toast{background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:6px;padding:10px 12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:tin .18s ease-out}
+.toast{background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:4px;padding:10px 12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:tin .18s ease-out}
 .toast.fill{border-left-color:var(--long)} .toast.error,.toast.liquidation{border-left-color:var(--short)}
 @keyframes tin{from{transform:translateY(6px);opacity:0}}
-.banner{position:fixed;top:0;left:50%;transform:translateX(-50%);background:var(--short);color:#1F0D09;padding:6px 14px;border-radius:0 0 6px 6px;font-size:13px;font-weight:600;z-index:60}
-dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:20px;width:min(360px,calc(100vw - 32px))}
-dialog::backdrop{background:rgba(10,8,5,.6)}
-dialog h3{margin:0 0 4px;font-size:17px}
+.banner{position:fixed;top:0;left:50%;transform:translateX(-50%);background:var(--short);color:#fff;padding:6px 14px;border-radius:0 0 4px 4px;font-size:13px;font-weight:600;z-index:60}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:20px;width:min(360px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(5,8,12,.65)}
+dialog h3{margin:0 0 4px;font-size:16px;font-weight:600}
 dialog p{margin:0 0 14px;color:var(--muted);font-size:13px}
 dialog form{display:flex;flex-direction:column;gap:12px}
 .dlg-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
-.btn{border:1px solid var(--line);background:var(--raise);border-radius:6px;padding:8px 14px;font-weight:600}
-.btn.primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
-.btn.danger{background:var(--short);color:#1F0D09;border-color:var(--short)}
+.btn{border:1px solid var(--line);background:var(--raise);border-radius:4px;padding:7px 14px;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.danger{background:var(--short);color:#fff;border-color:var(--short)}
 
-/* market picker overlay on smaller screens */
 .mk-close{display:none}
-
 @media (max-width:1279px){
   .app{grid-template-columns:minmax(0,1fr) 232px 300px}
-  .markets{position:fixed;inset:0 auto 0 0;width:min(320px,88vw);z-index:40;box-shadow:0 0 0 100vmax rgba(10,8,5,.6);display:none}
+  .markets{position:fixed;inset:0 auto 0 0;width:min(320px,88vw);z-index:40;box-shadow:0 0 0 100vmax rgba(5,8,12,.6);display:none}
   .markets.open{display:flex}
   .mk-close{display:block}
   .chartbox{grid-column:1} .book{grid-column:2} .side{grid-column:3} .bottom{grid-column:1/3}
+  .chart-tools .hint{display:none}
 }
 @media (max-width:899px){
   .app{display:flex;flex-direction:column;height:auto;min-height:100vh}
   header{gap:14px 20px}
-  header{order:0} .chartbox{order:1;height:340px} .side{order:2} .book{order:3;height:auto} .bk-side{max-height:180px}
+  header{order:0} .chartbox{order:1;height:360px} .side{order:2} .book{order:3;height:auto} .bk-side{max-height:180px}
   .bottom{order:4;height:420px}
-  .bigprice{font-size:24px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -202,14 +207,14 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 <body>
 <div class="app">
   <header>
-    <div class="brand"><div class="tile" aria-hidden="true"><small>79</small>Au</div><span class="wordmark">Aureous</span></div>
+    <span class="wordmark">Aureous</span>
     <button class="coin-btn" id="coinBtn" title="Change market"><span class="coin-name" id="hCoin">–</span><span class="lev-chip" id="hMaxLev"></span></button>
-    <div class="bigprice num" id="hPrice">–</div>
-    <div class="hstat"><span>24h change</span><span id="hChange" class="num">–</span></div>
-    <div class="hstat"><span>Funding / hour</span><span id="hFunding" class="num">–</span></div>
-    <div class="hstat"><span>Next funding</span><span id="hCountdown" class="num">–</span></div>
-    <div class="hstat"><span>24h volume</span><span id="hVol" class="num">–</span></div>
-    <div class="hstat"><span>Open interest</span><span id="hOI" class="num">–</span></div>
+    <div class="bigprice" id="hPrice">–</div>
+    <div class="hstat"><span>24h change</span><span id="hChange">–</span></div>
+    <div class="hstat"><span>Funding / hour</span><span id="hFunding">–</span></div>
+    <div class="hstat"><span>Next funding</span><span id="hCountdown">–</span></div>
+    <div class="hstat"><span>24h volume</span><span id="hVol">–</span></div>
+    <div class="hstat"><span>Open interest</span><span id="hOI">–</span></div>
     <div class="conn" id="conn"><span class="dot"></span><span id="connText">Live</span></div>
   </header>
 
@@ -230,15 +235,22 @@ dialog form{display:flex;flex-direction:column;gap:12px}
     <div class="chart-tools" id="intervals">
       <button data-i="1m">1m</button><button data-i="5m">5m</button><button data-i="15m">15m</button>
       <button data-i="1h" class="on">1h</button><button data-i="4h">4h</button><button data-i="1d">1d</button>
+      <span class="sep"></span>
+      <button id="resetView" title="Back to the latest candles at the default zoom">Reset view</button>
+      <span class="hint">Drag to move, scroll to zoom, drag the price axis to stretch</span>
     </div>
-    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div class="chart-wrap">
+      <div class="legend" id="legend"></div>
+      <div class="chart-msg" id="chartMsg">Loading chart</div>
+      <div id="chartEl"></div>
+    </div>
   </section>
 
   <section class="book" aria-label="Order book">
     <div class="panel-title">Order book <small>click a price to use it</small></div>
     <div class="bk-head"><span>Price</span><span style="text-align:right">Size</span><span style="text-align:right">Total</span></div>
     <div class="bk-side asks" id="asks"></div>
-    <div class="spread"><b id="bkMid" class="num">–</b><span id="bkSpread" class="num"></span></div>
+    <div class="spread"><b id="bkMid">–</b><span id="bkSpread"></span></div>
     <div class="bk-side" id="bids"></div>
   </section>
 
@@ -286,17 +298,17 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 
     <section class="acct" aria-label="Account">
       <div class="acct-top"><h2>Account</h2><button class="link-btn" id="resetBtn" type="button">Reset account</button></div>
-      <div><div class="equity num" id="aEquity">–</div><div id="aReturn" class="num" style="font-size:12.5px"></div></div>
-      <div class="ingot" title="Margin in use, as a share of equity. The red mark is maintenance margin: drop below it and you're liquidated.">
-        <div class="fill" id="ingotFill" style="width:0"></div><div class="mm" id="ingotMM" style="left:0"></div>
+      <div><div class="equity" id="aEquity">–</div><div id="aReturn" style="font-size:12.5px"></div></div>
+      <div class="meter" title="Margin in use, as a share of equity. The red mark is maintenance margin: fall below it and you're liquidated.">
+        <div class="fill" id="meterFill" style="width:0"></div><div class="mm" id="meterMM" style="left:0"></div>
       </div>
-      <div class="ingot-legend"><span id="ingotPct">0% margin in use</span><span>red mark = liquidation line</span></div>
+      <div class="meter-legend"><span id="meterPct">0% margin in use</span><span>red mark = liquidation line</span></div>
       <dl class="kv">
-        <dt>Balance</dt><dd id="aBal" class="num">–</dd>
-        <dt>Unrealized PnL</dt><dd id="aUpnl" class="num">–</dd>
-        <dt>Margin used</dt><dd id="aMargin" class="num">–</dd>
-        <dt>Available</dt><dd id="aAvail" class="num">–</dd>
-        <dt>Maintenance</dt><dd id="aMaint" class="num">–</dd>
+        <dt>Balance</dt><dd id="aBal">–</dd>
+        <dt>Unrealized PnL</dt><dd id="aUpnl">–</dd>
+        <dt>Margin used</dt><dd id="aMargin">–</dd>
+        <dt>Available</dt><dd id="aAvail">–</dd>
+        <dt>Maintenance</dt><dd id="aMaint">–</dd>
       </dl>
     </section>
   </div>
@@ -337,14 +349,18 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {long: cssVar("--long"), short: cssVar("--short"), accent: cssVar("--accent"), muted: cssVar("--muted"),
+           faint: cssVar("--faint"), line: cssVar("--line"), lineSoft: cssVar("--line-soft"), panel: cssVar("--panel"), text: cssVar("--text")};
 const store = {
   get(k, d){ try { const v = localStorage.getItem("aureous." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v){ try { localStorage.setItem("aureous." + k, JSON.stringify(v)); } catch {} }
 };
+const INTERVAL_MS = {"1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
 const S = {
   coin: store.get("coin", "BTC"), interval: store.get("interval", "1h"), side: "buy", type: "market",
-  unit: "usd", tab: "positions", markets: [], mk: {}, acct: null, book: null, candles: [],
-  lastEvent: null, hover: null, prevPrice: null,
+  unit: "usd", tab: "positions", markets: [], mk: {}, acct: null, book: null,
+  candles: [], olderLoading: false, noOlder: false, chartGen: 0, lastEvent: null, prevPrice: null,
 };
 
 // ---------- formatting ----------
@@ -376,6 +392,7 @@ async function act(path, body){
   try {
     const r = await api(path, body);
     (r.warnings || []).forEach(w => toast(w, "error"));
+    if (path === "/api/order") r.messages.forEach(m => toast(m, "fill"));
     await refreshState();
     return r;
   } catch (e) { toast(e.message, "error"); throw e; }
@@ -388,7 +405,7 @@ async function refreshMarkets(){
   S.markets = r.data; S.mk = {};
   for (const m of S.markets) S.mk[m.name] = m;
   if (!S.mk[S.coin]) S.coin = S.mk.BTC ? "BTC" : S.markets[0]?.name;
-  renderMarkets(); renderHeader(); updateLiveCandle(); renderSummary();
+  renderMarkets(); renderHeader(); tickLastCandle(); renderSummary();
 }
 function renderMarkets(){
   const q = $("#mkSearch").value.trim().toLowerCase(), sort = $("#mkSort").value;
@@ -396,7 +413,7 @@ function renderMarkets(){
   const list = S.markets.filter(m => !q || m.name.toLowerCase().includes(q))
     .sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
   $("#mkList").innerHTML = list.map(m =>
-    `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"><b>${esc(m.name)}</b><span class="r num">${fpx(m.mark)}</span><span class="r num ${cls(m.change)}">${pct(m.change)}</span></button>`
+    `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"><b>${esc(m.name)}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span></button>`
   ).join("") || `<div class="empty">No market matches “${esc(q)}”</div>`;
 }
 function renderHeader(){
@@ -416,7 +433,7 @@ function renderHeader(){
   $("#hFunding").title = `${pct(m.funding * 24 * 365, 1)} a year. Positive: longs pay shorts.`;
   $("#hVol").textContent = "$" + big(m.volume);
   $("#hOI").textContent = "$" + big(m.oi);
-  document.title = `${fpx(m.mark)} ${m.name} · Aureous`;
+  document.title = `${fpx(m.mark)} ${m.name} | Aureous`;
 }
 function countdown(){
   const now = new Date(), left = 3600 - (now.getMinutes() * 60 + now.getSeconds());
@@ -425,117 +442,133 @@ function countdown(){
 function selectCoin(name){
   if (!S.mk[name]) return;
   S.coin = name; store.set("coin", name);
-  S.candles = []; S.book = null; S.prevPrice = null;
+  S.book = null; S.prevPrice = null;
   $("#px").value = ""; $("#tpIn").value = ""; $("#slIn").value = "";
   $("#markets").classList.remove("open");
-  syncLeverage(); renderMarkets(); renderHeader(); renderSummary(); drawChart(); renderBook();
+  syncLeverage(); renderMarkets(); renderHeader(); renderSummary(); renderBook();
   loadCandles(); refreshBook();
 }
 
-// ---------- chart ----------
+// ---------- chart (TradingView Lightweight Charts) ----------
+const LC = window.LightweightCharts;
+let chart, candleSeries, volSeries, priceLines = [];
+// Lightweight Charts plots UTC; shift so the axis shows the viewer's local time.
+const toChartTime = ms => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
+function initChart(){
+  if (!LC) { $("#chartMsg").textContent = "Chart library failed to load"; return; }
+  chart = LC.createChart($("#chartEl"), {
+    autoSize: true,
+    layout: {background: {type: "solid", color: C.panel}, textColor: C.muted, fontFamily: cssVar("--font"), fontSize: 11, attributionLogo: true},
+    grid: {vertLines: {color: C.lineSoft}, horzLines: {color: C.lineSoft}},
+    crosshair: {mode: LC.CrosshairMode.Normal,
+      vertLine: {color: C.faint, labelBackgroundColor: "#2A3647"}, horzLine: {color: C.faint, labelBackgroundColor: "#2A3647"}},
+    rightPriceScale: {borderColor: C.line, scaleMargins: {top: .1, bottom: .22}},
+    timeScale: {borderColor: C.line, timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 7, minBarSpacing: .5},
+    handleScroll: {mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true},
+    handleScale: {mouseWheel: true, pinch: true, axisPressedMouseMove: {time: true, price: true}, axisDoubleClickReset: {time: true, price: true}},
+    kineticScroll: {mouse: true, touch: true},
+  });
+  candleSeries = chart.addSeries(LC.CandlestickSeries, {
+    upColor: C.long, downColor: C.short, wickUpColor: C.long, wickDownColor: C.short, borderVisible: false,
+    priceLineColor: C.muted, priceLineStyle: LC.LineStyle.Dotted,
+  });
+  volSeries = chart.addSeries(LC.HistogramSeries, {priceScaleId: "vol", priceFormat: {type: "volume"}, lastValueVisible: false, priceLineVisible: false});
+  chart.priceScale("vol").applyOptions({scaleMargins: {top: .86, bottom: 0}});
+  chart.subscribeCrosshairMove(p => renderLegend(p && p.time !== undefined ? p.seriesData.get(candleSeries) : null));
+  chart.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r && r.from < 20) loadOlder(); });
+  $("#chartEl").addEventListener("dblclick", resetView);
+}
+function resetView(){
+  if (!chart) return;
+  chart.priceScale("right").applyOptions({autoScale: true});
+  chart.timeScale().applyOptions({barSpacing: 7, rightOffset: 8});
+  chart.timeScale().scrollToRealTime();
+}
+function barOf(k){ return {time: toChartTime(k[0]), open: k[1], high: k[2], low: k[3], close: k[4]}; }
+function volOf(k){ return {time: toChartTime(k[0]), value: k[5], color: k[4] >= k[1] ? "rgba(47,165,125,.35)" : "rgba(219,90,85,.35)"}; }
+function setPriceFormat(){
+  const m = market(); if (!m || !candleSeries) return;
+  const d = decs(m.mark);
+  candleSeries.applyOptions({priceFormat: {type: "price", precision: d, minMove: Math.pow(10, -d)}});
+  chart.applyOptions({localization: {priceFormatter: p => fpx(p, d)}});
+}
 async function loadCandles(){
-  const coin = S.coin, interval = S.interval;
+  if (!chart) return;
+  const gen = ++S.chartGen, coin = S.coin, interval = S.interval;
+  S.candles = []; S.noOlder = false;
+  candleSeries.setData([]); volSeries.setData([]);
+  $("#chartMsg").hidden = false; $("#chartMsg").textContent = "Loading chart";
+  setPriceFormat();
   try {
-    const r = await api(`/api/candles?coin=${encodeURIComponent(coin)}&interval=${interval}&n=150`);
-    if (coin !== S.coin || interval !== S.interval) return;
-    S.candles = r.data.map(([t, o, h, l, c]) => ({t, o, h, l, c}));
-    updateLiveCandle(); drawChart();
-  } catch (e) { /* chart stays as is; banner handles connectivity */ }
+    const r = await api(`/api/candles?coin=${encodeURIComponent(coin)}&interval=${interval}&n=300`);
+    if (gen !== S.chartGen) return;
+    S.candles = r.data;
+    candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
+    $("#chartMsg").hidden = !!S.candles.length;
+    if (!S.candles.length) $("#chartMsg").textContent = "No price history for this market yet";
+    resetView(); tickLastCandle(); drawPriceLines(); renderLegend(null);
+  } catch (e) { if (gen === S.chartGen) $("#chartMsg").textContent = "Couldn't load the chart. Retrying shortly."; }
 }
-function updateLiveCandle(){
+async function loadOlder(){
+  if (S.olderLoading || S.noOlder || !S.candles.length) return;
+  S.olderLoading = true;
+  const gen = S.chartGen, oldest = S.candles[0][0];
+  try {
+    const r = await api(`/api/candles?coin=${encodeURIComponent(S.coin)}&interval=${S.interval}&n=300&end=${oldest - 1}`);
+    if (gen !== S.chartGen) return;
+    const older = r.data.filter(k => k[0] < oldest);
+    if (!older.length) { S.noOlder = true; return; }
+    const range = chart.timeScale().getVisibleLogicalRange();
+    S.candles = older.concat(S.candles);
+    candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
+    if (range) chart.timeScale().setVisibleLogicalRange({from: range.from + older.length, to: range.to + older.length});
+  } catch {} finally { S.olderLoading = false; }
+}
+// keep the newest candle moving with the live mark price
+function tickLastCandle(){
   const m = market(), k = S.candles[S.candles.length - 1];
-  if (!m || !k) return;
-  k.c = m.mark; k.h = Math.max(k.h, m.mark); k.l = Math.min(k.l, m.mark);
-  drawChart();
+  if (!m || !k || !candleSeries) return;
+  const step = INTERVAL_MS[S.interval], now = Date.now();
+  if (now >= k[0] + step) {                      // a new candle has started
+    const t = k[0] + Math.floor((now - k[0]) / step) * step;
+    S.candles.push([t, k[4], Math.max(k[4], m.mark), Math.min(k[4], m.mark), m.mark, 0]);
+  } else { k[4] = m.mark; k[2] = Math.max(k[2], m.mark); k[3] = Math.min(k[3], m.mark); }
+  const last = S.candles[S.candles.length - 1];
+  candleSeries.update(barOf(last)); volSeries.update(volOf(last));
+  if (!S.hovering) renderLegend(null);
 }
-function overlays(){
-  const out = [], p = S.acct?.positions.find(x => x.coin === S.coin);
+async function refreshRecentCandles(){
+  if (!S.candles.length) return;
+  const gen = S.chartGen;
+  const r = await api(`/api/candles?coin=${encodeURIComponent(S.coin)}&interval=${S.interval}&n=3`);
+  if (gen !== S.chartGen) return;
+  for (const k of r.data) {
+    const i = S.candles.findIndex(x => x[0] === k[0]);
+    if (i >= 0) S.candles[i] = k; else if (k[0] > S.candles[S.candles.length - 1][0]) S.candles.push(k); else continue;
+    candleSeries.update(barOf(k)); volSeries.update(volOf(k));
+  }
+}
+function renderLegend(bar){
+  S.hovering = !!bar;
+  if (!bar) { const k = S.candles[S.candles.length - 1]; if (!k) { $("#legend").innerHTML = ""; return; } bar = barOf(k); }
+  const chg = bar.close / bar.open - 1;
+  $("#legend").innerHTML = `<b>${esc(S.coin)} ${S.interval}</b><span>O <i>${fpx(bar.open)}</i></span><span>H <i>${fpx(bar.high)}</i></span><span>L <i>${fpx(bar.low)}</i></span><span>C <i>${fpx(bar.close)}</i></span><span class="${cls(chg)}">${pct(chg)}</span>`;
+}
+function drawPriceLines(){
+  if (!candleSeries) return;
+  priceLines.forEach(l => candleSeries.removePriceLine(l)); priceLines = [];
+  const add = (price, color, title, style = LC.LineStyle.Dashed) =>
+    priceLines.push(candleSeries.createPriceLine({price, color, title, lineWidth: 1, lineStyle: style, axisLabelVisible: true}));
+  const p = S.acct?.positions.find(x => x.coin === S.coin);
   if (p) {
-    out.push({px: p.entry, color: "#D8AD4F", label: `Entry ${p.size > 0 ? "long" : "short"}`});
-    if (p.liq) out.push({px: p.liq, color: "#E0644E", label: "Liquidation"});
+    add(p.entry, C.accent, `Entry ${p.size > 0 ? "long" : "short"}`, LC.LineStyle.Solid);
+    if (p.liq) add(p.liq, C.short, "Liquidation");
   }
   for (const o of S.acct?.orders || []) {
     if (o.coin !== S.coin) continue;
-    if (o.type === "limit") out.push({px: o.px, color: "#998C74", label: `${o.side === "buy" ? "Buy" : "Sell"} limit`});
-    else out.push({px: o.trigger_px, color: o.type === "tp" ? "#4DB088" : "#E0644E", label: o.type === "tp" ? "Take profit" : "Stop loss"});
+    if (o.type === "limit") add(o.px, C.muted, `${o.side === "buy" ? "Buy" : "Sell"} limit`);
+    else add(o.trigger_px, o.type === "tp" ? C.long : C.short, o.type === "tp" ? "Take profit" : "Stop loss");
   }
-  return out;
-}
-function drawChart(){
-  const cv = $("#chart"), W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
-  if (!W || !H) return;
-  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  const g = cv.getContext("2d");
-  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  g.font = "11.5px " + getComputedStyle(document.body).fontFamily;
-  const data = S.candles;
-  if (!data.length) { g.fillStyle = "#998C74"; g.fillText("Loading chart…", 16, 28); return; }
-  const padR = 78, padB = 22, padT = 30, pw = W - padR, ph = H - padB - padT;
-  let lo = Math.min(...data.map(k => k.l)), hi = Math.max(...data.map(k => k.h));
-  const lines = overlays().filter(l => { const r = hi - lo; return l.px > lo - r * .6 && l.px < hi + r * .6; });
-  for (const l of lines) { lo = Math.min(lo, l.px); hi = Math.max(hi, l.px); }
-  const padP = (hi - lo) * .06 || hi * .01; lo -= padP; hi += padP;
-  const y = p => padT + (hi - p) / (hi - lo) * ph;
-  const cw = pw / data.length;
-
-  // grid + price axis
-  g.strokeStyle = "#2A241C"; g.lineWidth = 1; g.fillStyle = "#6E6352"; g.textBaseline = "middle";
-  for (let i = 0; i <= 5; i++) {
-    const p = lo + (hi - lo) * i / 5, yy = Math.round(y(p)) + .5;
-    g.beginPath(); g.moveTo(0, yy); g.lineTo(pw, yy); g.stroke();
-    g.fillText(fpx(p), pw + 8, yy);
-  }
-  // time axis
-  g.textBaseline = "alphabetic";
-  const every = Math.max(1, Math.ceil(110 / cw));
-  for (let i = 0; i < data.length; i += every) {
-    const d = new Date(data[i].t), x = i * cw + cw / 2;
-    const lab = S.interval === "1d" ? d.toLocaleDateString(undefined, {month: "short", day: "numeric"})
-      : (S.interval === "1h" || S.interval === "4h") ? `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, "0")}:00`
-      : `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    g.fillText(lab, Math.min(x - 20, pw - 60), H - 6);
-  }
-  // candles
-  const bw = Math.max(1, Math.min(14, cw * .68));
-  data.forEach((k, i) => {
-    const x = i * cw + cw / 2, upk = k.c >= k.o;
-    g.strokeStyle = g.fillStyle = upk ? "#4DB088" : "#E0644E";
-    g.beginPath(); g.moveTo(Math.round(x) + .5, y(k.h)); g.lineTo(Math.round(x) + .5, y(k.l)); g.stroke();
-    const top = y(Math.max(k.o, k.c)), hgt = Math.max(1, Math.abs(y(k.o) - y(k.c)));
-    g.fillRect(x - bw / 2, top, bw, hgt);
-  });
-  // overlay lines
-  const tag = (py, text, color, dark) => {
-    g.font = "600 11px " + getComputedStyle(document.body).fontFamily;
-    g.fillStyle = color; g.fillRect(pw + 1, py - 9, padR - 2, 18);
-    g.fillStyle = dark; g.textBaseline = "middle"; g.fillText(text, pw + 6, py);
-    g.font = "11.5px " + getComputedStyle(document.body).fontFamily;
-  };
-  for (const l of lines) {
-    const yy = Math.round(y(l.px)) + .5;
-    g.setLineDash([6, 4]); g.strokeStyle = l.color; g.beginPath(); g.moveTo(0, yy); g.lineTo(pw, yy); g.stroke(); g.setLineDash([]);
-    g.fillStyle = l.color; g.textBaseline = "bottom"; g.fillText(l.label, 8, yy - 2);
-    tag(yy, fpx(l.px), l.color, "#15120E");
-  }
-  // last price
-  const last = data[data.length - 1].c, ly = Math.round(y(last)) + .5;
-  g.setLineDash([2, 3]); g.strokeStyle = "#D8AD4F"; g.beginPath(); g.moveTo(0, ly); g.lineTo(pw, ly); g.stroke(); g.setLineDash([]);
-  tag(ly, fpx(last), "#D8AD4F", "#15120E");
-  // crosshair + legend
-  let k = data[data.length - 1];
-  if (S.hover && S.hover.x < pw && S.hover.y > padT && S.hover.y < padT + ph) {
-    const i = Math.min(data.length - 1, Math.max(0, Math.floor(S.hover.x / cw)));
-    k = data[i];
-    g.strokeStyle = "#6E6352"; g.setLineDash([3, 3]);
-    g.beginPath(); g.moveTo(i * cw + cw / 2, padT); g.lineTo(i * cw + cw / 2, padT + ph); g.moveTo(0, S.hover.y); g.lineTo(pw, S.hover.y); g.stroke(); g.setLineDash([]);
-    tag(S.hover.y, fpx(lo + (padT + ph - S.hover.y) / ph * (hi - lo)), "#3A3127", "#EEE5D1");
-  }
-  g.textBaseline = "top"; g.fillStyle = "#998C74";
-  const chg = k.c / k.o - 1;
-  const legend = `${S.coin} · ${S.interval}   O ${fpx(k.o)}  H ${fpx(k.h)}  L ${fpx(k.l)}  C ${fpx(k.c)}  `;
-  g.fillText(legend, 10, 9);
-  g.fillStyle = chg >= 0 ? "#4DB088" : "#E0644E";
-  g.fillText(pct(chg), 10 + g.measureText(legend).width, 9);
 }
 
 // ---------- order book ----------
@@ -543,6 +576,7 @@ async function refreshBook(){
   const coin = S.coin;
   try { const r = await api(`/api/book?coin=${encodeURIComponent(coin)}`); if (coin === S.coin) { S.book = r; renderBook(); } } catch {}
 }
+function fmtSz(s){ return s >= 1000 ? big(s) : s.toLocaleString("en-US", {maximumFractionDigits: s >= 10 ? 2 : 4}); }
 function renderBook(){
   const b = S.book, small = matchMedia("(max-width:899px)").matches;
   const n = small ? 8 : Math.max(3, Math.min(14, Math.floor(($("#bids").clientHeight || 200) / 21.5)));
@@ -550,7 +584,7 @@ function renderBook(){
   const asks = b.asks.slice(0, n), bids = b.bids.slice(0, n);
   const cum = arr => { let t = 0; return arr.map(([p, s]) => [p, s, t += s]); };
   const ca = cum(asks), cb = cum(bids), max = Math.max(ca.at(-1)?.[2] || 0, cb.at(-1)?.[2] || 0) || 1;
-  const row = (kind, [p, s, t]) => `<button class="bk-row bk-${kind}" data-px="${p}"><i style="width:${(t / max * 100).toFixed(1)}%"></i><span class="num">${fpx(p)}</span><span class="num">${fmtSz(s)}</span><span class="num">${fmtSz(t)}</span></button>`;
+  const row = (kind, [p, s, t]) => `<button class="bk-row bk-${kind}" data-px="${p}"><i style="width:${(t / max * 100).toFixed(1)}%"></i><span>${fpx(p)}</span><span>${fmtSz(s)}</span><span>${fmtSz(t)}</span></button>`;
   $("#asks").innerHTML = ca.slice().reverse().map(r => row("ask", r)).join("");
   $("#bids").innerHTML = cb.map(r => row("bid", r)).join("");
   if (asks[0] && bids[0]) {
@@ -559,7 +593,6 @@ function renderBook(){
     $("#bkSpread").textContent = `spread ${fpx(sp)} (${(sp / mid * 1e4).toFixed(1)} bps)`;
   }
 }
-function fmtSz(s){ return s >= 1000 ? big(s) : s.toLocaleString("en-US", {maximumFractionDigits: s >= 10 ? 2 : 4}); }
 
 // ---------- ticket ----------
 function syncLeverage(){
@@ -571,7 +604,7 @@ function refPrice(){ const m = market(); if (!m) return NaN; if (S.type === "lim
 function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "usd" ? sz : sz * refPrice(); }
 function renderSummary(){
   const m = market(), a = S.acct; if (!m) return;
-  const n = notional(), lev = +$("#lev").value, fee = S.acct ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
+  const n = notional(), lev = +$("#lev").value, fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
   $("#sValue").textContent = n ? usd(n) + (S.unit === "usd" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${m.name})` : "") : "–";
   $("#sMargin").textContent = n ? usd(n / lev) : "–";
   $("#sFee").textContent = n ? usd(n * fee) : "–";
@@ -612,8 +645,11 @@ async function refreshState(){
   const r = await api(`/api/state?since=${S.lastEvent ?? 0}`);
   if (S.lastEvent !== null) r.events.forEach(e => { if (e.kind !== "fill") toast(e.msg, e.kind); });
   S.lastEvent = r.last_event;
+  const linesChanged = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]) !== S.linesKey;
+  S.linesKey = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]);
   S.acct = r;
-  renderAccount(); renderBottom(); renderSummary(); drawChart();
+  renderAccount(); renderBottom(); renderSummary();
+  if (linesChanged) drawPriceLines();
   const ban = $("#banner");
   ban.hidden = !r.error; if (r.error) ban.textContent = "Can't reach Hyperliquid right now. Showing the last prices received.";
   $("#conn").classList.toggle("bad", !!r.error); $("#connText").textContent = r.error ? "Reconnecting" : "Live";
@@ -623,9 +659,9 @@ function renderAccount(){
   $("#aEquity").textContent = usd(a.equity);
   $("#aReturn").innerHTML = `<span class="${cls(ret)}">${pct(ret)}</span> <span class="muted">since you started with ${usd(a.start)}</span>`;
   const used = a.equity > 0 ? Math.min(1, (a.margin_used + a.order_margin) / a.equity) : 1;
-  $("#ingotFill").style.width = (used * 100).toFixed(1) + "%";
-  $("#ingotMM").style.left = (a.equity > 0 ? Math.min(1, a.maintenance / a.equity) * 100 : 100).toFixed(1) + "%";
-  $("#ingotPct").textContent = `${(used * 100).toFixed(0)}% margin in use`;
+  $("#meterFill").style.width = (used * 100).toFixed(1) + "%";
+  $("#meterMM").style.left = (a.equity > 0 ? Math.min(1, a.maintenance / a.equity) * 100 : 100).toFixed(1) + "%";
+  $("#meterPct").textContent = `${(used * 100).toFixed(0)}% margin in use`;
   $("#aBal").textContent = usd(a.balance);
   $("#aUpnl").innerHTML = `<span class="${cls(a.upnl)}">${sgnUsd(a.upnl)}</span>`;
   $("#aMargin").textContent = usd(a.margin_used);
@@ -695,12 +731,12 @@ function drawCurve(){
   const pts = S.acct.curve, W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
   cv.width = W * dpr; cv.height = H * dpr;
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.font = "12px " + getComputedStyle(document.body).fontFamily;
-  if (pts.length < 2) { g.fillStyle = "#998C74"; g.fillText("Your equity curve appears here after a few minutes of trading.", 14, 20); return; }
+  g.font = "12px " + cssVar("--font");
+  if (pts.length < 2) { g.fillStyle = C.muted; g.fillText("Your equity curve appears here after a few minutes of trading.", 14, 20); return; }
   const vals = pts.map(p => p[1]), lo = Math.min(...vals, S.acct.start), hi = Math.max(...vals, S.acct.start), r = hi - lo || 1;
   const x = i => 14 + i / (pts.length - 1) * (W - 28), y = v => 10 + (hi - v) / r * (H - 20);
-  g.strokeStyle = "#342C22"; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(14, y(S.acct.start)); g.lineTo(W - 14, y(S.acct.start)); g.stroke(); g.setLineDash([]);
-  g.strokeStyle = "#D8AD4F"; g.lineWidth = 1.6; g.beginPath();
+  g.strokeStyle = C.line; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(14, y(S.acct.start)); g.lineTo(W - 14, y(S.acct.start)); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = C.accent; g.lineWidth = 1.6; g.beginPath();
   vals.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v))); g.stroke();
 }
 
@@ -714,14 +750,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") $("#markets"
 $("#intervals").addEventListener("click", e => {
   const b = e.target.closest("[data-i]"); if (!b) return;
   S.interval = b.dataset.i; store.set("interval", S.interval);
-  document.querySelectorAll("#intervals button").forEach(x => x.classList.toggle("on", x === b));
-  S.candles = []; drawChart(); loadCandles();
+  document.querySelectorAll("#intervals [data-i]").forEach(x => x.classList.toggle("on", x === b));
+  loadCandles();
 });
-const cv = $("#chart");
-cv.addEventListener("mousemove", e => { const r = cv.getBoundingClientRect(); S.hover = {x: e.clientX - r.left, y: e.clientY - r.top}; drawChart(); });
-cv.addEventListener("mouseleave", () => { S.hover = null; drawChart(); });
-new ResizeObserver(() => drawChart()).observe(cv.parentElement);
-
+$("#resetView").addEventListener("click", resetView);
 document.querySelector(".book").addEventListener("click", e => {
   const b = e.target.closest("[data-px]"); if (!b) return;
   setType("limit"); $("#px").value = fpx(+b.dataset.px).replace(/,/g, ""); renderSummary(); $("#size").focus();
@@ -784,20 +816,20 @@ $("#resetDlg").addEventListener("close", () => {
   act("/api/reset", {balance: num($("#dBal").value)}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
 });
 
-// show fills from our own actions as toasts
-const _act = act;
-act = async (path, body) => { const r = await _act(path, body); if (path === "/api/order") r.messages.forEach(m => toast(m, "fill")); return r; };
-
 // ---------- loops ----------
 function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) { $("#conn").classList.add("bad"); $("#connText").textContent = "Offline"; } setTimeout(run, ms); }; run(); }
 (async function init(){
-  document.querySelectorAll("#intervals button").forEach(x => x.classList.toggle("on", x.dataset.i === S.interval));
+  document.querySelectorAll("#intervals [data-i]").forEach(x => x.classList.toggle("on", x.dataset.i === S.interval));
+  initChart();
+  document.fonts?.ready.then(() => chart && chart.applyOptions({layout: {fontFamily: cssVar("--font")}}));
   try { await refreshMarkets(); } catch (e) { toast("Couldn't load markets: " + e.message, "error"); }
   syncLeverage(); renderSummary();
+  await refreshState().catch(() => {});
+  loadCandles();
   loop(refreshState, 1500);
   setTimeout(() => loop(refreshMarkets, 2500), 2500);
   loop(refreshBook, 1500);
-  loadCandles(); setInterval(loadCandles, 30000);
+  setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
   countdown(); setInterval(countdown, 1000);
 })();
 </script>

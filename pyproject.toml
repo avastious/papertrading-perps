@@ -20,7 +20,7 @@ aureous = "aureous.__main__:main"
 packages = ["aureous"]
 
 [tool.setuptools.package-data]
-aureous = ["web/*"]
+aureous = ["web/*", "web/fonts/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
