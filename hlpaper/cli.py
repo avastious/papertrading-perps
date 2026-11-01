@@ -12,7 +12,23 @@ from datetime import datetime
 from .api import HyperliquidAPIError
 from .engine import PaperError, PaperExchange, sign
 
-USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+def _enable_ansi() -> bool:
+    """Classic Windows consoles show raw escape codes unless VT processing is switched on."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        return bool(kernel32.SetConsoleMode(handle, mode.value | 0x0004))  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    except Exception:
+        return False
+
+
+USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None and _enable_ansi()
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 

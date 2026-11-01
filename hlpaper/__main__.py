@@ -23,6 +23,10 @@ def main(argv=None):
     ap.add_argument("--maker-fee", type=float, default=0.00015, help="maker fee rate (default 0.00015 = 0.015%%)")
     ap.add_argument("command", nargs=argparse.REMAINDER, help="optional one-shot command")
     a = ap.parse_args(argv)
+    try:  # never crash on symbols like ✓ in consoles with a legacy code page
+        sys.stdout.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
     client = HyperliquidClient(TESTNET if a.testnet else MAINNET)
     ex = PaperExchange(client, a.state, starting_balance=a.balance,
