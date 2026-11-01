@@ -132,6 +132,8 @@ async function main() {
       catch (e) { await backend.signOut().catch(() => {}); throw new Error("Your trading data was deleted, but removing the login failed: " + friendly(e)); }
     },
     leaderboard: () => call("/api/leaderboard", undefined, signedIn),
+    trader: pid => call(`/api/trader/${encodeURIComponent(pid)}`, undefined, signedIn),
+    async setPrivate(priv) { const r = await call("/api/privacy", {private: !!priv}); UI.adoptRemote(r); return r; },
   });
 
   backend.onUser(async user => {

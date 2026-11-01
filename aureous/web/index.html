@@ -230,6 +230,44 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 .board-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 12px 4px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
 .board-head b{color:var(--text);font-weight:600}
 tr.me td{background:var(--accent-wash)}
+.badge{display:inline-block;vertical-align:-3px;flex:none}
+.trader-btn{background:none;border:0;padding:0;display:inline-flex;align-items:center;gap:6px;font-weight:500;text-align:left}
+.trader-btn:hover .tname{text-decoration:underline;text-underline-offset:3px}
+.tname.gold{color:#E3B341}
+tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
+.spot-tag{font-size:11px;color:#E3B341;border:1px solid rgba(227,179,65,.45);border-radius:3px;padding:0 5px;margin-left:4px;white-space:nowrap}
+.milestones{display:flex;gap:8px;flex-wrap:wrap;padding:4px 12px 8px}
+.ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:3px 10px 3px 4px;color:var(--muted)}
+.ms-chip button{background:none;border:0;padding:0;color:var(--text);font-weight:500}
+.ms-chip button:hover{text-decoration:underline}
+.toast.milestone{border-left-color:#E3B341}
+.progress{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.progress .bar{height:4px;border-radius:2px;background:var(--raise);overflow:hidden}
+.progress .bar i{display:block;height:100%;background:#E3B341;border-radius:2px;transition:width .4s}
+.progress .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.my-badges{display:inline-flex;gap:3px;margin-left:6px;vertical-align:-3px}
+#traderDlg{width:min(880px,calc(100vw - 24px));max-height:calc(100vh - 40px);padding:0}
+#traderDlg .tr-wrap{display:flex;flex-direction:column;max-height:calc(100vh - 40px)}
+.tr-head{padding:18px 20px 12px;position:relative;border-bottom:1px solid var(--line-soft)}
+.tr-head h3{margin:0;font-size:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tr-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.tr-body{overflow:auto;padding:0 0 12px}
+.tr-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:14px 20px}
+.tr-stats span{display:block;font-size:11.5px;color:var(--muted)}
+.tr-stats b{font-size:16px;font-weight:600}
+.ladder{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 14px}
+.rung{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:6px;padding:6px 10px 6px 7px;font-size:12px}
+.rung b{display:block;font-weight:600;font-size:12.5px}
+.rung span{color:var(--muted)}
+.rung.locked{opacity:.45}
+.rung.locked .badge{filter:grayscale(1)}
+.tr-section{padding:4px 0 6px}
+.tr-section h4{margin:10px 20px 6px;font-size:13px;font-weight:600}
+.tr-section table th:first-child,.tr-section table td:first-child{padding-left:20px}
+.tr-section table th:last-child,.tr-section table td:last-child{padding-right:20px}
+.tr-private{margin:8px 20px 16px;padding:14px;border:1px dashed var(--line);border-radius:6px;color:var(--muted);font-size:13px}
+.swatch.locked{opacity:.4;position:relative}
+.swatch.locked::after{content:"";position:absolute;inset:7px;border:2px solid var(--bg);border-radius:2px}
 td.rank{color:var(--muted);width:56px}
 .submit.locked{background:var(--accent);color:#fff}
 /* site links, settings */
@@ -334,7 +372,9 @@ td.rank{color:var(--muted);width:56px}
         <button class="user-btn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"><span class="avatar" id="avatar"></span><span id="userName"></span></button>
         <div class="user-menu" id="userMenu" role="menu" hidden>
           <div class="user-email" id="userEmail"></div>
+          <button type="button" role="menuitem" id="myProfileBtn">My public profile</button>
           <button type="button" role="menuitem" id="nameBtn">Leaderboard name</button>
+          <button type="button" role="menuitem" id="privacyBtn">Hide my trades</button>
           <button type="button" role="menuitem" id="signOutBtn">Sign out</button>
           <button type="button" role="menuitem" id="deleteAcctBtn" class="danger-item">Delete account</button>
         </div>
@@ -423,6 +463,7 @@ td.rank{color:var(--muted);width:56px}
     <section class="acct" aria-label="Account">
       <div class="acct-top"><h2>Account</h2><button class="link-btn" id="resetBtn" type="button">Reset account</button></div>
       <div><div class="equity" id="aEquity">–</div><div id="aReturn" style="font-size:12.5px"></div></div>
+      <div class="progress" id="msProgress" hidden><div class="row"><span id="msText"></span><span id="msBadges" class="my-badges"></span></div><div class="bar"><i id="msBar" style="width:0"></i></div></div>
       <div class="meter" title="Margin in use, as a share of equity. The red mark is maintenance margin: fall below it and you're liquidated.">
         <div class="fill" id="meterFill" style="width:0"></div><div class="mm" id="meterMM" style="left:0"></div>
       </div>
@@ -492,6 +533,14 @@ td.rank{color:var(--muted);width:56px}
     <label class="field" id="delPwField" hidden><span>Enter your password to confirm</span><div class="inp"><input id="delPw" type="password" autocomplete="current-password"></div></label>
     <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Keep account</button><button class="btn danger" value="ok">Delete account</button></div>
   </form>
+</dialog>
+
+<dialog id="traderDlg" aria-labelledby="trName">
+  <div class="tr-wrap">
+    <div class="tr-head"><button class="dlg-x" id="trClose" type="button" aria-label="Close" style="top:10px;right:12px">&times;</button>
+      <h3 id="trName">Trader</h3><p id="trSub"></p></div>
+    <div class="tr-body" id="trBody"><div class="empty">Loading…</div></div>
+  </div>
 </dialog>
 
 <dialog id="settingsDlg" aria-labelledby="setTitle">
@@ -628,6 +677,7 @@ async function act(path, body){
 // ---------- markets ----------
 function market(){ return S.mk[S.coin]; }
 async function refreshMarkets(){
+  if (S.trader && S.trader.data && $("#traderDlg").open) setTimeout(renderTrader, 0);
   const r = await api("/api/markets");
   S.markets = r.data; S.mk = {};
   for (const m of S.markets) S.mk[m.name] = m;
@@ -916,8 +966,13 @@ function saveSettings(next){
 function renderSettings(){
   document.querySelectorAll("#settingsDlg .choice").forEach(g => g.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(SET[g.dataset.set] === b.dataset.v))));
   const acc = window.AureousSettings ? AureousSettings.ACCENTS : {};
-  $("#settingsDlg .swatches").innerHTML = Object.entries(acc).map(([k, v]) =>
-    `<button class="swatch" data-v="${k}" style="background:${v}" aria-pressed="${SET.accent === k}" aria-label="${k[0].toUpperCase() + k.slice(1)}" title="${k[0].toUpperCase() + k.slice(1)}"></button>`).join("");
+  const earnedBy = (window.AureousSettings && AureousSettings.EARNED) || {}, badges = (S.acct && S.acct.profile && S.acct.profile.badges) || [];
+  $("#settingsDlg .swatches").innerHTML = Object.entries(acc).map(([k, v]) => {
+    const need = earnedBy[k], open = !need || hasTier(badges, need) || SET.accent === k;
+    const label = k === "gold" ? "Aureus gold" : k[0].toUpperCase() + k.slice(1);
+    const tip = open ? label : `${label}: reach ${usd(tierOf(need).at).replace(".00", "")} account value to unlock`;
+    return `<button class="swatch${open ? "" : " locked"}" data-v="${k}" data-need="${open ? "" : need}" style="background:${v}" aria-pressed="${SET.accent === k}" aria-label="${tip}" title="${tip}"></button>`;
+  }).join("");
   $("#setConfirm").checked = !!SET.confirm; $("#setBook").checked = SET.book !== false;
 }
 $("#settingsBtn").addEventListener("click", () => { renderSettings(); $("#settingsDlg").showModal(); });
@@ -926,6 +981,7 @@ $("#setDone").addEventListener("click", () => $("#settingsDlg").close());
 $("#setReset").addEventListener("click", () => saveSettings({...AureousSettings.DEFAULTS}));
 $("#settingsDlg").addEventListener("click", e => {
   const b = e.target.closest(".choice button, .swatch"); if (!b) return;
+  if (b.dataset.need) { toast(`Reach ${usd(tierOf(b.dataset.need).at).replace(".00", "")} account value to unlock Aureus gold.`); return; }
   const key = b.classList.contains("swatch") ? "accent" : b.parentElement.dataset.set;
   saveSettings({...SET, [key]: b.dataset.v});
 });
@@ -936,7 +992,7 @@ window.addEventListener("aureous-settings", () => { C = AureousSettings.apply(SE
 // ---------- account + tables ----------
 async function refreshState(){
   const r = await api(`/api/state?since=${S.lastEvent ?? 0}`);
-  if (S.lastEvent !== null) r.events.forEach(e => { if (e.kind !== "fill") toast(e.msg, e.kind); });
+  if (S.lastEvent !== null) r.events.forEach(e => { if (e.kind !== "fill") toast(e.msg, e.kind); if (e.kind === "milestone") loadBoard(true); });
   S.lastEvent = r.last_event;
   const linesChanged = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]) !== S.linesKey;
   S.linesKey = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]);
@@ -961,6 +1017,10 @@ function renderAccount(){
   $("#aAvail").textContent = usd(a.available);
   $("#aMaint").textContent = usd(a.maintenance);
   if (MODE === "browser") renderSaveNote();
+  renderMilestones();
+  const prof = a.profile;
+  $("#privacyBtn").textContent = prof && prof.private ? "Show my trades" : "Hide my trades";
+  $("#myProfileBtn").hidden = $("#privacyBtn").hidden = !SERVER_ACCOUNTS;
   const np = a.positions.length, no = a.orders.length;
   $('[data-t="positions"]').textContent = np ? `Positions (${np})` : "Positions";
   $('[data-t="orders"]').textContent = no ? `Open orders (${no})` : "Open orders";
@@ -1240,19 +1300,105 @@ async function loadBoard(force){
   try { S.board = await AUTH.leaderboard(); S.boardErr = null; } catch (e) { S.boardErr = e.message; }
   if (S.tab === "board") renderBottom();
 }
+const TIERS = (window.Aureous && Aureous.TIERS) || [];
+const tierOf = id => TIERS.find(t => t.id === id);
+function badgeSvg(id, size = 16){
+  const t = tierOf(id); if (!t) return "";
+  return `<svg class="badge" width="${size}" height="${size}" viewBox="0 0 20 20" role="img" aria-label="${t.name} badge"><title>${t.name}: reached $${t.at.toLocaleString("en-US")}</title>` +
+    `<circle cx="10" cy="10" r="9.2" fill="${t.color}"/><circle cx="10" cy="10" r="6.8" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1"/>` +
+    `<text x="10" y="13.6" text-anchor="middle" font-family="Cinzel,Georgia,serif" font-weight="600" font-size="9" fill="rgba(0,0,0,.62)">${t.letter}</text></svg>`;
+}
+const hasTier = (badges, id) => (badges || []).some(b => b.tier === id);
+const topIndex = id => TIERS.findIndex(t => t.id === id);
+function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; }
+function left(until){ const m = Math.max(0, Math.round((until - Date.now()) / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}d ${Math.floor(m % 1440 / 60)}h left` : m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m left` : `${m}m left`; }
+function traderName(r){
+  const gold = r.badge && topIndex(r.badge) >= topIndex("aureus");
+  return `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span></button>` +
+    (r.spotlight_until ? `<span class="spot-tag" title="New milestone. Spotlight: ${left(r.spotlight_until)}">Spotlight</span>` : "");
+}
 function renderBoard(){
   const v = $("#bview"), b = S.board;
   if (!b) { v.innerHTML = `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
   const me = b.me;
-  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions.</span>` +
+  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades.</span>` +
     (me ? `<span>You're <b>#${me.rank}</b> of ${b.total}</span>` : S.user ? "" : `<span>Sign in to join</span>`) + `</div>`;
+  const ms = (b.milestones || []).slice(0, 6).map(m => { const t = tierOf(m.tier);
+    return `<span class="ms-chip">${badgeSvg(m.tier, 18)}<span><button data-pid="${esc(m.pid)}">${esc(m.name)}</button> reached ${t ? t.name : m.tier} ${ago(m.at)}</span></span>`; }).join("");
+  const strip = ms ? `<div class="milestones" aria-label="Recent milestones">${ms}</div>` : "";
   if (!b.rows.length) { v.innerHTML = head + `<div class="empty">No traders yet. Be the first.</div>`; return; }
-  const row = r => `<tr class="${me && r.rank === me.rank && r.name === me.name ? "me" : ""}"><td class="rank">#${r.rank}</td><td style="text-align:left">${esc(r.name)}</td>
+  const row = r => `<tr class="${me && r.pid === me.pid ? "me" : ""}${r.spotlight_until ? " spot" : ""}"><td class="rank">#${r.rank}</td><td style="text-align:left">${traderName(r)}</td>
     <td>${usd(r.equity)}</td><td class="${cls(r.return)}">${pct(r.return)}</td><td>${r.positions}</td></tr>`;
   let rows = b.rows.map(row).join("");
   if (me && me.rank > b.rows.length) rows += `<tr><td colspan="5" style="text-align:center;color:var(--faint)">…</td></tr>` + row(me);
-  v.innerHTML = head + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
+  v.innerHTML = head + strip + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
+$("#bview").addEventListener("click", e => { const t = e.target.closest("[data-pid]"); if (t) openTrader(t.dataset.pid); });
+
+// ---------- trader profiles ----------
+S.trader = null;
+async function openTrader(pid){
+  if (!AUTH || !AUTH.trader) return;
+  S.trader = {pid, data: null};
+  $("#trName").textContent = "Trader"; $("#trSub").textContent = ""; $("#trBody").innerHTML = `<div class="empty">Loading…</div>`;
+  if (!$("#traderDlg").open) $("#traderDlg").showModal();
+  try { const d = await AUTH.trader(pid); if (S.trader && S.trader.pid === pid) { S.trader.data = d; renderTrader(); } }
+  catch (e) { $("#trBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderTrader(){
+  const d = S.trader && S.trader.data; if (!d) return;
+  const top = (d.badges || []).map(b => b.tier).sort((a, b) => topIndex(a) - topIndex(b)).pop();
+  $("#trName").innerHTML = `${top ? badgeSvg(top, 22) : ""}<span class="tname${top && topIndex(top) >= topIndex("aureus") ? " gold" : ""}">${esc(d.name)}</span>` +
+    (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
+  $("#trSub").textContent = `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
+  // live values from this page's prices where we have them
+  const mk = c => S.mk[c] ? S.mk[c].mark : null;
+  const pos = (d.positions || []).map(p => { const m = mk(p.coin) ?? p.mark; return {...p, mark: m, upnl: p.size * (m - p.entry), value: Math.abs(p.size) * m}; });
+  const st = d.stats || {}, wr = st.win_rate == null ? "–" : (st.win_rate * 100).toFixed(0) + "%";
+  const stats = [["Account value", usd(d.equity), ""], ["Return", pct(d.return), cls(d.return)], ["Best value", usd(d.peak), ""],
+    ["Closed PnL", sgnUsd(st.realized || 0), cls(st.realized)], ["Win rate", wr, ""], ["Trades", String(st.trades || 0), ""], ["Resets", String(d.resets || 0), ""]];
+  const ladder = TIERS.map(t => { const got = (d.badges || []).find(b => b.tier === t.id);
+    return `<div class="rung${got ? "" : " locked"}">${badgeSvg(t.id, 22)}<div><b>${t.name}</b><span>${got ? "Earned " + new Date(got.at).toLocaleDateString(undefined, {day: "numeric", month: "short"}) : "$" + t.at.toLocaleString("en-US")}</span></div></div>`; }).join("");
+  let html = `<div class="tr-stats">${stats.map(([k, v, c]) => `<div><span>${k}</span><b class="${c}">${v}</b></div>`).join("")}</div><div class="ladder">${ladder}</div>`;
+  if (d.private && !d.self) {
+    html += `<div class="tr-private">${esc(d.name)} keeps their positions and trades private.</div>`;
+  } else {
+    if (d.private && d.self) html += `<div class="tr-private">Your trades are hidden from other traders. Only you can see the sections below.</div>`;
+    html += `<div class="tr-section"><h4>Open positions</h4>` + (pos.length ? `<div class="tbl-wrap"><table><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Value</th><th>Entry</th><th>Mark</th><th>PnL</th><th>Opened</th></tr></thead><tbody>` +
+      pos.map(p => `<tr><td><b>${esc(p.coin)}</b></td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td><td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${fpx(p.entry)}</td><td>${fpx(p.mark)}</td><td class="${cls(p.upnl)}">${sgnUsd(p.upnl)}</td><td>${ago(p.opened)}</td></tr>`).join("") +
+      `</tbody></table></div>` : `<div class="empty" style="padding:14px">No open positions.</div>`) + `</div>`;
+    const kind = {market: "Market", limit: "Limit", close: "Close", tp: "Take profit", sl: "Stop loss", liquidation: "Liquidation"};
+    html += `<div class="tr-section"><h4>Recent trades</h4>` + ((d.trades || []).length ? `<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Closed PnL</th><th>Type</th></tr></thead><tbody>` +
+      d.trades.map(t => `<tr><td>${tstr(t.ts)}</td><td>${esc(t.coin)}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td><td>${t.sz}</td><td>${fpx(t.px)}</td><td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || esc(t.kind)}</td></tr>`).join("") +
+      `</tbody></table></div>` : `<div class="empty" style="padding:14px">No trades yet.</div>`) + `</div>`;
+  }
+  $("#trBody").innerHTML = html;
+}
+$("#trClose").addEventListener("click", () => $("#traderDlg").close());
+$("#traderDlg").addEventListener("close", () => { S.trader = null; });
+$("#traderDlg").addEventListener("click", e => { if (e.target === $("#traderDlg")) $("#traderDlg").close(); });
+
+// ---------- milestones on your own account ----------
+function renderMilestones(){
+  const box = $("#msProgress"), prof = S.acct && S.acct.profile;
+  if (!SERVER_ACCOUNTS || !S.user || !prof || !TIERS.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const eq = S.acct.equity, earned = prof.badges || [], next = TIERS.find(t => !hasTier(earned, t.id));
+  $("#msBadges").innerHTML = TIERS.filter(t => hasTier(earned, t.id)).map(t => badgeSvg(t.id, 15)).join("");
+  if (!next) { $("#msText").textContent = "Every badge earned. Imperium!"; $("#msBar").style.width = "100%"; return; }
+  const prev = TIERS[TIERS.indexOf(next) - 1], from = prev ? prev.at : S.acct.start;
+  const p = Math.max(0, Math.min(1, (eq - from) / (next.at - from)));
+  $("#msText").innerHTML = `Next badge: <b style="color:var(--text)">${next.name}</b> at ${usd(next.at).replace(".00", "")}`;
+  $("#msBar").style.width = (p * 100).toFixed(1) + "%";
+  $("#msProgress").title = `${usd(Math.max(0, next.at - eq))} to go`;
+}
+$("#myProfileBtn").addEventListener("click", () => { $("#userMenu").hidden = true; const p = S.acct && S.acct.profile; if (p && p.pid) openTrader(p.pid); });
+$("#privacyBtn").addEventListener("click", async () => {
+  $("#userMenu").hidden = true;
+  const p = S.acct && S.acct.profile; if (!p) return;
+  try { const r = await AUTH.setPrivate(!p.private); toast(r.messages[0]); loadBoard(true); } catch (e) { toast(e.message, "error"); }
+});
+
 document.querySelector('[data-t="board"]').addEventListener("click", () => loadBoard(true));
 function openBoard(){ document.querySelector('[data-t="board"]').click(); $(".bottom").scrollIntoView({block: "nearest", behavior: "smooth"}); }
 $("#navBoard").addEventListener("click", e => { e.preventDefault(); history.replaceState(null, "", "#leaderboard"); openBoard(); });

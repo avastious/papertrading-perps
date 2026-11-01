@@ -3,7 +3,9 @@
 //   GET  /api/leaderboard          public; top accounts by value (plus your rank when signed in)
 //   GET  /api/account?since=N      your account (created on first visit with $10,000)
 //   POST /api/order|close|cancel|tpsl|leverage|reset   trade (same bodies as the local server)
+//   GET  /api/trader/<id>          public profile: value, badges, open positions and recent trades
 //   POST /api/profile {name}       set your leaderboard name
+//   POST /api/privacy {private}    hide (or show) your positions and trades on your profile
 //   POST /api/delete               delete your account data
 //
 // Every request except the leaderboard needs "Authorization: Bearer <Firebase ID token>".
@@ -42,6 +44,8 @@ export default {
       const ex = exchange(env);
 
       if (url.pathname === "/api/leaderboard" && req.method === "GET") return reply(await ex.leaderboard(user ? user.uid : null));
+      const tm = /^\/api\/trader\/([0-9a-f]{12})$/.exec(url.pathname);
+      if (tm && req.method === "GET") return reply(await ex.trader(tm[1], user ? user.uid : null));
       if (!user) return json({ok: false, error: "Sign in to trade."}, 401, cors);
 
       if (url.pathname === "/api/account" && req.method === "GET") {
@@ -55,6 +59,7 @@ export default {
       if (!body || typeof body !== "object" || Array.isArray(body)) body = {};
 
       if (url.pathname === "/api/profile") return reply(await ex.setName(user.uid, body.name));
+      if (url.pathname === "/api/privacy") return reply(await ex.setPrivate(user.uid, body.private === true));
       if (url.pathname === "/api/delete") return reply(await ex.remove(user.uid));
       return reply(await ex.act(user.uid, {name: user.name}, url.pathname, body, +body.since || 0));
     } catch (e) {

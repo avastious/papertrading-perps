@@ -57,7 +57,17 @@ One-time setup in Cloudflare (free plan):
 
 Settings live in `wrangler.jsonc`: `FIREBASE_PROJECT_ID`, and `ALLOWED_ORIGINS` (the websites allowed to call the server; add any new domain here).
 
-Endpoints: `GET /api/leaderboard` (public), `GET /api/account`, `POST /api/order|close|cancel|tpsl|leverage|reset|profile|delete`. Everything except the leaderboard needs a Firebase ID token.
+Endpoints:
+
+- Public: `GET /api/leaderboard` and `GET /api/trader/<id>` (a trader's profile).
+- Signed in: `GET /api/account` and `POST /api/order|close|cancel|tpsl|leverage|reset|profile|privacy|delete`. These need a Firebase ID token.
+
+**Badges and profiles.**
+
+- Account-value milestones award permanent badges: Sestertius ($20k), Denarius ($50k), Aureus ($100k), Solidus ($250k) and Imperium ($1M).
+- Each new badge starts a 7-day spotlight on the leaderboard.
+- Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
+- Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
 ## Accounts (sign in with Google or email)
 
@@ -188,6 +198,7 @@ node tests/server/mock-hyperliquid.js &
 npx wrangler dev --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
   --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 &
 node tests/server/api.check.mjs          # sign-in, trading, every-minute job, cheating attempts, leaderboard
+node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, hiding trades (run after api.check on a fresh server)
 ```
 
 ## Files
@@ -203,7 +214,8 @@ node tests/server/api.check.mjs          # sign-in, trading, every-minute job, c
 - `aureous/web/auth.js`, `aureous/web/firebase-config.js`: sign-in (Firebase Auth) and the connection to the trading server
 - `worker/`: the trading server (Cloudflare Worker + Durable Object), `wrangler.jsonc` its settings
 - `firestore.rules`: closes the unused Firestore database
-- `scripts/publish_pages.sh`: publish the site to GitHub Pages
+- `scripts/publish_pages.sh`: publish the site to GitHub Pages and Cloudflare Pages
+- `scripts/build_pages.py`: regenerates the content pages (edit the text there)
 - `tests/`: engine and web API tests
 
 ## Third-party

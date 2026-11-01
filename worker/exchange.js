@@ -7,12 +7,14 @@
 import {DurableObject} from "cloudflare:workers";
 import "../aureous/web/engine.js";
 
-const {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError} = globalThis.Aureous;
+const {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, TIERS, SPOTLIGHT_MS} = globalThis.Aureous;
 
 const START_BALANCE = 10000;                 // everyone starts here: the leaderboard ranks account value
 const ACTIONS = new Set(["/api/order", "/api/close", "/api/cancel", "/api/tpsl", "/api/leverage", "/api/reset"]);
 const HISTORY = ["trades", "funding_log", "equity_curve"];
 const MAX_ACTIONS_PER_MIN = 40, MAX_EVENTS = 50, BOARD_TTL = 20000, CURVE_MS = 10 * 60 * 1000;
+const PEAK_STEP = 1.002;                      // only store a new peak when it's 0.2% higher (saves writes)
+const newPid = () => [...crypto.getRandomValues(new Uint8Array(6))].map(b => b.toString(16).padStart(2, "0")).join("");
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} ._-]{1,22}[\p{L}\p{N}._-]$/u;
 
 // Shares Hyperliquid responses between accounts so one price snapshot serves everyone.
@@ -56,6 +58,16 @@ export class Exchange extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, ts INTEGER NOT NULL, kind TEXT NOT NULL, msg TEXT NOT NULL)`);
     this.sql.exec("CREATE INDEX IF NOT EXISTS events_uid ON events(uid, id)");
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS milestones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, tier TEXT NOT NULL, at INTEGER NOT NULL, equity REAL NOT NULL)`);
+    this.sql.exec("CREATE INDEX IF NOT EXISTS milestones_at ON milestones(at)");
+    // v2 columns (public profiles, badges); added in place so existing accounts keep their data
+    const cols = new Set(this.sql.exec("PRAGMA table_info(accounts)").toArray().map(c => c.name));
+    const add = (name, def) => { if (!cols.has(name)) this.sql.exec(`ALTER TABLE accounts ADD COLUMN ${name} ${def}`); };
+    add("pid", "TEXT"); add("badges", "TEXT NOT NULL DEFAULT '[]'"); add("peak", "REAL NOT NULL DEFAULT 10000");
+    add("spotlight_until", "INTEGER NOT NULL DEFAULT 0"); add("resets", "INTEGER NOT NULL DEFAULT 0"); add("private", "INTEGER NOT NULL DEFAULT 0");
+    for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
+    this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
     this.client = new SharedClient(env.HL_API_URL || "https://api.hyperliquid.xyz");
     this.locks = new Map();      // one operation at a time per account (fetches can interleave otherwise)
     this.rate = new Map();
@@ -81,8 +93,8 @@ export class Exchange extends DurableObject {
     const ex = new PaperExchange(this.client, {storage: null});
     const [core, hist] = split(ex.newState(START_BALANCE));
     const now = Date.now();
-    this.sql.exec("INSERT INTO accounts (uid, name, core, history, active, created, updated) VALUES (?, ?, ?, ?, 0, ?, ?)",
-                  uid, this.defaultName(profile), JSON.stringify(core), JSON.stringify(hist), now, now);
+    this.sql.exec("INSERT INTO accounts (uid, pid, name, core, history, active, created, updated) VALUES (?, ?, ?, ?, ?, 0, ?, ?)",
+                  uid, newPid(), this.defaultName(profile), JSON.stringify(core), JSON.stringify(hist), now, now);
     this.board = null;
     return this.row(uid);
   }
@@ -94,6 +106,34 @@ export class Exchange extends DurableObject {
     return ex;
   }
   persist(row, ex, histLoaded) {
+    this.persistState(row, ex, histLoaded);
+    this.checkMilestones(row.uid, ex);
+  }
+  // award badges for account value; each new one also starts a 7-day spotlight
+  checkMilestones(uid, ex) {
+    let eq;
+    try { eq = ex.equity(); } catch { return; }
+    if (!isFinite(eq)) return;
+    const r = this.sql.exec("SELECT badges, peak FROM accounts WHERE uid = ?", uid).toArray()[0];
+    if (!r) return;
+    const badges = JSON.parse(r.badges || "[]"), have = new Set(badges.map(b => b.tier)), now = Date.now();
+    const earned = TIERS.filter(t => eq >= t.at && !have.has(t.id));
+    if (earned.length) {
+      for (const t of earned) {
+        badges.push({tier: t.id, at: now, equity: Math.round(eq * 100) / 100});
+        this.sql.exec("INSERT INTO milestones (uid, tier, at, equity) VALUES (?, ?, ?, ?)", uid, t.id, now, eq);
+      }
+      const top = earned[earned.length - 1];
+      this.sql.exec("UPDATE accounts SET badges = ?, peak = MAX(peak, ?), spotlight_until = ? WHERE uid = ?",
+                    JSON.stringify(badges), eq, now + SPOTLIGHT_MS, uid);
+      this.addEvents(uid, [{kind: "milestone", msg: `Milestone reached: ${top.name} ($${top.at.toLocaleString("en-US")}). ` +
+        `Your badge is on the leaderboard and you're in the spotlight for 7 days.`}]);
+      this.board = null;
+    } else if (eq > r.peak * PEAK_STEP) {
+      this.sql.exec("UPDATE accounts SET peak = ? WHERE uid = ?", eq, uid);
+    }
+  }
+  persistState(row, ex, histLoaded) {
     const st = ex.state;
     ex.save();                                   // trims history to the engine's caps
     const [core, hist] = split(st);
@@ -141,7 +181,7 @@ export class Exchange extends DurableObject {
         const ex = this.exchangeFor(row);
         this.addEvents(uid, await this.catchUp(ex));
         this.persist(row, ex, true);
-        return {ok: true, state: ex.state, profile: {name: this.row(uid).name}, events: this.eventsSince(uid, since)};
+        return {ok: true, state: ex.state, profile: this.ownProfile(uid), events: this.eventsSince(uid, since)};
       } catch (e) { return fail(e); }
     });
   }
@@ -160,13 +200,29 @@ export class Exchange extends DurableObject {
         try { result = await app.handle(path, {}, body && typeof body === "object" ? body : {}); }
         catch (e) { error = e; }
         events.push(...app.events.map(e => ({kind: e.kind, msg: e.msg})));
-        if (path === "/api/reset") this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
+        if (path === "/api/reset") {
+          this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
+          if (!error) this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid);
+        }
         else this.addEvents(uid, events);
         this.persist(row, ex, true);
         if (error) return {...fail(error), state: ex.state, events: this.eventsSince(uid, since)};
-        return {ok: true, ...result, state: ex.state, profile: {name: this.row(uid).name}, events: this.eventsSince(uid, since)};
+        return {ok: true, ...result, state: ex.state, profile: this.ownProfile(uid), events: this.eventsSince(uid, since)};
       } catch (e) { return fail(e); }
     });
+  }
+
+  ownProfile(uid) {
+    const r = this.sql.exec("SELECT pid, name, badges, peak, spotlight_until, private, resets FROM accounts WHERE uid = ?", uid).toArray()[0];
+    return r ? {pid: r.pid, name: r.name, badges: JSON.parse(r.badges || "[]"), peak: r.peak, spotlight_until: r.spotlight_until,
+                private: !!r.private, resets: r.resets} : null;
+  }
+
+  async setPrivate(uid, priv) {
+    if (!this.row(uid)) return {ok: false, status: 404, error: "No account yet."};
+    this.sql.exec("UPDATE accounts SET private = ? WHERE uid = ?", priv ? 1 : 0, uid);
+    return {ok: true, profile: this.ownProfile(uid),
+            messages: [priv ? "Your positions and trades are now hidden from other traders." : "Other traders can now see your positions and trades."]};
   }
 
   async setName(uid, name) {
@@ -175,13 +231,14 @@ export class Exchange extends DurableObject {
     if (!this.row(uid)) return {ok: false, status: 404, error: "No account yet."};
     this.sql.exec("UPDATE accounts SET name = ? WHERE uid = ?", name, uid);
     this.board = null;
-    return {ok: true, profile: {name}, messages: [`Leaderboard name set to ${name}`]};
+    return {ok: true, profile: this.ownProfile(uid), messages: [`Leaderboard name set to ${name}`]};
   }
 
   async remove(uid) {
     return this.withLock(uid, async () => {
       this.sql.exec("DELETE FROM accounts WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
+      this.sql.exec("DELETE FROM milestones WHERE uid = ?", uid);
       this.board = null;
       return {ok: true};
     });
@@ -192,7 +249,7 @@ export class Exchange extends DurableObject {
       if (!this.board || Date.now() - this.board.t > BOARD_TTL) {
         const ex = new PaperExchange(this.client, {storage: null, refreshMs: 0});
         await ex.refresh();
-        const rows = this.sql.exec("SELECT uid, name, core FROM accounts").toArray().map(r => {
+        const rows = this.sql.exec("SELECT uid, pid, name, core, badges, spotlight_until FROM accounts").toArray().map(r => {
           const core = JSON.parse(r.core);
           let equity = core.balance;
           for (const [coin, p] of Object.entries(core.positions)) {
@@ -200,15 +257,53 @@ export class Exchange extends DurableObject {
             try { mark = ex.market(coin).mark; } catch {}
             equity += p.size * (mark - p.entry);
           }
-          return {uid: r.uid, name: r.name, equity, positions: Object.keys(core.positions).length};
+          const badges = JSON.parse(r.badges || "[]");
+          const top = TIERS.filter(t => badges.some(b => b.tier === t.id)).pop();
+          return {uid: r.uid, pid: r.pid, name: r.name, equity, positions: Object.keys(core.positions).length,
+                  badge: top ? top.id : null, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0};
         }).sort((a, b) => b.equity - a.equity);
         rows.forEach((r, i) => { r.rank = i + 1; r.return = r.equity / START_BALANCE - 1; });
         this.board = {t: Date.now(), rows};
       }
-      const pub = r => ({rank: r.rank, name: r.name, equity: r.equity, return: r.return, positions: r.positions});
+      const pub = r => ({rank: r.rank, pid: r.pid, name: r.name, equity: r.equity, return: r.return, positions: r.positions,
+                         badge: r.badge, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0});
       const me = uid ? this.board.rows.find(r => r.uid === uid) : null;
+      const milestones = this.sql.exec(`SELECT m.tier, m.at, a.name, a.pid FROM milestones m JOIN accounts a ON a.uid = m.uid
+                                        WHERE m.at > ? ORDER BY m.at DESC LIMIT 10`, Date.now() - SPOTLIGHT_MS).toArray();
       return {ok: true, updated: this.board.t, total: this.board.rows.length, start: START_BALANCE,
-              rows: this.board.rows.slice(0, 100).map(pub), me: me ? pub(me) : null};
+              rows: this.board.rows.slice(0, 100).map(pub), me: me ? pub(me) : null, milestones};
+    } catch (e) { return fail(e); }
+  }
+
+  // a trader's public profile: value, badges and (unless they hide them) open positions and recent trades
+  async trader(pid, viewerUid = null) {
+    try {
+      if (typeof pid !== "string" || !/^[0-9a-f]{12}$/.test(pid)) return {ok: false, status: 404, error: "Trader not found."};
+      const row = this.sql.exec("SELECT * FROM accounts WHERE pid = ?", pid).toArray()[0];
+      if (!row) return {ok: false, status: 404, error: "Trader not found."};
+      await this.leaderboard();                                   // makes sure ranks are fresh
+      const ranked = this.board.rows.find(r => r.uid === row.uid);
+      const ex = this.exchangeFor(row);
+      await ex.refresh();
+      const st = ex.state, equity = ex.equity(), self = viewerUid === row.uid;
+      const out = {
+        ok: true, pid, name: row.name, self, rank: ranked ? ranked.rank : null, total: this.board.rows.length,
+        equity, return: equity / START_BALANCE - 1, peak: Math.max(row.peak, equity), resets: row.resets, joined: row.created,
+        badges: JSON.parse(row.badges || "[]"), spotlight_until: row.spotlight_until > Date.now() ? row.spotlight_until : 0,
+        private: !!row.private, stats: ex.stats(),
+      };
+      delete out.stats.equity; delete out.stats.start;
+      if (!row.private || self) {
+        out.positions = Object.entries(st.positions).map(([coin, p]) => {
+          let mark = p.entry, lev = 1;
+          try { mark = ex.market(coin).mark; lev = ex.leverage(coin); } catch {}
+          return {coin, size: p.size, entry: p.entry, mark, value: Math.abs(p.size) * mark, upnl: p.size * (mark - p.entry),
+                  lev, opened: p.opened_ms, funding: p.funding};
+        });
+        out.trades = st.trades.slice(-50).reverse().map(t => ({ts: t.ts, coin: t.coin, side: t.side, sz: t.sz, px: t.px, realized: t.realized, kind: t.kind}));
+        out.curve = st.equity_curve.slice(-300);
+      }
+      return out;
     } catch (e) { return fail(e); }
   }
 

@@ -654,5 +654,15 @@
     }
   }
 
-  root.Aureous = {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, applyFill, roundSize, roundPx, HOUR_MS};
+  // Account-value milestones (Roman coins). Shared by the server (awards them) and the site (shows them).
+  const TIERS = [
+    {id: "sestertius", name: "Sestertius", at: 20000, color: "#C27D4A", letter: "S"},
+    {id: "denarius", name: "Denarius", at: 50000, color: "#BFC7D2", letter: "D"},
+    {id: "aureus", name: "Aureus", at: 100000, color: "#E3B341", letter: "A"},
+    {id: "solidus", name: "Solidus", at: 250000, color: "#E8A9A0", letter: "S"},
+    {id: "imperium", name: "Imperium", at: 1000000, color: "#A58BF5", letter: "I"},
+  ];
+  const SPOTLIGHT_MS = 7 * 24 * 3600 * 1000;
+
+  root.Aureous = {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, applyFill, roundSize, roundPx, HOUR_MS, TIERS, SPOTLIGHT_MS};
 })(typeof window !== "undefined" ? window : globalThis);

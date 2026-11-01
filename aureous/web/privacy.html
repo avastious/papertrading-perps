@@ -27,12 +27,14 @@
 <h3>When you sign in</h3>
 <p>Sign-in is handled by Google Firebase Authentication. Firebase keeps your email address, your name and profile photo if your sign-in provider shares them (Google does), and a user ID. If you sign up with email, Firebase stores your password securely; Aureous never sees it.</p>
 <h3>Your trading account</h3>
-<p>The Aureous server, which runs on Cloudflare, stores your paper account under your user ID: your balance, positions, orders, trade and funding history, account-value history, recent notifications and the leaderboard name you choose. It doesn't store your email address.</p>
+<p>The Aureous server, which runs on Cloudflare, stores your paper account under your user ID: your balance, positions, orders, trade and funding history, account-value history, recent notifications, badges and milestones, the leaderboard name you choose, and whether you've hidden your trades. It doesn't store your email address.</p>
 <h3>In your browser</h3>
 <p>Your display settings, favourite markets and last-viewed market are saved in your browser's local storage. They never leave your device. Firebase also keeps you signed in using your browser's storage.</p>
 
 <h2>What's public</h2>
-<p>The leaderboard shows your leaderboard name, your rank, your account value, your return and how many positions you have open. It never shows your email address or user ID. Your name defaults to your first name and last initial, and you can change it from the account menu at any time.</p>
+<p>The leaderboard shows your leaderboard name, rank, account value, return, badges and how many positions you have open. Clicking your name opens your public profile. It shows those same details plus your best account value, closed profit and loss, win rate, number of trades and resets, and the date you started.</p>
+<p>By default your profile also shows your <strong>open positions</strong> (market, side, size, leverage, entry price and profit or loss) and your <strong>last 50 trades</strong>. To hide them, choose <strong>Hide my trades</strong> in the account menu. Your summary and badges stay visible on the leaderboard.</p>
+<p>Profiles never show your email address, your sign-in ID or your resting orders. Your leaderboard name defaults to your first name and last initial, and you can change it from the account menu at any time.</p>
 
 <h2>What we don't do</h2>
 <ul>

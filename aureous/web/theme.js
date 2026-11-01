@@ -10,7 +10,9 @@
     light: {bg: "#EDF0F4", panel: "#FFFFFF", raise: "#F2F4F7", line: "#D8DEE6", lineSoft: "#E8ECF1",
             text: "#17202B", muted: "#5A6575", faint: "#8B95A4", crossLabel: "#5A6575", long: "#168A63", short: "#CC423E", wash: .10},
   };
-  const ACCENTS = {cobalt: "#5B8DEF", violet: "#8B78F0", teal: "#1FA595", amber: "#D8962A"};
+  const ACCENTS = {cobalt: "#5B8DEF", violet: "#8B78F0", teal: "#1FA595", amber: "#D8962A", gold: "#E3B341"};
+  // accents earned on the leaderboard: name -> badge needed
+  const EARNED = {gold: "denarius"};
   const PRICES = {
     classic: b => [b.long, b.short],            // green up, red down
     inverted: b => [b.short, b.long],           // red up, green down (common in East Asian markets)
@@ -45,7 +47,7 @@
     return {...b, theme, accent, long: up, short: down, longWash: rgba(up, .35), shortWash: rgba(down, .35)};
   }
 
-  window.AureousSettings = {DEFAULTS, ACCENTS, load, save, apply, resolve};
+  window.AureousSettings = {DEFAULTS, ACCENTS, EARNED, load, save, apply, resolve};
   apply();
   if (window.matchMedia) {
     matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
