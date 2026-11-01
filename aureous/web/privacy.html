@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy | Aureous</title>
+<meta name="description" content="What Aureous stores, who can see it, and how to delete it.">
+<meta property="og:title" content="Privacy | Aureous">
+<meta property="og:description" content="What Aureous stores, who can see it, and how to delete it.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="site-head">
+  <a class="wordmark" href="./">Aureous</a>
+  <nav aria-label="Site"><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a></nav>
+  <a class="btn primary" href="./">Open the app</a>
+</header>
+<main>
+<h1>Privacy</h1>
+<p class="updated">Last updated 1 November 2026</p>
+<p>Aureous collects as little as it can. This page explains what's stored, where, who can see it, and how to delete it.</p>
+
+<h2>What we store</h2>
+<h3>When you sign in</h3>
+<p>Sign-in is handled by Google Firebase Authentication. Firebase keeps your email address, your name and profile photo if your sign-in provider shares them (Google does), and a user ID. If you sign up with email, Firebase stores your password securely; Aureous never sees it.</p>
+<h3>Your trading account</h3>
+<p>The Aureous server, which runs on Cloudflare, stores your paper account under your user ID: your balance, positions, orders, trade and funding history, account-value history, recent notifications and the leaderboard name you choose. It doesn't store your email address.</p>
+<h3>In your browser</h3>
+<p>Your display settings, favourite markets and last-viewed market are saved in your browser's local storage. They never leave your device. Firebase also keeps you signed in using your browser's storage.</p>
+
+<h2>What's public</h2>
+<p>The leaderboard shows your leaderboard name, your rank, your account value, your return and how many positions you have open. It never shows your email address or user ID. Your name defaults to your first name and last initial, and you can change it from the account menu at any time.</p>
+
+<h2>What we don't do</h2>
+<ul>
+  <li>No advertising, and no advertising or analytics trackers.</li>
+  <li>We don't sell or share your information.</li>
+  <li>We don't ask for a wallet, real funds or payment details.</li>
+</ul>
+
+<h2>Services involved</h2>
+<ul>
+  <li><strong>Google Firebase</strong>: sign-in.</li>
+  <li><strong>Cloudflare</strong>: hosts the website and the trading server. Like any web host, it handles your IP address and basic request details to deliver the site.</li>
+  <li><strong>Hyperliquid</strong>: your browser loads market data directly from Hyperliquid's public data service, so Hyperliquid receives your IP address, as with any website you visit. No account information is sent to it.</li>
+  <li><strong>GitHub</strong>: hosts the code and a copy of the website.</li>
+</ul>
+
+<h2>Keeping and deleting your data</h2>
+<p>Your account is kept until you delete it. To delete everything, open the account menu (your name, top right) and choose <strong>Delete account</strong>. That removes your trading data from the Aureous server and deletes your Firebase login. Settings stored in your browser can be cleared through your browser's site data settings.</p>
+
+<h2>Children</h2>
+<p>Aureous isn't intended for children under 13, and we don't knowingly collect their information.</p>
+
+<h2>Changes and contact</h2>
+<p>If this policy changes, the date above will change too. Questions or requests: <a href="https://github.com/avastious/papertrading-perps/issues">open an issue on GitHub</a>.</p>
+</main>
+<footer class="site-foot">
+  <nav aria-label="Footer"><a href="./">Trade</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="https://github.com/avastious/papertrading-perps/issues">Report a problem</a></nav>
+  <span class="note">Paper trading only. Not financial advice. Not affiliated with Hyperliquid.</span>
+</footer>
+</body>
+</html>

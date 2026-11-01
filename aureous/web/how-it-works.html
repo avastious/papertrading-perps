@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works | Aureous</title>
+<meta name="description" content="How Aureous fills orders, charges fees and funding, handles liquidation and ranks the leaderboard.">
+<meta property="og:title" content="How it works | Aureous">
+<meta property="og:description" content="How Aureous fills orders, charges fees and funding, handles liquidation and ranks the leaderboard.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="site-head">
+  <a class="wordmark" href="./">Aureous</a>
+  <nav aria-label="Site"><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html" aria-current="page">How it works</a><a href="about.html">About</a></nav>
+  <a class="btn primary" href="./">Open the app</a>
+</header>
+<main>
+<h1>How Aureous works</h1>
+<p class="lede">Everything you need to start, and exactly how the simulation treats your orders.</p>
+
+<h2>Getting started</h2>
+<ol class="steps">
+  <li><b>Sign in</b>with Google or an email address. Your account opens with $10,000 of paper money.</li>
+  <li><b>Pick a market</b>from the list on the left. Star the ones you trade most to keep them at the top.</li>
+  <li><b>Choose a direction and size</b>in the order panel. Long if you think the price will rise, short if you think it will fall. Size can be in dollars or coins, and leverage sets how much margin the trade ties up.</li>
+  <li><b>Protect the trade</b>with a take-profit and a stop-loss. They're drawn on the chart and fire automatically.</li>
+  <li><b>Watch it and close it</b>from the Positions tab, all at once or half at a time. Your result counts towards the leaderboard straight away.</li>
+</ol>
+
+<h2>Questions</h2>
+<details><summary>Is any real money involved?</summary><div><p>No. Every balance is pretend, nothing is sent to Hyperliquid, and you never connect a wallet. There's nothing to deposit and nothing to win or lose.</p></div></details>
+<details><summary>Where do prices come from?</summary><div><p>Live from Hyperliquid's public market data: mark prices, order books, candles and funding rates. They're the same numbers you'd see on Hyperliquid itself, give or take a second or two.</p></div></details>
+<details><summary>How are my orders filled?</summary><div>
+  <p><strong>Market orders</strong> fill against the real order book at that moment, level by level, so bigger orders get a worse average price, as they would on the real exchange. Like Hyperliquid, a market order won't fill more than 5% away from the mark price. If the book is too thin, you get a partial fill.</p>
+  <p><strong>Limit orders</strong> that would cross the book fill immediately as taker orders. Otherwise they rest and fill at your price once the market reaches it. Post-only orders that would cross are rejected.</p>
+</div></details>
+<details><summary>What fees do I pay?</summary><div><p>Hyperliquid's base rates: 0.045% of the order's value when you take liquidity (market orders and crossing limits), and 0.015% when you provide it (resting limit orders).</p></div></details>
+<details><summary>How do leverage and margin work?</summary><div><p>All positions share one balance (cross margin). Leverage is set per market, up to that market's maximum, and decides how much margin a position ties up: a $5,000 position at 10x uses $500. Higher leverage leaves more of your balance free, but it doesn't change your profit or loss per dollar of position.</p></div></details>
+<details><summary>When do I get liquidated?</summary><div><p>Each market has a maintenance margin of half its initial margin at maximum leverage. For a 40x market that's 1.25% of the position's value. If your account's equity falls below the total maintenance margin of your positions, every position is closed at the mark price. The Positions tab shows the price where that would happen, if there is one.</p></div></details>
+<details><summary>What is funding?</summary><div><p>Every hour, one side of each market pays the other to keep the perpetual's price close to the underlying asset. When the rate is positive, longs pay shorts; when it's negative, shorts pay longs. Aureous uses Hyperliquid's actual hourly rates, so holding a position for days can cost or earn real (paper) money.</p></div></details>
+<details><summary>Do stops and limits work when I close the page?</summary><div><p>Yes. The Aureous server checks every account once a minute and fills any take-profits, stop-losses and limit orders that have been reached, settles funding and handles liquidations. Because the check runs once a minute, a fast move can fill a stop at a worse price than you set, much like a real market gapping through it.</p></div></details>
+<details><summary>How does the leaderboard work?</summary><div><p>Everyone starts with $10,000. Accounts are ranked by current value: cash balance plus the profit or loss of open positions at the mark price. The board refreshes every 20 seconds or so. Choose the name others see from the account menu; your email is never shown.</p></div></details>
+<details><summary>Can I start again?</summary><div><p>Yes. "Reset account" closes everything, clears your history and puts your account back to $10,000. Your leaderboard position starts over from there.</p></div></details>
+<details><summary>How do I delete my account?</summary><div><p>Open the account menu (your name, top right) and choose Delete account. After you confirm it's you, your trading data is removed from the Aureous server and your login is deleted.</p></div></details>
+<details><summary>Can I change how it looks?</summary><div><p>Yes. The gear icon in the app opens settings for a light or dark theme, accent colour, price colours (including a colour-blind option and red-for-up), a more compact layout, order confirmations, and whether to show the order book. Settings are saved in your browser.</p></div></details>
+<details><summary>Does it work on my phone?</summary><div><p>Yes. The layout stacks on small screens, and your account follows you once you're signed in.</p></div></details>
+<details><summary>Where does the simulation differ from the real exchange?</summary><div><ul>
+  <li>Resting limit orders fill completely once the price reaches them; your place in the queue isn't modelled.</li>
+  <li>Liquidation closes positions at the mark price, with no liquidation fee or partial liquidation.</li>
+  <li>There's no isolated margin, no fee discounts and no builder-deployed markets.</li>
+  <li>Orders you place yourself are filled at once; orders that wait for a price are checked once a minute.</li>
+</ul></div></details>
+<details><summary>Is this financial advice?</summary><div><p>No. Aureous is a practice tool. Results with paper money don't predict results with real money, where emotions, liquidity and risk all behave differently.</p></div></details>
+</main>
+<footer class="site-foot">
+  <nav aria-label="Footer"><a href="./">Trade</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="https://github.com/avastious/papertrading-perps/issues">Report a problem</a></nav>
+  <span class="note">Paper trading only. Not financial advice. Not affiliated with Hyperliquid.</span>
+</footer>
+</body>
+</html>

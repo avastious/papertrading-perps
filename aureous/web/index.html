@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="aureous-mode" content="browser">
 <meta name="description" content="Paper-trade Hyperliquid perpetuals with live market data. No wallet, no real money.">
+<meta property="og:title" content="Aureous: paper-trade Hyperliquid perpetuals">
+<meta property="og:description" content="Live Hyperliquid markets, $10,000 of paper money and a fair leaderboard. No wallet, no real money.">
+<meta property="og:type" content="website">
 <title>Aureous</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
 <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<script src="theme.js"></script>
 <script src="lightweight-charts.js"></script>
 <script src="engine.js"></script>
 <script src="firebase-config.js"></script>
@@ -228,6 +232,60 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 tr.me td{background:var(--accent-wash)}
 td.rank{color:var(--muted);width:56px}
 .submit.locked{background:var(--accent);color:#fff}
+/* site links, settings */
+.site-nav{display:flex;gap:2px;margin-left:auto}
+.site-nav a{color:var(--muted);text-decoration:none;font-size:13px;padding:5px 9px;border-radius:4px}
+.site-nav a:hover{color:var(--text);background:var(--raise)}
+.conn{margin-left:0}
+.icon-btn{display:grid;place-items:center;width:32px;height:32px;border-radius:5px;background:none;border:1px solid transparent;color:var(--muted)}
+.icon-btn:hover{color:var(--text);border-color:var(--line)}
+.icon-btn svg{width:18px;height:18px}
+.side-foot{margin-top:auto;padding:12px 14px 14px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--faint);line-height:1.5}
+.side-foot nav{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:6px}
+.side-foot a{color:var(--muted);text-decoration:none}
+.side-foot a:hover{color:var(--text);text-decoration:underline}
+.mk-item{display:flex;align-items:center;border-left:2px solid transparent}
+.mk-item.on{background:var(--accent-wash);border-left-color:var(--accent)}
+.mk-item:hover{background:var(--raise)}
+.mk-item.on:hover{background:var(--accent-wash)}
+.mk-item .mk-row{flex:1;border-left:0;padding-left:2px}
+.mk-item .mk-row:hover,.mk-item .mk-row.on{background:none}
+.star{background:none;border:0;width:24px;padding:5px 0 5px 8px;color:var(--faint);font-size:13px;line-height:1}
+.star:hover{color:var(--text)}
+.star.fav{color:var(--accent)}
+#settingsDlg{width:min(440px,calc(100vw - 32px))}
+.set-group{display:flex;flex-direction:column;gap:12px;padding:14px 0;border-top:1px solid var(--line-soft)}
+.set-group h4{margin:0;font-size:12px;font-weight:600;color:var(--muted)}
+.set-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
+.choice{display:inline-flex;background:var(--bg);border-radius:5px;padding:2px;gap:2px;flex-wrap:wrap}
+.choice button{border:0;background:none;color:var(--muted);padding:5px 10px;border-radius:4px;font-size:12.5px}
+.choice button[aria-pressed=true]{background:var(--raise);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.swatches{display:flex;gap:8px}
+.swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;padding:0}
+.swatch[aria-pressed=true]{border-color:var(--text)}
+.price-demo{display:inline-flex;gap:3px;margin-right:6px;vertical-align:middle}
+.price-demo i{width:6px;height:12px;border-radius:1px;display:inline-block}
+.toggle{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggle input{accent-color:var(--accent);width:16px;height:16px}
+.confirm-sum{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0 0 6px;font-size:13px}
+.confirm-sum dt{color:var(--muted)} .confirm-sum dd{margin:0;text-align:right}
+
+/* density */
+[data-density=compact] body{font-size:12.5px}
+[data-density=compact] header{padding:6px 14px}
+[data-density=compact] .bigprice{font-size:21px}
+[data-density=compact] .mk-row{padding:3px 12px 3px 2px}
+[data-density=compact] .bk-row{padding:1px 12px}
+[data-density=compact] td{padding:4px 8px}
+[data-density=compact] .ticket,[data-density=compact] .acct{padding:11px;gap:9px}
+[data-density=compact] .inp input{padding:6px 9px;font-size:13.5px}
+[data-density=compact] .submit{padding:9px}
+
+/* order book hidden */
+[data-book=off] .book{display:none}
+[data-book=off] .app{grid-template-columns:224px minmax(0,1fr) 312px}
+[data-book=off] .side{grid-column:3}
+[data-book=off] .bottom{grid-column:2/3}
 .mk-close{display:none}
 @media (max-width:1279px){
   .app{grid-template-columns:minmax(0,1fr) 232px 300px}
@@ -236,6 +294,8 @@ td.rank{color:var(--muted);width:56px}
   .mk-close{display:block}
   .chartbox{grid-column:1} .book{grid-column:2} .side{grid-column:3} .bottom{grid-column:1/3}
   .chart-tools .hint{display:none}
+  [data-book=off] .app{grid-template-columns:minmax(0,1fr) 300px}
+  [data-book=off] .chartbox{grid-column:1} [data-book=off] .side{grid-column:2} [data-book=off] .bottom{grid-column:1/2}
 }
 @media (max-width:899px){
   .app{display:flex;flex-direction:column;height:auto;min-height:100vh}
@@ -243,6 +303,7 @@ td.rank{color:var(--muted);width:56px}
   .who{margin-left:auto}
   header{order:0} .chartbox{order:1;height:360px} .side{order:2} .book{order:3;height:auto} .bk-side{max-height:180px}
   .bottom{order:4;height:420px}
+  .site-nav{order:10;margin-left:0;width:100%}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -258,7 +319,15 @@ td.rank{color:var(--muted);width:56px}
     <div class="hstat"><span>Next funding</span><span id="hCountdown">–</span></div>
     <div class="hstat"><span>24h volume</span><span id="hVol">–</span></div>
     <div class="hstat"><span>Open interest</span><span id="hOI">–</span></div>
+    <nav class="site-nav" aria-label="Site">
+      <a href="#leaderboard" id="navBoard" hidden>Leaderboard</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="about.html">About</a>
+    </nav>
     <div class="conn" id="conn"><span class="dot"></span><span id="connText">Live</span></div>
+    <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
     <div class="who" id="who" hidden>
       <button class="btn primary sm" id="signInBtn" type="button">Sign in</button>
       <div class="user" id="userBox" hidden>
@@ -367,6 +436,10 @@ td.rank{color:var(--muted);width:56px}
       </dl>
       <p class="note" id="saveNote" hidden></p>
     </section>
+    <footer class="side-foot">
+      <nav aria-label="Site"><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a></nav>
+      Paper trading only. Not financial advice. Not affiliated with Hyperliquid.
+    </footer>
   </div>
 
   <section class="bottom" aria-label="Positions and history">
@@ -421,6 +494,38 @@ td.rank{color:var(--muted);width:56px}
   </form>
 </dialog>
 
+<dialog id="settingsDlg" aria-labelledby="setTitle">
+  <div class="auth">
+    <button class="dlg-x" id="setClose" type="button" aria-label="Close">&times;</button>
+    <h3 id="setTitle">Settings</h3>
+    <p>Saved in this browser.</p>
+    <div class="set-group">
+      <h4>Appearance</h4>
+      <div class="set-row"><span>Theme</span><div class="choice" data-set="theme"><button data-v="dark">Dark</button><button data-v="light">Light</button><button data-v="system">Match device</button></div></div>
+      <div class="set-row"><span>Accent colour</span><div class="swatches" data-set="accent"></div></div>
+      <div class="set-row"><span>Price colours</span><div class="choice" data-set="prices">
+        <button data-v="classic" title="Green up, red down">Green up</button><button data-v="inverted" title="Red up, green down">Red up</button><button data-v="colorblind" title="Blue up, orange down">Colour-blind</button></div></div>
+      <div class="set-row"><span>Layout</span><div class="choice" data-set="density"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div></div>
+    </div>
+    <div class="set-group">
+      <h4>Trading</h4>
+      <label class="toggle"><input type="checkbox" id="setConfirm"> Ask me to confirm before placing orders</label>
+      <label class="toggle"><input type="checkbox" id="setBook"> Show the order book</label>
+      <p class="note">Star a market in the list to keep it at the top.</p>
+    </div>
+    <div class="dlg-btns"><button class="btn" type="button" id="setReset">Reset to defaults</button><button class="btn primary" type="button" id="setDone">Done</button></div>
+  </div>
+</dialog>
+
+<dialog id="confirmDlg">
+  <form method="dialog">
+    <h3 id="cfTitle">Confirm order</h3>
+    <dl class="confirm-sum" id="cfSum"></dl>
+    <label class="toggle"><input type="checkbox" id="cfNoAsk"> Don't ask again</label>
+    <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" id="cfOk">Place order</button></div>
+  </form>
+</dialog>
+
 <dialog id="nameDlg">
   <form id="nameForm">
     <h3>Leaderboard name</h3>
@@ -444,15 +549,17 @@ td.rank{color:var(--muted);width:56px}
 "use strict";
 const $ = s => document.querySelector(s);
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const C = {long: cssVar("--long"), short: cssVar("--short"), accent: cssVar("--accent"), muted: cssVar("--muted"),
-           faint: cssVar("--faint"), line: cssVar("--line"), lineSoft: cssVar("--line-soft"), panel: cssVar("--panel"), text: cssVar("--text")};
+let SET = window.AureousSettings ? AureousSettings.load() : {};
+let C = window.AureousSettings ? AureousSettings.apply(SET)
+  : {long: "#2FA57D", short: "#DB5A55", accent: "#5B8DEF", muted: "#7F8B9B", faint: "#58647A", line: "#232E3D", lineSoft: "#1B2431",
+     panel: "#121924", text: "#D5DCE5", crossLabel: "#2A3647", longWash: "rgba(47,165,125,.35)", shortWash: "rgba(219,90,85,.35)"};
 const store = {
   get(k, d){ try { const v = localStorage.getItem("aureous." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v){ try { localStorage.setItem("aureous." + k, JSON.stringify(v)); } catch {} }
 };
 const INTERVAL_MS = {"1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
 const S = {
-  coin: store.get("coin", "BTC"), interval: store.get("interval", "1h"), side: "buy", type: "market",
+  coin: store.get("coin", "BTC"), interval: store.get("interval", "1h"), side: "buy", type: "market", favs: store.get("favs", []),
   unit: "usd", tab: "positions", markets: [], mk: {}, acct: null, book: null,
   candles: [], olderLoading: false, noOlder: false, chartGen: 0, lastEvent: null, prevPrice: null,
 };
@@ -532,9 +639,12 @@ function renderMarkets(){
   const key = {volume: m => -m.volume, change: m => -Math.abs(m.change), funding: m => -Math.abs(m.funding), oi: m => -m.oi, name: m => m.name.toLowerCase()}[sort];
   const list = S.markets.filter(m => !q || m.name.toLowerCase().includes(q))
     .sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
-  $("#mkList").innerHTML = list.map(m =>
-    `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"><b>${esc(m.name)}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span></button>`
-  ).join("") || `<div class="empty">No market matches “${esc(q)}”</div>`;
+  const favs = new Set(S.favs);
+  list.sort((a, b) => (favs.has(b.name) ? 1 : 0) - (favs.has(a.name) ? 1 : 0));   // favourites first, order kept otherwise
+  $("#mkList").innerHTML = list.map(m => { const f = favs.has(m.name);
+    return `<div class="mk-item${m.name === S.coin ? " on" : ""}"><button class="star${f ? " fav" : ""}" data-fav="${esc(m.name)}" aria-pressed="${f}" aria-label="${f ? "Remove" : "Add"} ${esc(m.name)} ${f ? "from" : "to"} favourites">${f ? "★" : "☆"}</button>` +
+      `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"><b>${esc(m.name)}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span></button></div>`;
+  }).join("") || `<div class="empty">No market matches “${esc(q)}”</div>`;
 }
 function renderHeader(){
   const m = market(); if (!m) return;
@@ -581,7 +691,7 @@ function initChart(){
     layout: {background: {type: "solid", color: C.panel}, textColor: C.muted, fontFamily: cssVar("--font"), fontSize: 11, attributionLogo: true},
     grid: {vertLines: {color: C.lineSoft}, horzLines: {color: C.lineSoft}},
     crosshair: {mode: LC.CrosshairMode.Normal,
-      vertLine: {color: C.faint, labelBackgroundColor: "#2A3647"}, horzLine: {color: C.faint, labelBackgroundColor: "#2A3647"}},
+      vertLine: {color: C.faint, labelBackgroundColor: C.crossLabel}, horzLine: {color: C.faint, labelBackgroundColor: C.crossLabel}},
     rightPriceScale: {borderColor: C.line, scaleMargins: {top: .1, bottom: .22}},
     timeScale: {borderColor: C.line, timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 7, minBarSpacing: .5},
     handleScroll: {mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true},
@@ -605,7 +715,18 @@ function resetView(){
   chart.timeScale().scrollToRealTime();
 }
 function barOf(k){ return {time: toChartTime(k[0]), open: k[1], high: k[2], low: k[3], close: k[4]}; }
-function volOf(k){ return {time: toChartTime(k[0]), value: k[5], color: k[4] >= k[1] ? "rgba(47,165,125,.35)" : "rgba(219,90,85,.35)"}; }
+function volOf(k){ return {time: toChartTime(k[0]), value: k[5], color: k[4] >= k[1] ? C.longWash : C.shortWash}; }
+// re-colour the chart after a settings change
+function applyChartTheme(){
+  if (!chart) return;
+  chart.applyOptions({layout: {background: {type: "solid", color: C.panel}, textColor: C.muted},
+    grid: {vertLines: {color: C.lineSoft}, horzLines: {color: C.lineSoft}},
+    crosshair: {vertLine: {color: C.faint, labelBackgroundColor: C.crossLabel}, horzLine: {color: C.faint, labelBackgroundColor: C.crossLabel}},
+    rightPriceScale: {borderColor: C.line}, timeScale: {borderColor: C.line}});
+  candleSeries.applyOptions({upColor: C.long, downColor: C.short, wickUpColor: C.long, wickDownColor: C.short, priceLineColor: C.muted});
+  volSeries.setData(S.candles.map(volOf));
+  drawPriceLines();
+}
 function setPriceFormat(){
   const m = market(); if (!m || !candleSeries) return;
   const d = decs(m.mark);
@@ -759,10 +880,58 @@ async function submitOrder(ev){
     if ($("#post").checked) body.tif = "Alo";
   }
   if ($("#tpslOn").checked) { const tp = num($("#tpIn").value), sl = num($("#slIn").value); if (tp > 0) body.tp = tp; if (sl > 0) body.sl = sl; }
+  if (SET.confirm && !(await confirmOrder(body, m))) return;
   const btn = $("#submit"); btn.disabled = true;
   try { await act("/api/order", body); $("#size").value = ""; $("#tpIn").value = ""; $("#slIn").value = ""; renderSummary(); } catch {}
   finally { btn.disabled = false; }
 }
+
+function confirmOrder(body, m){
+  return new Promise(resolve => {
+    const n = notional(), lev = +$("#lev").value;
+    const rows = [["Market", m.name], ["Side", body.side === "buy" ? "Long" : "Short"], ["Type", body.type === "limit" ? `Limit at ${fpx(body.price)}` : "Market"],
+      ["Size", usd(n) + ` (${fpx(n / refPrice(), m.sz_dec)} ${m.name})`], ["Leverage", lev + "x"], ["Margin", usd(n / lev)]];
+    if (body.tp) rows.push(["Take profit", fpx(body.tp)]);
+    if (body.sl) rows.push(["Stop loss", fpx(body.sl)]);
+    if (body.reduce_only) rows.push(["Reduce only", "Yes"]);
+    $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${m.name}?`;
+    $("#cfSum").innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+    $("#cfOk").className = "btn " + (body.side === "buy" ? "primary" : "danger");
+    $("#cfNoAsk").checked = false;
+    const dlg = $("#confirmDlg");
+    dlg.addEventListener("close", () => {
+      if (dlg.returnValue === "ok" && $("#cfNoAsk").checked) saveSettings({...SET, confirm: false});
+      resolve(dlg.returnValue === "ok");
+    }, {once: true});
+    dlg.returnValue = ""; dlg.showModal();
+  });
+}
+
+// ---------- settings ----------
+function saveSettings(next){
+  SET = next; if (window.AureousSettings) { AureousSettings.save(SET); C = AureousSettings.apply(SET); }
+  applyChartTheme(); renderSettings(); renderBook();
+  if (S.tab === "perf") drawCurve();
+}
+function renderSettings(){
+  document.querySelectorAll("#settingsDlg .choice").forEach(g => g.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(SET[g.dataset.set] === b.dataset.v))));
+  const acc = window.AureousSettings ? AureousSettings.ACCENTS : {};
+  $("#settingsDlg .swatches").innerHTML = Object.entries(acc).map(([k, v]) =>
+    `<button class="swatch" data-v="${k}" style="background:${v}" aria-pressed="${SET.accent === k}" aria-label="${k[0].toUpperCase() + k.slice(1)}" title="${k[0].toUpperCase() + k.slice(1)}"></button>`).join("");
+  $("#setConfirm").checked = !!SET.confirm; $("#setBook").checked = SET.book !== false;
+}
+$("#settingsBtn").addEventListener("click", () => { renderSettings(); $("#settingsDlg").showModal(); });
+$("#setClose").addEventListener("click", () => $("#settingsDlg").close());
+$("#setDone").addEventListener("click", () => $("#settingsDlg").close());
+$("#setReset").addEventListener("click", () => saveSettings({...AureousSettings.DEFAULTS}));
+$("#settingsDlg").addEventListener("click", e => {
+  const b = e.target.closest(".choice button, .swatch"); if (!b) return;
+  const key = b.classList.contains("swatch") ? "accent" : b.parentElement.dataset.set;
+  saveSettings({...SET, [key]: b.dataset.v});
+});
+$("#setConfirm").addEventListener("change", e => saveSettings({...SET, confirm: e.target.checked}));
+$("#setBook").addEventListener("change", e => saveSettings({...SET, book: e.target.checked}));
+window.addEventListener("aureous-settings", () => { C = AureousSettings.apply(SET); applyChartTheme(); });
 
 // ---------- account + tables ----------
 async function refreshState(){
@@ -868,7 +1037,11 @@ function drawCurve(){
 }
 
 // ---------- events ----------
-$("#mkList").addEventListener("click", e => { const b = e.target.closest("[data-coin]"); if (b) selectCoin(b.dataset.coin); });
+$("#mkList").addEventListener("click", e => {
+  const f = e.target.closest("[data-fav]");
+  if (f) { const n = f.dataset.fav; S.favs = S.favs.includes(n) ? S.favs.filter(x => x !== n) : S.favs.concat(n); store.set("favs", S.favs); renderMarkets(); return; }
+  const b = e.target.closest("[data-coin]"); if (b) selectCoin(b.dataset.coin);
+});
 $("#mkSearch").addEventListener("input", renderMarkets);
 $("#mkSort").addEventListener("change", renderMarkets);
 $("#coinBtn").addEventListener("click", () => { $("#markets").classList.add("open"); $("#mkSearch").focus(); });
@@ -1081,6 +1254,9 @@ function renderBoard(){
   v.innerHTML = head + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 document.querySelector('[data-t="board"]').addEventListener("click", () => loadBoard(true));
+function openBoard(){ document.querySelector('[data-t="board"]').click(); $(".bottom").scrollIntoView({block: "nearest", behavior: "smooth"}); }
+$("#navBoard").addEventListener("click", e => { e.preventDefault(); history.replaceState(null, "", "#leaderboard"); openBoard(); });
+window.addEventListener("hashchange", () => { if (location.hash === "#leaderboard" && AUTH && AUTH.leaderboard) openBoard(); });
 $("#nameBtn").addEventListener("click", () => {
   $("#userMenu").hidden = true;
   $("#nameIn").value = (S.acct && S.acct.profile && S.acct.profile.name) || ""; $("#nameMsg").hidden = true;
@@ -1109,7 +1285,8 @@ window.AureousUI = {
   syncStatus(status, msg){ S.syncError = status === "error" ? msg : null; renderSaveNote(); },
   enableAccounts(api){
     AUTH = api; renderUser(); renderSaveNote(); renderSummary();
-    $("#boardTab").hidden = !api.leaderboard;
+    $("#boardTab").hidden = !api.leaderboard; $("#navBoard").hidden = !api.leaderboard;
+    if (location.hash === "#leaderboard" && api.leaderboard) openBoard();
   },
 };
 function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }

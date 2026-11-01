@@ -198,6 +198,8 @@ node tests/server/api.check.mjs          # sign-in, trading, every-minute job, c
 - `aureous/server.py`: local web server and JSON API
 - `aureous/web/index.html`: the website (same page for the public site and the local server)
 - `aureous/web/engine.js`: the browser engine used by the public site
+- `aureous/web/theme.js`: display settings (theme, accent, price colours, layout) shared by every page
+- `aureous/web/about.html`, `how-it-works.html`, `terms.html`, `privacy.html`, `404.html`, `site.css`: the site's content pages
 - `aureous/web/auth.js`, `aureous/web/firebase-config.js`: sign-in (Firebase Auth) and the connection to the trading server
 - `worker/`: the trading server (Cloudflare Worker + Durable Object), `wrangler.jsonc` its settings
 - `firestore.rules`: closes the unused Firestore database
