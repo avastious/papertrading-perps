@@ -279,7 +279,7 @@ class PaperExchange:
             p["realized"] += realized
             p["fees"] = p.get("fees", 0.0) + fee
         trade = {"ts": now, "coin": coin, "side": "buy" if sz > 0 else "sell",
-                 "sz": abs(sz), "px": px, "fee": fee, "realized": realized, "kind": kind}
+                 "sz": abs(sz), "px": px, "fee": fee, "realized": realized, "kind": kind, "lev": self.leverage(coin)}
         self.state["trades"].append(trade)
         return trade
 

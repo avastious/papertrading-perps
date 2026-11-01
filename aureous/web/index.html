@@ -8,6 +8,15 @@
 <meta property="og:title" content="Aureous: paper-trade Hyperliquid perpetuals">
 <meta property="og:description" content="Live Hyperliquid markets, $10,000 of paper money and a fair leaderboard. No wallet, no real money.">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Aureous">
+<meta property="og:url" content="https://aureous.pages.dev/">
+<meta property="og:image" content="https://aureous.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Aureous: paper-trade Hyperliquid perps with live prices">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://aureous.pages.dev/og.png">
+<link rel="canonical" href="https://aureous.pages.dev/">
 <title>Aureous</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
 <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -266,6 +275,12 @@ tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
 .tr-section table th:first-child,.tr-section table td:first-child{padding-left:20px}
 .tr-section table th:last-child,.tr-section table td:last-child{padding-right:20px}
 .tr-private{margin:8px 20px 16px;padding:14px;border:1px dashed var(--line);border-radius:6px;color:var(--muted);font-size:13px}
+#shareDlg{width:min(680px,calc(100vw - 24px))}
+#shareImg{width:100%;border-radius:8px;border:1px solid var(--line);display:block;background:#0E131B;aspect-ratio:1200/675}
+.share-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.share-btns .btn{font-size:13px}
+.tr-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tr-actions .btn{padding:5px 12px;font-size:12.5px}
 .swatch.locked{opacity:.4;position:relative}
 .swatch.locked::after{content:"";position:absolute;inset:7px;border:2px solid var(--bg);border-radius:2px}
 td.rank{color:var(--muted);width:56px}
@@ -535,10 +550,27 @@ td.rank{color:var(--muted);width:56px}
   </form>
 </dialog>
 
+<dialog id="shareDlg" aria-labelledby="shTitle">
+  <div class="auth">
+    <button class="dlg-x" id="shClose" type="button" aria-label="Close">&times;</button>
+    <h3 id="shTitle">Share</h3>
+    <img id="shareImg" alt="">
+    <div class="share-btns">
+      <button class="btn primary" type="button" id="shNative" hidden>Share…</button>
+      <button class="btn" type="button" id="shX">Post on X</button>
+      <button class="btn" type="button" id="shCopyImg" hidden>Copy image</button>
+      <button class="btn" type="button" id="shDownload">Download image</button>
+      <button class="btn" type="button" id="shCopyLink">Copy link</button>
+    </div>
+    <p class="note" id="shNote">On X, attach the downloaded or copied image to your post.</p>
+  </div>
+</dialog>
+
 <dialog id="traderDlg" aria-labelledby="trName">
   <div class="tr-wrap">
     <div class="tr-head"><button class="dlg-x" id="trClose" type="button" aria-label="Close" style="top:10px;right:12px">&times;</button>
-      <h3 id="trName">Trader</h3><p id="trSub"></p></div>
+      <h3 id="trName">Trader</h3><p id="trSub"></p>
+      <div class="tr-actions" id="trActions" hidden><button class="btn" type="button" id="trShare">Share profile</button><button class="btn" type="button" id="trLink">Copy link</button></div></div>
     <div class="tr-body" id="trBody"><div class="empty">Loading…</div></div>
   </div>
 </dialog>
@@ -618,7 +650,7 @@ function decs(x){ const a = Math.abs(x); if (!a) return 2; if (a >= 1) return Ma
 function fpx(x, d){ if (x == null || !isFinite(x)) return "–"; d = d ?? decs(x); return x.toLocaleString("en-US", {minimumFractionDigits: d, maximumFractionDigits: d}); }
 function usd(x){ if (x == null || !isFinite(x)) return "–"; return (x < 0 ? "-$" : "$") + Math.abs(x).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
 function sgnUsd(x){ return (x > 0 ? "+" : "") + usd(x); }
-function pct(x, d = 2){ return (x > 0 ? "+" : "") + (x * 100).toFixed(d) + "%"; }
+function pct(x, d = 2){ const v = (x * 100).toFixed(d); return +v === 0 ? (0).toFixed(d) + "%" : (x > 0 ? "+" : "") + v + "%"; }
 function big(x){ for (const [u, n] of [["B", 1e9], ["M", 1e6], ["K", 1e3]]) if (Math.abs(x) >= n) return (x / n).toFixed(2) + u; return x.toFixed(0); }
 function cls(x){ return x > 0 ? "up" : x < 0 ? "down" : ""; }
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -1044,7 +1076,7 @@ function renderBottom(){
           <td title="${p.liq ? "" : "Your whole balance backs this position (cross margin), so it can't be liquidated at any positive price."}">${p.liq ? fpx(p.liq) : "None"}</td>
           <td class="${cls(p.funding)}">${sgnUsd(p.funding)}</td>
           <td><span class="up">${tp}</span> / <span class="down">${sl}</span></td>
-          <td><span class="act"><button data-act="tpsl" data-coin="${esc(p.coin)}">TP/SL</button><button data-act="half" data-coin="${esc(p.coin)}" title="Close half at market">50%</button><button data-act="close" data-coin="${esc(p.coin)}" title="Close all at market">Close</button></span></td></tr>`;
+          <td><span class="act"><button data-act="share-pos" data-coin="${esc(p.coin)}" title="Share this position as an image">Share</button><button data-act="tpsl" data-coin="${esc(p.coin)}">TP/SL</button><button data-act="half" data-coin="${esc(p.coin)}" title="Close half at market">50%</button><button data-act="close" data-coin="${esc(p.coin)}" title="Close all at market">Close</button></span></td></tr>`;
       }).join("") + `</tbody></table>`;
   } else if (S.tab === "orders") {
     if (!a.orders.length) { v.innerHTML = `<div class="empty">No open orders. Limit orders and TP/SL triggers show up here.</div>`; return; }
@@ -1058,10 +1090,11 @@ function renderBottom(){
   } else if (S.tab === "trades") {
     if (!a.trades.length) { v.innerHTML = `<div class="empty">No trades yet.</div>`; return; }
     const kind = {market: "Market", limit: "Limit", close: "Close", tp: "Take profit", sl: "Stop loss", liquidation: "Liquidation"};
-    v.innerHTML = `<table><thead><tr><th>Time</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Value</th><th>Fee</th><th>Closed PnL</th><th>Type</th></tr></thead><tbody>` +
-      a.trades.map(t => `<tr><td>${tstr(t.ts)}</td><td>${coinBtn(t.coin)}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td>
+    v.innerHTML = `<table><thead><tr><th>Time</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Value</th><th>Fee</th><th>Closed PnL</th><th>Type</th><th></th></tr></thead><tbody>` +
+      a.trades.map((t, i) => `<tr><td>${tstr(t.ts)}</td><td>${coinBtn(t.coin)}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td>
         <td>${t.sz}</td><td>${fpx(t.px)}</td><td>${usd(t.sz * t.px)}</td><td>${usd(t.fee)}</td>
-        <td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || t.kind}</td></tr>`).join("") + `</tbody></table>`;
+        <td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || t.kind}</td>
+        <td>${Math.abs(t.realized) > 1e-9 ? `<span class="act"><button data-act="share-trade" data-i="${i}" title="Share this trade as an image">Share</button></span>` : ""}</td></tr>`).join("") + `</tbody></table>`;
   } else if (S.tab === "funding") {
     if (!a.funding.length) { v.innerHTML = `<div class="empty">No funding yet. It's settled on the hour for every open position.</div>`; return; }
     v.innerHTML = `<table><thead><tr><th>Time</th><th>Market</th><th>Position</th><th>Rate</th><th>Payment</th></tr></thead><tbody>` +
@@ -1158,6 +1191,8 @@ $("#bview").addEventListener("click", e => {
     act("/api/close", {coin, fraction: b.dataset.act === "half" ? .5 : 1}).then(r => r.messages.forEach(m => toast(m, "fill"))).catch(() => {});
   else if (b.dataset.act === "cancel") act("/api/cancel", {target: b.dataset.id}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
   else if (b.dataset.act === "tpsl") openTpsl(coin);
+  else if (b.dataset.act === "share-pos") sharePosition(coin);
+  else if (b.dataset.act === "share-trade") shareTrade(S.acct.trades[+b.dataset.i]);
 });
 function openTpsl(coin){
   const p = S.acct.positions.find(x => x.coin === coin); if (!p) return;
@@ -1335,12 +1370,169 @@ function renderBoard(){
 }
 $("#bview").addEventListener("click", e => { const t = e.target.closest("[data-pid]"); if (t) openTrader(t.dataset.pid); });
 
+// ---------- share cards ----------
+const SITE_URL = (document.querySelector('meta[property="og:url"]') || {}).content || location.origin + location.pathname;
+const CARD = {bg: "#0B1018", panel: "#111823", line: "#222D3C", text: "#E6EBF1", muted: "#8592A3", faint: "#55627A", gold: "#E3B341"};
+const profileLink = pid => SITE_URL.replace(/#.*$/, "") + "#trader-" + pid;
+async function cardFonts(){
+  try { await Promise.all(['600 120px "IBM Plex Sans"', '500 30px "IBM Plex Sans"', '400 26px "IBM Plex Sans"', '600 34px "Cinzel"'].map(f => document.fonts.load(f))); } catch {}
+}
+function cardBase(g, W, H){
+  g.fillStyle = CARD.bg; g.fillRect(0, 0, W, H);
+  const grad = g.createRadialGradient(W * .85, -H * .2, 10, W * .85, -H * .2, W * .9);
+  grad.addColorStop(0, "rgba(227,179,65,.10)"); grad.addColorStop(1, "rgba(227,179,65,0)");
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  g.strokeStyle = "rgba(255,255,255,.035)"; g.lineWidth = 1;
+  for (let x = 0; x < W; x += 60) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
+  for (let y = 0; y < H; y += 60) { g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
+  g.fillStyle = CARD.text; g.font = '600 34px "Cinzel", Georgia, serif'; g.textBaseline = "alphabetic";
+  if ("letterSpacing" in g) g.letterSpacing = "4px";
+  g.fillText("AUREOUS", 64, 92);
+  if ("letterSpacing" in g) g.letterSpacing = "0px";
+  g.fillStyle = CARD.muted; g.font = '400 22px "IBM Plex Sans", sans-serif'; g.textAlign = "right";
+  g.fillText("Paper trading on live Hyperliquid prices", W - 64, 90); g.textAlign = "left";
+}
+function cardCoin(g, x, y, r, tierId){
+  const t = tierOf(tierId); if (!t) return;
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = t.color; g.fill();
+  g.beginPath(); g.arc(x, y, r * .74, 0, Math.PI * 2); g.strokeStyle = "rgba(0,0,0,.28)"; g.lineWidth = Math.max(1, r / 9); g.stroke();
+  g.fillStyle = "rgba(0,0,0,.62)"; g.font = `600 ${Math.round(r)}px "Cinzel", Georgia, serif`; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(t.letter, x, y + r * .06); g.textAlign = "left"; g.textBaseline = "alphabetic";
+}
+function cardFooter(g, W, H, name, badges){
+  g.fillStyle = CARD.line; g.fillRect(64, H - 112, W - 128, 1);
+  let x = 64;
+  const top = (badges || []).map(b => b.tier).sort((a, b) => topIndex(a) - topIndex(b)).pop();
+  if (top) { cardCoin(g, x + 18, H - 62, 18, top); x += 50; }
+  g.fillStyle = top && topIndex(top) >= topIndex("aureus") ? CARD.gold : CARD.text; g.font = '500 28px "IBM Plex Sans", sans-serif';
+  g.fillText(name || "Aureous trader", x, H - 52);
+  g.fillStyle = CARD.muted; g.font = '400 24px "IBM Plex Sans", sans-serif'; g.textAlign = "right";
+  g.fillText(SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, ""), W - 64, H - 52); g.textAlign = "left";
+}
+function cardSparkline(g, x, y, w, h, closes, color){
+  if (!closes || closes.length < 2) return;
+  const lo = Math.min(...closes), hi = Math.max(...closes), r = hi - lo || 1;
+  const px = i => x + i / (closes.length - 1) * w, py = v => y + h - (v - lo) / r * h;
+  g.beginPath(); closes.forEach((v, i) => i ? g.lineTo(px(i), py(v)) : g.moveTo(px(i), py(v)));
+  g.strokeStyle = color; g.lineWidth = 3; g.globalAlpha = .9; g.stroke();
+  g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.closePath();
+  const fill = g.createLinearGradient(0, y, 0, y + h); fill.addColorStop(0, color + "33"); fill.addColorStop(1, color + "00");
+  g.fillStyle = fill; g.globalAlpha = 1; g.fill();
+}
+const CARD_UP = () => "#2FA57D", CARD_DOWN = () => "#DB5A55";
+function pctBig(x){ return (x > 0 ? "+" : "") + (x * 100).toFixed(Math.abs(x) >= 10 ? 0 : 2) + "%"; }
+async function drawTradeCard(d){
+  await cardFonts();
+  const W = 1200, H = 675, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); cardBase(g, W, H);
+  const up = d.pnl >= 0, col = up ? CARD_UP() : CARD_DOWN(), long = d.size > 0;
+  // market + side
+  g.fillStyle = CARD.text; g.font = '600 46px "IBM Plex Sans", sans-serif'; g.fillText(d.coin, 64, 186);
+  const cw = g.measureText(d.coin).width, chip = `${long ? "LONG" : "SHORT"} ${d.lev}x`;
+  g.font = '600 22px "IBM Plex Sans", sans-serif'; const tw = g.measureText(chip).width;
+  g.fillStyle = long ? "rgba(47,165,125,.16)" : "rgba(219,90,85,.16)"; g.beginPath(); g.roundRect(64 + cw + 20, 154, tw + 28, 40, 6); g.fill();
+  g.fillStyle = long ? CARD_UP() : CARD_DOWN(); g.fillText(chip, 64 + cw + 34, 182);
+  g.fillStyle = CARD.muted; g.font = '400 22px "IBM Plex Sans", sans-serif'; g.fillText(d.closed ? "Closed trade" : "Open position", 64, 226);
+  // big return
+  let fs = 150; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`;
+  while (g.measureText(pctBig(d.roe)).width > 630 && fs > 70) { fs -= 6; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`; }
+  g.fillStyle = col; g.fillText(pctBig(d.roe), 56, 382);
+  g.font = '500 40px "IBM Plex Sans", sans-serif'; g.fillText(`${up ? "+" : "-"}$${Math.abs(d.pnl).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 64, 440);
+  // stats
+  const stats = [["Entry", fpx(d.entry)], [d.closed ? "Exit" : "Mark", fpx(d.exit)], ["Size", "$" + Math.round(d.value).toLocaleString("en-US")]];
+  stats.forEach(([k, v], i) => { const x = 64 + i * 210;
+    g.fillStyle = CARD.faint; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.fillText(k, x, 498);
+    g.fillStyle = CARD.text; g.font = '500 30px "IBM Plex Sans", sans-serif'; g.fillText(v, x, 536); });
+  cardSparkline(g, 720, 150, 416, 330, d.closes, col);
+  g.fillStyle = CARD.faint; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.textAlign = "right";
+  g.fillText(new Date(d.ts || Date.now()).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"}), W - 64, 536); g.textAlign = "left";
+  cardFooter(g, W, H, d.name, d.badges);
+  return cv;
+}
+async function drawProfileCard(d){
+  await cardFonts();
+  const W = 1200, H = 675, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); cardBase(g, W, H);
+  const up = d.return >= 0, col = up ? CARD_UP() : CARD_DOWN();
+  g.fillStyle = CARD.muted; g.font = '400 24px "IBM Plex Sans", sans-serif';
+  g.fillText(d.rank ? `#${d.rank} of ${d.total} on the leaderboard` : "On the Aureous leaderboard", 64, 186);
+  let fs = 110; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`;
+  const big$ = "$" + Math.round(d.equity).toLocaleString("en-US");
+  while (g.measureText(big$).width > 660 && fs > 60) { fs -= 6; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`; }
+  g.fillStyle = CARD.text; g.fillText(big$, 56, 316);
+  g.fillStyle = col; g.font = '600 52px "IBM Plex Sans", sans-serif'; g.fillText(pctBig(d.return), 64, 386);
+  const rw = g.measureText(pctBig(d.return)).width;
+  g.fillStyle = CARD.muted; g.font = '400 24px "IBM Plex Sans", sans-serif'; g.fillText("from a $10,000 start", 64 + rw + 20, 384);
+  const st = d.stats || {}, stats = [["Best value", "$" + Math.round(d.peak).toLocaleString("en-US")], ["Win rate", st.win_rate == null ? "–" : Math.round(st.win_rate * 100) + "%"], ["Trades", String(st.trades || 0)]];
+  stats.forEach(([k, v], i) => { const x = 64 + i * 230;
+    g.fillStyle = CARD.faint; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.fillText(k, x, 470);
+    g.fillStyle = CARD.text; g.font = '500 30px "IBM Plex Sans", sans-serif'; g.fillText(v, x, 508); });
+  // badge ladder
+  TIERS.forEach((t, i) => { const got = (d.badges || []).some(b => b.tier === t.id), x = 820 + i * 66;
+    g.globalAlpha = got ? 1 : .18; cardCoin(g, x, 300, 26, t.id); g.globalAlpha = 1; });
+  const earned = (d.badges || []).length;
+  g.fillStyle = CARD.muted; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.textAlign = "center";
+  g.fillText(earned ? `${earned} of ${TIERS.length} badges` : "No badges yet", 820 + 2 * 66, 360); g.textAlign = "left";
+  cardSparkline(g, 760, 400, 376, 110, (d.curve || []).map(p => p[1]), col);
+  cardFooter(g, W, H, d.name, d.badges);
+  return cv;
+}
+S.share = null;
+async function openShare(title, canvas, text, link){
+  const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+  const file = new File([blob], "aureous.png", {type: "image/png"});
+  if (S.share && S.share.url) URL.revokeObjectURL(S.share.url);
+  S.share = {blob, file, text, link, url: URL.createObjectURL(blob)};
+  $("#shTitle").textContent = title; $("#shareImg").src = S.share.url; $("#shareImg").alt = text;
+  $("#shNative").hidden = !(navigator.canShare && navigator.canShare({files: [file]}));
+  $("#shCopyImg").hidden = !(navigator.clipboard && window.ClipboardItem);
+  $("#shareDlg").showModal();
+}
+function myName(){ return (S.acct && S.acct.profile && S.acct.profile.name) || (S.user && S.user.name) || "Aureous trader"; }
+function myBadges(){ return (S.acct && S.acct.profile && S.acct.profile.badges) || []; }
+function closesFor(coin){ return coin === S.coin && S.candles.length ? S.candles.slice(-80).map(k => k[4]) : null; }
+async function sharePosition(coin){
+  const p = S.acct.positions.find(x => x.coin === coin); if (!p) return;
+  const cv = await drawTradeCard({coin, size: p.size, lev: p.lev, entry: p.entry, exit: p.mark, pnl: p.upnl, roe: p.roe, value: p.value,
+    closes: closesFor(coin), name: myName(), badges: myBadges(), ts: Date.now()});
+  const dir = p.size > 0 ? "long" : "short";
+  const text = `${p.upnl >= 0 ? "Up" : "Down"} ${pct(Math.abs(p.roe), 1).replace("+", "")} on a ${p.lev}x ${coin} ${dir}, paper trading live Hyperliquid prices on Aureous.`;
+  openShare(`Share your ${coin} ${dir}`, cv, text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
+}
+async function shareTrade(t){
+  if (!t) return;
+  // the closing fill tells us the exit; the realised PnL gives the entry
+  const wasLong = t.side === "sell", entry = wasLong ? t.px - t.realized / t.sz : t.px + t.realized / t.sz;
+  const lev = t.lev || 1, value = t.sz * entry, roe = t.realized / (value / lev);
+  const cv = await drawTradeCard({coin: t.coin, size: wasLong ? t.sz : -t.sz, lev, entry, exit: t.px, pnl: t.realized, roe, value,
+    closes: closesFor(t.coin), name: myName(), badges: myBadges(), ts: t.ts, closed: true});
+  const text = `Closed a ${lev}x ${t.coin} ${wasLong ? "long" : "short"} ${t.realized >= 0 ? "up" : "down"} ${pct(Math.abs(roe), 1).replace("+", "")}, paper trading live Hyperliquid prices on Aureous.`;
+  openShare(`Share your ${t.coin} trade`, cv, text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
+}
+async function shareProfile(d){
+  const cv = await drawProfileCard(d);
+  const text = d.self ? `My Aureous account: ${usd(d.equity).replace(".00", "")} (${pct(d.return, 1)}) from a $10,000 start. Paper trading live Hyperliquid prices.`
+                      : `${d.name} is at ${usd(d.equity).replace(".00", "")} (${pct(d.return, 1)}) on Aureous, paper trading live Hyperliquid prices.`;
+  openShare(d.self ? "Share your profile" : `Share ${d.name}'s profile`, cv, text, profileLink(d.pid));
+}
+async function copyText(t, msg){ try { await navigator.clipboard.writeText(t); toast(msg); } catch { prompt("Copy this link:", t); } }
+$("#shClose").addEventListener("click", () => $("#shareDlg").close());
+$("#shDownload").addEventListener("click", () => { const a = document.createElement("a"); a.href = S.share.url; a.download = "aureous.png"; document.body.appendChild(a); a.click(); a.remove(); });
+$("#shCopyImg").addEventListener("click", async () => {
+  try { await navigator.clipboard.write([new ClipboardItem({"image/png": S.share.blob})]); toast("Image copied. Paste it into your post."); }
+  catch { toast("Your browser didn't allow copying the image. Use Download instead.", "error"); }
+});
+$("#shNative").addEventListener("click", async () => { try { await navigator.share({files: [S.share.file], text: S.share.text + " " + S.share.link}); } catch {} });
+$("#shX").addEventListener("click", () => window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(S.share.text)}&url=${encodeURIComponent(S.share.link)}`, "_blank", "noopener"));
+$("#shCopyLink").addEventListener("click", () => copyText(S.share.link, "Link copied."));
+
 // ---------- trader profiles ----------
 S.trader = null;
 async function openTrader(pid){
   if (!AUTH || !AUTH.trader) return;
   S.trader = {pid, data: null};
-  $("#trName").textContent = "Trader"; $("#trSub").textContent = ""; $("#trBody").innerHTML = `<div class="empty">Loading…</div>`;
+  $("#trName").textContent = "Trader"; $("#trSub").textContent = ""; $("#trActions").hidden = true; $("#trBody").innerHTML = `<div class="empty">Loading…</div>`;
+  if (location.hash !== "#trader-" + pid) history.replaceState(null, "", "#trader-" + pid);
   if (!$("#traderDlg").open) $("#traderDlg").showModal();
   try { const d = await AUTH.trader(pid); if (S.trader && S.trader.pid === pid) { S.trader.data = d; renderTrader(); } }
   catch (e) { $("#trBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -1351,6 +1543,7 @@ function renderTrader(){
   $("#trName").innerHTML = `${top ? badgeSvg(top, 22) : ""}<span class="tname${top && topIndex(top) >= topIndex("aureus") ? " gold" : ""}">${esc(d.name)}</span>` +
     (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
   $("#trSub").textContent = `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
+  $("#trActions").hidden = false;
   // live values from this page's prices where we have them
   const mk = c => S.mk[c] ? S.mk[c].mark : null;
   const pos = (d.positions || []).map(p => { const m = mk(p.coin) ?? p.mark; return {...p, mark: m, upnl: p.size * (m - p.entry), value: Math.abs(p.size) * m}; });
@@ -1375,7 +1568,11 @@ function renderTrader(){
   $("#trBody").innerHTML = html;
 }
 $("#trClose").addEventListener("click", () => $("#traderDlg").close());
-$("#traderDlg").addEventListener("close", () => { S.trader = null; });
+$("#traderDlg").addEventListener("close", () => { S.trader = null; if (location.hash.startsWith("#trader-")) history.replaceState(null, "", location.pathname + location.search); });
+$("#trShare").addEventListener("click", () => { if (S.trader && S.trader.data) shareProfile(S.trader.data); });
+$("#trLink").addEventListener("click", () => { if (S.trader) copyText(profileLink(S.trader.pid), "Profile link copied."); });
+const hashTrader = () => { const m = /^#trader-([0-9a-f]{12})$/.exec(location.hash); return m && m[1]; };
+window.addEventListener("hashchange", () => { const pid = hashTrader(); if (pid && AUTH && AUTH.trader && !(S.trader && S.trader.pid === pid)) openTrader(pid); });
 $("#traderDlg").addEventListener("click", e => { if (e.target === $("#traderDlg")) $("#traderDlg").close(); });
 
 // ---------- milestones on your own account ----------
@@ -1433,6 +1630,7 @@ window.AureousUI = {
     AUTH = api; renderUser(); renderSaveNote(); renderSummary();
     $("#boardTab").hidden = !api.leaderboard; $("#navBoard").hidden = !api.leaderboard;
     if (location.hash === "#leaderboard" && api.leaderboard) openBoard();
+    if (hashTrader() && api.trader) { openBoard(); openTrader(hashTrader()); }
   },
 };
 function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }

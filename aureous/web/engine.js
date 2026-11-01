@@ -240,7 +240,7 @@
       } else {
         p.size = n; p.entry = entry; p.realized += realized; p.fees = (p.fees || 0) + fee;
       }
-      const trade = {ts: now, coin, side: sz > 0 ? "buy" : "sell", sz: Math.abs(sz), px, fee, realized, kind};
+      const trade = {ts: now, coin, side: sz > 0 ? "buy" : "sell", sz: Math.abs(sz), px, fee, realized, kind, lev: this.leverage(coin)};
       this.state.trades.push(trade);
       return trade;
     }

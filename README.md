@@ -34,18 +34,21 @@ To publish website changes: commit them, then run `scripts/publish_pages.sh`. It
 
 The main address is a Cloudflare Pages project built from the `gh-pages` branch, with no build command and no output directory. Every run of `scripts/publish_pages.sh` updates GitHub Pages and Cloudflare at once. `aureous.pages.dev` must be listed in Firebase → Authentication → Authorized domains.
 
+## Sharing
+
+- **Share cards:** "Share" on a position, a closed trade (Trade history) or a profile makes an image card. It can be downloaded, copied, shared from a phone's share sheet, or posted on X.
+- **Profile links** look like `https://aureous.pages.dev/#trader-<id>` and open that trader's profile.
+- **Link previews** use `aureous/web/og.png`. Regenerate it with `node scripts/make_og.mjs [domain]` (needs Playwright).
+
 ## Custom domain
 
-1. Buy a domain from any registrar (Cloudflare, Porkbun, Namecheap, Squarespace, ...).
-2. In the repo, go to Settings → Pages → Custom domain, enter the domain (e.g. `example.com`) and click Save.
-3. At the registrar's DNS settings, add four `A` records for `@` pointing to `185.199.108.153`, `185.199.109.153`, `185.199.110.153` and `185.199.111.153`. Then add a `CNAME` record for `www` pointing to `avastious.github.io`. Delete any other `A` or `CNAME` records for `@` and `www`, such as the registrar's parking page.
-4. Once GitHub shows the DNS check passed (minutes to a few hours), tick **Enforce HTTPS**.
-5. Add the domain everywhere sign-in is allowed:
-   - Firebase → Authentication → Settings → Authorized domains (add both `example.com` and `www.example.com`).
-   - The API key's website restrictions.
-   - The reCAPTCHA key's domains, if you use App Check.
+1. Buy the domain. Cloudflare Registrar is simplest, because the domain then lives in the same account as the site.
+2. Cloudflare → Workers & Pages → the `aureous` Pages project → **Custom domains → Set up a custom domain**. Enter the domain and follow the prompts; Cloudflare creates the DNS records and the HTTPS certificate. Add `www.` the same way if you want it.
+   - If you bought the domain elsewhere, Cloudflare will ask you to switch the domain's nameservers to Cloudflare. Do that at your registrar.
+3. Firebase → Authentication → Settings → **Authorized domains**: add the domain (and `www.` version).
+4. Run `python3 scripts/set_domain.py yourdomain.com`. It updates share links and link previews, lets the domain call the trading server, and regenerates the pages and the preview image. Then commit, push, and run `scripts/publish_pages.sh`.
 
-Also save the domain in `aureous/web/CNAME` (just the name, e.g. `example.com`). `scripts/publish_pages.sh` publishes only that file's domain, so without it the next publish removes the domain.
+`aureous.pages.dev` and the GitHub Pages address keep working.
 
 ## The trading server (aureous-api)
 
@@ -216,6 +219,8 @@ node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, h
 - `firestore.rules`: closes the unused Firestore database
 - `scripts/publish_pages.sh`: publish the site to GitHub Pages and Cloudflare Pages
 - `scripts/build_pages.py`: regenerates the content pages (edit the text there)
+- `scripts/set_domain.py`: switch the site to a new domain in one step
+- `scripts/make_og.mjs`, `scripts/og-card.html`: the link preview image
 - `tests/`: engine and web API tests
 
 ## Third-party

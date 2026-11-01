@@ -6,6 +6,10 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aureous", 
 FAV = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E"
 NAV = [("./#leaderboard", "Leaderboard", None), ("how-it-works.html", "How it works", "how"), ("about.html", "About", "about")]
 ISSUES = "https://github.com/avastious/papertrading-perps/issues"
+SITE_URL = "https://aureous.pages.dev/"   # change with scripts/set_domain.py
+
+def slug_file(slug):
+    return {"how": "how-it-works.html", "about": "about.html", "terms": "terms.html", "privacy": "privacy.html"}.get(slug, "")
 
 def page(slug, title, desc, body, extra_head=""):
     nav = "".join(f'<a href="{h}"{" aria-current=\"page\"" if k == slug else ""}>{t}</a>' for h, t, k in NAV)
@@ -19,6 +23,13 @@ def page(slug, title, desc, body, extra_head=""):
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Aureous">
+<meta property="og:url" content="{SITE_URL}{"" if slug == "404" else slug_file(slug)}">
+<meta property="og:image" content="{SITE_URL}og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{SITE_URL}og.png">
 <link rel="icon" href="{FAV}">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="site.css">

@@ -300,7 +300,7 @@ export class Exchange extends DurableObject {
           return {coin, size: p.size, entry: p.entry, mark, value: Math.abs(p.size) * mark, upnl: p.size * (mark - p.entry),
                   lev, opened: p.opened_ms, funding: p.funding};
         });
-        out.trades = st.trades.slice(-50).reverse().map(t => ({ts: t.ts, coin: t.coin, side: t.side, sz: t.sz, px: t.px, realized: t.realized, kind: t.kind}));
+        out.trades = st.trades.slice(-50).reverse().map(t => ({ts: t.ts, coin: t.coin, side: t.side, sz: t.sz, px: t.px, realized: t.realized, kind: t.kind, lev: t.lev}));
         out.curve = st.equity_curve.slice(-300);
       }
       return out;
