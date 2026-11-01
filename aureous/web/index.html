@@ -294,7 +294,9 @@ tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
 #shareCv{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;background:#0E131B;aspect-ratio:1200/675}
 .bg-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .bg-row .btn{font-size:12.5px;padding:5px 10px}
-.bg-row label{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.bg-row label{display:inline-flex;align-items:center;gap:6px}
+#shZoomWrap{margin-left:auto}
+#shareCv.movable{cursor:grab;touch-action:none} #shareCv.movable:active{cursor:grabbing}
 .bg-row input[type=range]{width:110px}
 .share-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .share-btns .btn{font-size:13px}
@@ -580,6 +582,7 @@ td.rank{color:var(--muted);width:56px}
       <button class="btn" type="button" id="shBgPick">Use my image or video…</button>
       <button class="btn" type="button" id="shBgClear" hidden>Back to default</button>
       <button class="btn" type="button" id="shSound" hidden aria-pressed="true">Sound on</button>
+      <label id="shZoomWrap" hidden title="From the whole picture to filling the card">Zoom <input type="range" id="shZoom" min="0" max="100" step="1" aria-label="Zoom the background"></label>
       <label id="shDimWrap" hidden>Darken <input type="range" id="shDim" min="0" max="90" step="5" aria-label="Darken the background"></label>
       <input type="file" id="shBgFile" accept="image/*,video/*" hidden>
     </div>
@@ -1591,7 +1594,16 @@ async function drawProfileCard(d){
 }
 // ---- your own background (image or video). It stays on this device: kept in the browser's
 // storage so it's there next time, never uploaded anywhere.
-const BG = {media: null, kind: null, url: null, dim: store.get("cardDim", 55), sound: store.get("cardSound", true), loaded: false};
+const BG = {media: null, kind: null, url: null, dim: store.get("cardDim", 55), sound: store.get("cardSound", true), loaded: false,
+            zoom: store.get("cardZoom", 0), pan: store.get("cardPan", [0, 0])};   // zoom 0 = whole picture, 100 = fills the card
+const blurCv = document.createElement("canvas"); blurCv.width = 64; blurCv.height = 36;
+// where the picture sits on the 1200x675 card for the current zoom and drag position
+function bgPlace(sw, sh, W = 1200, H = 675){
+  const fit = Math.min(W / sw, H / sh), fill = Math.max(W / sw, H / sh);
+  const k = fit * Math.pow(fill / fit, BG.zoom / 100), dw = sw * k, dh = sh * k;
+  const x = (W - dw) / 2 + (dw > W ? BG.pan[0] * (dw - W) / 2 : 0), y = (H - dh) / 2 + (dh > H ? BG.pan[1] * (dh - H) / 2 : 0);
+  return {x, y, dw, dh};
+}
 // The video's sound goes through Web Audio: one branch to the speakers (the preview, switchable)
 // and one into the recording, so the downloaded video keeps its sound.
 const AUD = {ctx: null, el: null, src: null, out: null, dest: null};
@@ -1652,9 +1664,16 @@ function composeCard(g, fg){
   g.save();
   if (m && (BG.kind === "image" || m.readyState >= 2)) {
     const sw = BG.kind === "video" ? m.videoWidth : m.naturalWidth, sh = BG.kind === "video" ? m.videoHeight : m.naturalHeight;
-    const k = Math.max(W / sw, H / sh), dw = sw * k, dh = sh * k;
+    const {x, y, dw, dh} = bgPlace(sw, sh);
     g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
-    g.drawImage(m, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    if (dw < W - 1 || dh < H - 1) {               // fill the edges with a soft, dark blur of the same picture
+      const k2 = Math.max(64 / sw, 36 / sh), b = blurCv.getContext("2d");
+      b.drawImage(m, (64 - sw * k2) / 2, (36 - sh * k2) / 2, sw * k2, sh * k2);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+      g.drawImage(blurCv, -40, -24, W + 80, H + 48);
+      g.fillStyle = "rgba(8,11,17,.45)"; g.fillRect(0, 0, W, H);
+    }
+    g.drawImage(m, x, y, dw, dh);
     const d = BG.dim / 100;                        // darken overall, more on the left where the numbers are
     g.fillStyle = `rgba(8,11,17,${(d * .6).toFixed(3)})`; g.fillRect(0, 0, W, H);
     const lg = g.createLinearGradient(0, 0, W * .75, 0); lg.addColorStop(0, `rgba(8,11,17,${(d * .6).toFixed(3)})`); lg.addColorStop(1, "rgba(8,11,17,0)");
@@ -1671,6 +1690,8 @@ function renderShareBg(){
   const custom = !!BG.media, video = BG.kind === "video";
   $("#shBgPick").textContent = custom ? "Change image or video…" : "Use my image or video…";
   $("#shBgClear").hidden = !custom; $("#shDimWrap").hidden = !custom; $("#shDim").value = BG.dim;
+  $("#shZoomWrap").hidden = !custom; $("#shZoom").value = BG.zoom; $("#shareCv").classList.toggle("movable", custom);
+  $("#shareCv").title = custom ? "Drag to move the picture" : "";
   $("#shVideo").hidden = !video; $("#shSound").hidden = !video;
   $("#shSound").textContent = BG.sound ? "Sound on" : "Sound off"; $("#shSound").setAttribute("aria-pressed", String(BG.sound));
   $("#shDownload").textContent = video ? "Download still" : "Download image";
@@ -1718,6 +1739,7 @@ $("#shBgFile").addEventListener("change", async () => {
   if (f.size > BG_MAX[kind]) { toast(`That ${kind} is too big (over ${BG_MAX[kind] / 1e6} MB).`, "error"); return; }
   try { await setBg(f, kind); }
   catch { toast(kind === "video" ? "Your browser can't play that video. Try an MP4." : "Couldn't open that image.", "error"); await setBg(null); }
+  BG.pan = [0, 0]; store.set("cardPan", BG.pan);
   if (BG.kind === "video") videoSound(BG.sound);
   if (BG.media) {
     if (f.size <= BG_KEEP) bgDB.set({blob: f, kind, name: f.name});
@@ -1734,6 +1756,27 @@ $("#shSound").addEventListener("click", async () => {
 $("#shBgClear").addEventListener("click", async () => { await setBg(null); bgDB.clear(); await bgChanged(); });
 $("#shDim").addEventListener("input", () => { BG.dim = +$("#shDim").value; store.set("cardDim", BG.dim); if (BG.kind !== "video") drawSharePreview(); });
 $("#shDim").addEventListener("change", () => { S.share.video = null; refreshShareImage(); });
+$("#shZoom").addEventListener("input", () => { BG.zoom = +$("#shZoom").value; store.set("cardZoom", BG.zoom); if (BG.kind !== "video") drawSharePreview(); });
+$("#shZoom").addEventListener("change", () => { S.share.video = null; refreshShareImage(); });
+// drag the picture to choose which part shows
+(() => {
+  const cv = $("#shareCv"); let drag = null;
+  cv.addEventListener("pointerdown", e => {
+    if (!BG.media) return;
+    const m = BG.media, sw = BG.kind === "video" ? m.videoWidth : m.naturalWidth, sh = BG.kind === "video" ? m.videoHeight : m.naturalHeight;
+    drag = {x: e.clientX, y: e.clientY, pan: BG.pan.slice(), sw, sh, scale: 1200 / cv.getBoundingClientRect().width};
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const {dw, dh} = bgPlace(drag.sw, drag.sh), clamp = v => Math.max(-1, Math.min(1, v));
+    BG.pan = [dw > 1200 ? clamp(drag.pan[0] + 2 * (e.clientX - drag.x) * drag.scale / (dw - 1200)) : 0,
+              dh > 675 ? clamp(drag.pan[1] + 2 * (e.clientY - drag.y) * drag.scale / (dh - 675)) : 0];
+    if (BG.kind !== "video") drawSharePreview();
+  });
+  const end = () => { if (!drag) return; drag = null; store.set("cardPan", BG.pan); S.share.video = null; refreshShareImage(); };
+  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+})();
 $("#shareDlg").addEventListener("close", () => { if (BG.kind === "video" && !S.recording) BG.media.pause(); });
 
 // ---- video: play the background from the start and record the card over it

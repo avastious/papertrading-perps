@@ -76,6 +76,7 @@ Endpoints:
 
 Positions, closed trades and profiles can be shared as 1200×675 images drawn in the browser. People can put their own image or video behind a card:
 
+- the whole picture shows by default (edges filled with a blurred copy). A Zoom slider goes up to filling the card, and dragging the preview moves the picture;
 - the text is drawn as a separate layer over the background, with a Darken slider to keep it readable;
 - a video background exports as a 1280×720 MP4 (WebM in browsers that can't record MP4), up to 15 seconds long, recorded in the browser with MediaRecorder. The video's sound is routed through Web Audio into the recording (H.264 + AAC where the browser can, as X requires), and can be switched off;
 - the file never leaves the device. It's kept in IndexedDB (files up to 100 MB) so it's there next time.
