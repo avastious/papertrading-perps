@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!-- Profile picture. Render: open with ?theme=dark|light|gold at 1024x1024 (see brand/README in the main README). -->
+<html><head><meta charset="utf-8"><style>
+@font-face{font-family:"Cinzel";font-weight:600;src:url(../aureous/web/fonts/cinzel-latin-600-normal.woff2)}
+*{margin:0}
+html,body{width:1024px;height:1024px;overflow:hidden}
+body{display:grid;place-items:center;background:var(--bg);position:relative}
+.word{font-family:Cinzel,serif;font-weight:600;font-size:118px;letter-spacing:.09em;color:var(--fg);padding-left:.09em;line-height:1}
+.rule{position:absolute;left:50%;top:calc(50% + 96px);width:72px;height:4px;margin-left:-36px;background:var(--accent);border-radius:3px}
+.dark{--bg:#0E131B;--fg:#E6EBF1;--accent:#E3B341}
+.light{--bg:#F4F1EA;--fg:#141B25;--accent:#B8862B}
+.gold{--bg:#0E131B;--fg:#E3B341;--accent:#E3B341}
+.glow{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,rgba(227,179,65,.10),rgba(227,179,65,0) 60%)}
+.light .glow{display:none}
+</style></head><body>
+<div class="glow"></div><div class="word">AUREOUS</div><div class="rule"></div>
+<script>document.body.className = new URLSearchParams(location.search).get("theme") || "dark";</script>
+</body></html>
