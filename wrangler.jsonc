@@ -15,7 +15,7 @@
   },
   "vars": {
     "FIREBASE_PROJECT_ID": "aureous-14551",
-    "ALLOWED_ORIGINS": "https://aureous.pages.dev,https://avastious.github.io"
+    "ALLOWED_ORIGINS": "https://www.aureous.trade,https://aureous.trade,https://aureous.pages.dev,https://avastious.github.io"
   },
   "observability": {"enabled": true}
 }

@@ -6,7 +6,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aureous", 
 FAV = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E"
 NAV = [("./#leaderboard", "Leaderboard", None), ("how-it-works.html", "How it works", "how"), ("about.html", "About", "about")]
 ISSUES = "https://github.com/avastious/papertrading-perps/issues"
-SITE_URL = "https://aureous.pages.dev/"   # change with scripts/set_domain.py
+SITE_URL = "https://aureous.trade/"   # change with scripts/set_domain.py
 
 def slug_file(slug):
     return {"how": "how-it-works.html", "about": "about.html", "terms": "terms.html", "privacy": "privacy.html"}.get(slug, "")
@@ -153,7 +153,7 @@ HOW = """
 TERMS = """
 <h1>Terms of use</h1>
 <p class="updated">Last updated 1 November 2026</p>
-<p>These terms cover your use of Aureous, the paper-trading website at aureous.pages.dev. By using it you agree to them. If you don't agree, please don't use the site.</p>
+<p>These terms cover your use of Aureous, the paper-trading website at aureous.trade. By using it you agree to them. If you don't agree, please don't use the site.</p>
 
 <h2>Paper trading only</h2>
 <p>Aureous is a simulation. Balances, positions, profits and losses are not real money and can't be deposited, withdrawn, exchanged or redeemed for anything. No orders are ever placed on Hyperliquid or any other exchange. There are no prizes unless we announce one separately, with its own rules.</p>
