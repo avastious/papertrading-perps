@@ -28,7 +28,7 @@ On Windows use `py -m pip install -e .`. With no Git, download the ZIP from GitH
   - every minute, fills stops, take-profits, limits and liquidations and settles funding, even with nobody's page open.
 - **The leaderboard is fair.** Everyone starts with $10,000 and ranks by account value (balance plus open positions at mark). Balances only ever change on the server. Resets always go back to $10,000.
 
-To publish website changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which both Cloudflare Pages and GitHub Pages serve. Server changes deploy automatically when `main` is pushed.
+To publish website changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which both Cloudflare Pages and GitHub Pages serve. It also stamps script and style links with the commit (`auth.js?v=abc1234`), so browsers never mix a new page with old cached code. Server changes deploy automatically when `main` is pushed.
 
 ## Cloudflare Pages (aureous.pages.dev)
 
@@ -71,6 +71,14 @@ Endpoints:
 - Each new badge starts a 7-day spotlight on the leaderboard.
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
+
+## Share cards
+
+Positions, closed trades and profiles can be shared as 1200×675 images drawn in the browser. People can put their own image or video behind a card:
+
+- the text is drawn as a separate layer over the background, with a Darken slider to keep it readable;
+- a video background exports as a 1280×720 MP4 (WebM in browsers that can't record MP4), up to 15 seconds long and without sound, recorded in the browser with MediaRecorder;
+- the file never leaves the device. It's kept in IndexedDB (files up to 100 MB) so it's there next time.
 
 ## Clans
 
