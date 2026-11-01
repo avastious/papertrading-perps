@@ -2,7 +2,7 @@
 
 Paper-trade **Hyperliquid perpetuals** with **live Hyperliquid market data**: real prices, real order books, real funding. All fills are simulated against your own fake USDC balance. No wallet, no API key, no real orders. It only reads Hyperliquid's public `info` endpoint.
 
-**Live site: https://avastious.github.io/papertrading-perps/**. Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their browser or, once they sign in, to their account.
+**Live site: https://aureous.pages.dev** (also at https://avastious.github.io/papertrading-perps/). Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their browser or, once they sign in, to their account.
 
 You can also run it on your own computer, as a local website or in the terminal. Those two share one paper account, kept in a file.
 
@@ -23,9 +23,11 @@ The site is static files (`aureous/web/`) on GitHub Pages. The trading engine is
 
 To publish changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which GitHub Pages serves. One-time setup: in the repo, go to Settings → Pages → Build and deployment, choose "Deploy from a branch", then pick `gh-pages` and `/ (root)`.
 
-## Cloudflare (alternative host)
+## Cloudflare Pages (aureous.pages.dev)
 
-`wrangler.jsonc` lets Cloudflare serve the same site: Workers & Pages → Create → Import a repository → this repo, branch `main`. Cloudflare redeploys on every push to `main`; its address is shown on the Worker's overview page. Add that address to Firebase → Authentication → Authorized domains.
+The main address is a Cloudflare Pages project built from the `gh-pages` branch, with no build command and no output directory. Every run of `scripts/publish_pages.sh` updates GitHub Pages and Cloudflare at once. `aureous.pages.dev` must be listed in Firebase → Authentication → Authorized domains.
+
+`wrangler.jsonc` is only for deploying as a Cloudflare Worker instead, which serves `aureous/web` from `main`. Pages doesn't need it.
 
 ## Custom domain
 
