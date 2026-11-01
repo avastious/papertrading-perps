@@ -1797,26 +1797,48 @@ async function recordCardVideo(){
   const stream = new MediaStream([...canvasStream.getVideoTracks(), ...(a ? a.dest.stream.getAudioTracks() : [])]);
   g.scale(1280 / 1200, 720 / 675);
   const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: 8e6, audioBitsPerSecond: 160000}), chunks = [];
+  let recError = null;
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onerror = e => { recError = (e && e.error && e.error.message) || "recording error"; };
   const secs = Math.min(isFinite(v.duration) && v.duration > 0 ? v.duration : VIDEO_MAX_S, VIDEO_MAX_S);
   S.recording = true; v.loop = false; v.pause(); v.currentTime = 0;
   await new Promise(r => { v.onseeked = r; setTimeout(r, 1500); });
   composeCard(g, S.share.fg);
   rec.start(250); await v.play().catch(() => {});
   const t0 = performance.now(), btn = $("#shVideo");
+  // Draw on every animation frame, with a timer as backup: browsers pause animation frames when the
+  // tab is hidden or the window is covered. The recording ends on a clock, never on drawing.
   await new Promise(done => {
-    const frame = () => {
-      const el = (performance.now() - t0) / 1000;
+    let finished = false, last = 0;
+    const draw = () => {
+      if (finished) return;
+      last = performance.now();
+      const el = (last - t0) / 1000;
       composeCard(g, S.share.fg);
       btn.textContent = `Recording… ${Math.min(Math.ceil(el), Math.ceil(secs))} / ${Math.ceil(secs)}s`;
-      if (el >= secs || v.ended) return done();
-      requestAnimationFrame(frame);
     };
+    const frame = () => { draw(); if (!finished) requestAnimationFrame(frame); };
+    const backup = setInterval(() => { if (performance.now() - last > 120) draw(); }, 100);
+    const finish = () => { if (finished) return; finished = true; clearInterval(backup); clearTimeout(timer); v.onended = null; done(); };
+    const timer = setTimeout(finish, secs * 1000 + 50);
+    v.onended = finish;
     requestAnimationFrame(frame);
   });
-  await new Promise(r => { rec.onstop = r; rec.stop(); });
+  btn.textContent = "Saving video…";
+  await new Promise(r => {                          // wait for the recorder, but never forever
+    let over = false; const end = () => { if (!over) { over = true; r(); } };
+    rec.onstop = end;
+    try { if (rec.state === "recording") rec.requestData(); } catch {}
+    try { if (rec.state !== "inactive") rec.stop(); else end(); } catch { end(); }
+    setTimeout(end, 5000);
+  });
   canvasStream.getTracks().forEach(t => t.stop());   // (the audio track stays: it belongs to the shared audio graph)
   S.recording = false; v.loop = true; v.play().catch(() => {}); drawSharePreview();
+  if (!chunks.length) {
+    console.error("card video: no data", {type, recError, state: rec.state});
+    throw new Error(a ? "Your browser couldn't finish the video with sound. Turn Sound off and try again, or use Download still."
+                      : "Your browser couldn't finish the video. Try again with this tab in front, or use Download still.");
+  }
   const mime = type.split(";")[0], ext = mime === "video/mp4" ? "mp4" : "webm";
   const blob = new Blob(chunks, {type: mime});
   return {blob, ext, opusInMp4: ext === "mp4" && /opus/.test(type), file: new File([blob], "aureous." + ext, {type: mime}), url: URL.createObjectURL(blob)};
@@ -1830,11 +1852,12 @@ $("#shVideo").addEventListener("click", async () => {
     S.share.video = await recordCardVideo();
     btn.textContent = "Download video";
     saveFile(S.share.video.url, "aureous." + S.share.video.ext);
+    toast("Video ready. If it didn't download, press Download video again.");
     if (S.share.video.ext === "webm") toast("Saved as WebM, which X doesn't accept. Chrome, Edge or Safari save MP4.", "error");
     else if (S.share.video.opusInMp4) toast("Your browser saved the sound in a format X may refuse. If the upload fails, turn Sound off and download again.");
     if (navigator.canShare && navigator.canShare({files: [S.share.video.file]})) $("#shNative").hidden = false;
-  } catch (e) { S.recording = false; BG.media.loop = true; toast(e.message, "error"); btn.textContent = "Download video"; }
-  finally { btn.disabled = false; }
+  } catch (e) { S.recording = false; if (BG.media) { BG.media.loop = true; BG.media.play().catch(() => {}); } toast(e.message, "error"); }
+  finally { btn.disabled = false; if (/Recording|Saving/.test(btn.textContent)) btn.textContent = "Download video"; }
 });
 function myName(){ return (S.acct && S.acct.profile && S.acct.profile.name) || (S.user && S.user.name) || "Aureous trader"; }
 function myBadges(){ return (S.acct && S.acct.profile && S.acct.profile.badges) || []; }
