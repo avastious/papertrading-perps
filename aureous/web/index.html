@@ -133,7 +133,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .checks{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
 .checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
 .checks input{accent-color:var(--accent)}
-.tpsl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tpsl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.tpsl>*{min-width:0}
 .summary{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:0;font-size:12.5px}
 .summary dt{color:var(--muted)} .summary dd{margin:0;text-align:right}
 .submit{border:0;border-radius:5px;padding:11px;font-weight:600;font-size:14.5px;color:#fff}
@@ -222,6 +223,11 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 .auth-msg{font-size:13px;color:var(--short)}
 .auth-msg.ok{color:var(--long)}
 .auth-links{display:flex;justify-content:space-between}
+.board-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 12px 4px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.board-head b{color:var(--text);font-weight:600}
+tr.me td{background:var(--accent-wash)}
+td.rank{color:var(--muted);width:56px}
+.submit.locked{background:var(--accent);color:#fff}
 .mk-close{display:none}
 @media (max-width:1279px){
   .app{grid-template-columns:minmax(0,1fr) 232px 300px}
@@ -259,6 +265,7 @@ dialog form{display:flex;flex-direction:column;gap:12px}
         <button class="user-btn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"><span class="avatar" id="avatar"></span><span id="userName"></span></button>
         <div class="user-menu" id="userMenu" role="menu" hidden>
           <div class="user-email" id="userEmail"></div>
+          <button type="button" role="menuitem" id="nameBtn">Leaderboard name</button>
           <button type="button" role="menuitem" id="signOutBtn">Sign out</button>
           <button type="button" role="menuitem" id="deleteAcctBtn" class="danger-item">Delete account</button>
         </div>
@@ -365,7 +372,7 @@ dialog form{display:flex;flex-direction:column;gap:12px}
   <section class="bottom" aria-label="Positions and history">
     <div class="tabs" id="btabs">
       <button data-t="positions" class="on">Positions</button><button data-t="orders">Open orders</button>
-      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button>
+      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button>
       <span class="grow"></span>
       <button id="bulkBtn" class="tiny" hidden></button>
     </div>
@@ -401,7 +408,7 @@ dialog form{display:flex;flex-direction:column;gap:12px}
       <button class="btn primary" id="authSubmit" type="submit">Sign in</button>
       <div class="auth-links"><button type="button" class="link-btn" id="authForgot">Forgot password?</button><button type="button" class="link-btn" id="authSwitch">Create an account</button></div>
     </form>
-    <p class="privacy">Signing in stores your name, email and paper account with Google Firebase. Nothing else, and never real money. You can delete it all from the account menu.</p>
+    <p class="privacy">Signing in uses Google Firebase. Aureous keeps only your paper account and the leaderboard name you choose. Your email is never shown, and you can delete everything from the account menu.</p>
   </div>
 </dialog>
 
@@ -414,11 +421,21 @@ dialog form{display:flex;flex-direction:column;gap:12px}
   </form>
 </dialog>
 
+<dialog id="nameDlg">
+  <form id="nameForm">
+    <h3>Leaderboard name</h3>
+    <p>This is the name everyone sees on the leaderboard. Your email is never shown.</p>
+    <label class="field"><span>Name</span><div class="inp"><input id="nameIn" maxlength="24" autocomplete="nickname"></div></label>
+    <p class="auth-msg" id="nameMsg" hidden></p>
+    <div class="dlg-btns"><button class="btn" type="button" id="nameCancel">Cancel</button><button class="btn primary" type="submit">Save</button></div>
+  </form>
+</dialog>
+
 <dialog id="resetDlg">
   <form method="dialog" id="resetForm">
     <h3>Reset account</h3>
-    <p>Closes everything and erases your history. This can't be undone.</p>
-    <label class="field"><span>Starting balance (USD)</span><div class="inp"><input id="dBal" inputmode="decimal" value="10000"></div></label>
+    <p id="resetText">Closes everything and erases your history. This can't be undone.</p>
+    <label class="field" id="resetBalField"><span>Starting balance (USD)</span><div class="inp"><input id="dBal" inputmode="decimal" value="10000"></div></label>
     <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Keep account</button><button class="btn danger" value="ok">Reset</button></div>
   </form>
 </dialog>
@@ -456,14 +473,19 @@ function tstr(ms){ const d = new Date(ms); return d.toLocaleDateString(undefined
 // "browser" mode (the public website): the engine runs in this page and the account lives in this browser.
 // "server" mode (python -m aureous web): the local Python server does the trading.
 const MODE = document.querySelector('meta[name="aureous-mode"]')?.content || "browser";
+// With sign-in and the trading server configured, accounts live on the server: this page shows
+// live prices and your account, and every trade is made (and checked) by the server.
+const FB = window.AUREOUS_FIREBASE || {};
+const SERVER_ACCOUNTS = MODE === "browser" && !!(FB.config && FB.apiUrl);
 let LOCAL = null;
 if (MODE === "browser" && window.Aureous) {
   let storage = null;
-  try { localStorage.setItem("aureous.test", "1"); localStorage.removeItem("aureous.test"); storage = localStorage; } catch {}
+  if (!SERVER_ACCOUNTS) try { localStorage.setItem("aureous.test", "1"); localStorage.removeItem("aureous.test"); storage = localStorage; } catch {}
   const A = window.Aureous;
-  LOCAL = new A.LocalApp(new A.PaperExchange(new A.HyperliquidClient(), {storage}));
+  LOCAL = new A.LocalApp(new A.PaperExchange(new A.HyperliquidClient(), {storage}), {passive: SERVER_ACCOUNTS});
   LOCAL.start(2000);
 }
+const locked = () => SERVER_ACCOUNTS && !(S.acct && S.acct.signed_in);
 async function api(path, body){
   if (LOCAL) {
     const [p, qs] = path.split("?");
@@ -708,8 +730,11 @@ function renderSummary(){
   $("#sFee").textContent = n ? usd(n * fee) : "–";
   $("#sAvail").textContent = a ? usd(a.available) : "–";
   const btn = $("#submit");
-  btn.className = "submit " + (S.side === "buy" ? "long" : "short");
-  btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${m.name}${S.type === "limit" ? " at limit" : ""}`;
+  if (locked()) { btn.className = "submit locked"; btn.textContent = AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
+  else {
+    btn.className = "submit " + (S.side === "buy" ? "long" : "short");
+    btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${m.name}${S.type === "limit" ? " at limit" : ""}`;
+  }
   $("#unitBtn").textContent = S.unit === "usd" ? "USD" : m.name;
 }
 function setSide(side){ S.side = side; document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.side === side)); renderSummary(); }
@@ -723,6 +748,7 @@ function setType(type){
 }
 async function submitOrder(ev){
   ev.preventDefault();
+  if (locked()) { if (AUTH) openAuth(); return; }
   const m = market(); if (!m) return;
   const size = num($("#size").value);
   if (!(size > 0)) { toast("Enter a size first.", "error"); $("#size").focus(); return; }
@@ -775,7 +801,9 @@ function renderBottom(){
   const a = S.acct, v = $("#bview"), bulk = $("#bulkBtn");
   if (!a) return;
   bulk.hidden = true;
+  if (S.tab === "board") { renderBoard(); return; }
   if (S.tab === "positions") {
+    if (locked()) { v.innerHTML = `<div class="empty">Sign in to start trading. Everyone gets $10,000 of paper money, and the leaderboard ranks accounts by value.</div>`; return; }
     if (!a.positions.length) { v.innerHTML = `<div class="empty">No open positions. Pick a market, enter a size and press Long or Short.</div>`; return; }
     bulk.hidden = a.positions.length < 2; bulk.textContent = "Close all"; bulk.dataset.act = "closeall";
     v.innerHTML = `<table><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Value</th><th>Entry</th><th>Mark</th><th>PnL (ROE)</th><th>Liq. price</th><th>Funding</th><th>TP / SL</th><th></th></tr></thead><tbody>` +
@@ -875,6 +903,7 @@ $("#chips").addEventListener("click", e => {
 $("#lev").addEventListener("input", () => { $("#levOut").textContent = $("#lev").value + "x"; renderSummary(); });
 $("#lev").addEventListener("change", async () => {
   const m = market(), v = +$("#lev").value;
+  if (locked()) return;
   try { await act("/api/leverage", {coin: m.name, leverage: v}); m.lev = v; }
   catch { syncLeverage(); renderSummary(); }
 });
@@ -909,7 +938,15 @@ $("#tpslDlg").addEventListener("close", () => {
   act("/api/tpsl", {coin: $("#tpslDlg").dataset.coin, tp: $("#dTp").value.trim(), sl: $("#dSl").value.trim()})
     .then(r => r.messages.forEach(m => toast(m))).catch(() => {});
 });
-$("#resetBtn").addEventListener("click", () => { $("#dBal").value = S.acct ? S.acct.start : 10000; $("#resetDlg").showModal(); });
+$("#resetBtn").addEventListener("click", () => {
+  if (locked()) { if (AUTH) openAuth(); return; }
+  $("#dBal").value = S.acct ? S.acct.start : 10000;
+  $("#resetBalField").hidden = SERVER_ACCOUNTS;
+  $("#resetText").textContent = SERVER_ACCOUNTS
+    ? "Closes everything, erases your history and puts your account back to $10,000. Your leaderboard position starts over. This can't be undone."
+    : "Closes everything and erases your history. This can't be undone.";
+  $("#resetDlg").showModal();
+});
 $("#resetDlg").addEventListener("close", () => {
   if ($("#resetDlg").returnValue !== "ok") return;
   act("/api/reset", {balance: num($("#dBal").value)}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
@@ -923,6 +960,15 @@ function renderSaveNote(){
   const n = $("#saveNote"), a = S.acct; if (!a) return;
   n.hidden = false;
   let text, warn = false;
+  if (SERVER_ACCOUNTS) {
+    if (S.user && S.authPhase === "loading") text = "Loading your account…";
+    else if (S.user && S.authPhase === "error") { text = "Couldn't load your account. Refresh the page to try again."; warn = true; }
+    else if (S.user && S.syncError) { text = "Can't reach the Aureous server right now. Retrying…"; warn = true; }
+    else if (S.user) text = "Paper money only. Your account lives on the Aureous server, so stops, limits and funding keep running even with this page closed.";
+    else if (AUTH) text = "Sign in to trade. Everyone starts with $10,000 of paper money and competes on the leaderboard.";
+    else text = "Sign-in is unavailable right now, so trading is paused.";
+    n.textContent = text; n.classList.toggle("warn", warn); return;
+  }
   if (S.user && S.authPhase === "loading") text = "Loading your account…";
   else if (S.user && S.authPhase === "error") { text = "Couldn't load your account, so you're trading as a guest in this browser."; warn = true; }
   else if (S.user && S.saveStatus === "error") { text = "Couldn't save to your account. Retrying…"; warn = true; }
@@ -948,7 +994,8 @@ function setAuthMode(mode){
   S.authMode = mode;
   const up = mode === "signup", reset = mode === "reset";
   $("#authTitle").textContent = up ? "Create your Aureous account" : reset ? "Reset your password" : "Sign in to Aureous";
-  $("#authSub").textContent = reset ? "We'll email you a link to choose a new password." : "Keep your paper account and pick it up on any device.";
+  $("#authSub").textContent = reset ? "We'll email you a link to choose a new password."
+    : SERVER_ACCOUNTS ? "Get $10,000 of paper money, trade live Hyperliquid markets and climb the leaderboard." : "Keep your paper account and pick it up on any device.";
   $("#authNameField").hidden = !up; $("#authPwField").hidden = reset;
   $("#authPw").autocomplete = up ? "new-password" : "current-password";
   $("#authSubmit").textContent = up ? "Create account" : reset ? "Send reset link" : "Sign in";
@@ -995,7 +1042,7 @@ $("#userBtn").addEventListener("click", e => {
 document.addEventListener("click", e => { if (!e.target.closest("#userBox")) { $("#userMenu").hidden = true; $("#userBtn").setAttribute("aria-expanded", "false"); } });
 $("#signOutBtn").addEventListener("click", async () => {
   $("#userMenu").hidden = true;
-  try { await AUTH.signOut(); toast("Signed out. You're trading as a guest in this browser."); } catch (e) { toast(e.message, "error"); }
+  try { await AUTH.signOut(); toast(SERVER_ACCOUNTS ? "Signed out." : "Signed out. You're trading as a guest in this browser."); } catch (e) { toast(e.message, "error"); }
 });
 $("#deleteAcctBtn").addEventListener("click", () => {
   $("#userMenu").hidden = true;
@@ -1012,31 +1059,61 @@ async function reloadAccountView(){
   await refreshMarkets().catch(() => {}); syncLeverage();
   await refreshState().catch(() => {});
 }
+// leaderboard + name (server accounts)
+S.board = null; S.boardAt = 0;
+async function loadBoard(force){
+  if (!AUTH || !AUTH.leaderboard || (!force && Date.now() - S.boardAt < 20000)) return;
+  S.boardAt = Date.now();
+  try { S.board = await AUTH.leaderboard(); S.boardErr = null; } catch (e) { S.boardErr = e.message; }
+  if (S.tab === "board") renderBottom();
+}
+function renderBoard(){
+  const v = $("#bview"), b = S.board;
+  if (!b) { v.innerHTML = `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
+  const me = b.me;
+  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions.</span>` +
+    (me ? `<span>You're <b>#${me.rank}</b> of ${b.total}</span>` : S.user ? "" : `<span>Sign in to join</span>`) + `</div>`;
+  if (!b.rows.length) { v.innerHTML = head + `<div class="empty">No traders yet. Be the first.</div>`; return; }
+  const row = r => `<tr class="${me && r.rank === me.rank && r.name === me.name ? "me" : ""}"><td class="rank">#${r.rank}</td><td style="text-align:left">${esc(r.name)}</td>
+    <td>${usd(r.equity)}</td><td class="${cls(r.return)}">${pct(r.return)}</td><td>${r.positions}</td></tr>`;
+  let rows = b.rows.map(row).join("");
+  if (me && me.rank > b.rows.length) rows += `<tr><td colspan="5" style="text-align:center;color:var(--faint)">…</td></tr>` + row(me);
+  v.innerHTML = head + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+document.querySelector('[data-t="board"]').addEventListener("click", () => loadBoard(true));
+$("#nameBtn").addEventListener("click", () => {
+  $("#userMenu").hidden = true;
+  $("#nameIn").value = (S.acct && S.acct.profile && S.acct.profile.name) || ""; $("#nameMsg").hidden = true;
+  $("#nameDlg").showModal(); $("#nameIn").focus();
+});
+$("#nameCancel").addEventListener("click", () => $("#nameDlg").close());
+$("#nameForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    const r = await AUTH.setName($("#nameIn").value);
+    $("#nameDlg").close(); toast(r.messages[0]); loadBoard(true);
+  } catch (err) { $("#nameMsg").hidden = false; $("#nameMsg").textContent = err.message; }
+});
+
 window.AureousUI = {
   mode: MODE, toast,
-  guestStorage: LOCAL ? LOCAL.ex.storage : null,
-  guestState(){
-    try {
-      const raw = this.guestStorage && this.guestStorage.getItem(ACCOUNT_KEY); if (!raw) return null;
-      const st = JSON.parse(raw);
-      return {state: st, active: st.trades.length > 0 || Object.keys(st.positions).length > 0 || st.orders.length > 0};
-    } catch { return null; }
+  serverEvent: () => LOCAL ? LOCAL.serverEvent : 0,
+  setRemote(fn){ LOCAL.setRemote(fn); S.syncError = null; reloadAccountView(); },
+  adoptRemote(r, opts = {}){
+    LOCAL.locked(async () => {
+      if (opts.silent) { const evs = r.events || []; LOCAL.serverEvent = evs.length ? evs[evs.length - 1].id : 0; LOCAL.adopt({...r, events: []}); }
+      else LOCAL.adopt(r);
+    }).then(opts.silent ? reloadAccountView : () => refreshState().catch(() => {}));   // keep new notifications
   },
-  clearGuest(){ try { this.guestStorage && this.guestStorage.removeItem(ACCOUNT_KEY); } catch {} },
-  async useStorage(store, seed){
-    let created = false;
-    await LOCAL.locked(async () => { created = LOCAL.ex.attach(store, seed); LOCAL.events = []; });
-    await reloadAccountView();
-    return created;
+  setUser(user, phase){ S.user = user; S.authPhase = phase || null; renderUser(); renderSaveNote(); renderSummary(); renderNameBtn(); if (S.tab === "board") loadBoard(true); },
+  syncStatus(status, msg){ S.syncError = status === "error" ? msg : null; renderSaveNote(); },
+  enableAccounts(api){
+    AUTH = api; renderUser(); renderSaveNote(); renderSummary();
+    $("#boardTab").hidden = !api.leaderboard;
   },
-  adopt(json){
-    LOCAL.locked(async () => { LOCAL.ex.state = JSON.parse(json); })
-      .then(reloadAccountView).then(() => toast("Updated with changes from your other tab or device."));
-  },
-  setUser(user, phase){ S.user = user; S.authPhase = phase || null; S.saveStatus = "saved"; renderUser(); renderSaveNote(); },
-  saveStatus(status, msg){ S.saveStatus = status; renderSaveNote(); if (status === "error") console.warn("Account save failed:", msg); },
-  enableAccounts(api){ AUTH = api; renderUser(); renderSaveNote(); },
 };
+function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }
+renderNameBtn();
 
 // ---------- loops ----------
 function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) { $("#conn").classList.add("bad"); $("#connText").textContent = "Offline"; } setTimeout(run, ms); }; run(); }
@@ -1053,6 +1130,7 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   loop(refreshBook, 1500);
   setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
   countdown(); setInterval(countdown, 1000);
+  setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") loadBoard(); }, 30000);
 })();
 </script>
 <script type="module" src="auth.js"></script>

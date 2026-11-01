@@ -95,6 +95,7 @@
       this.makerFee = opts.makerFee ?? 0.00015;
       this.refreshMs = opts.refreshMs ?? 2500;
       this.now = opts.now || (() => Date.now());
+      this.curveMs = opts.curveMs ?? 60000;        // how often to add a point to the equity curve
       this.markets = new Map();
       this.lookup = new Map();
       this.lastRefresh = 0;
@@ -430,7 +431,7 @@
     }
     recordEquity() {
       const curve = this.state.equity_curve, now = this.now();
-      if (!curve.length || now - curve[curve.length - 1][0] >= 60000) {
+      if (!curve.length || now - curve[curve.length - 1][0] >= this.curveMs) {
         curve.push([now, roundTo(this.equity(), 4)]);
         if (curve.length > MAX_CURVE) curve.splice(0, curve.length - MAX_CURVE);
       }
@@ -459,10 +460,31 @@
     return msg;
   }
 
+  const ACTIONS = new Set(["/api/order", "/api/close", "/api/cancel", "/api/tpsl", "/api/leverage", "/api/reset"]);
+
   class LocalApp {
-    constructor(ex) {
+    /* opts.passive: this page only displays an account that lives on a server. Prices are
+         fetched here for the live view, but every action goes to opts.remote / setRemote(fn)
+         and nothing is filled locally. */
+    constructor(ex, opts = {}) {
       this.ex = ex; this.events = []; this.eventId = 0; this.error = null;
       this.queue = Promise.resolve();
+      this.passive = !!opts.passive;
+      this.remote = opts.remote || null;
+      this.serverEvent = 0;
+      this.profile = null;
+    }
+    setRemote(fn) { this.remote = fn; this.serverEvent = 0; if (!fn) { this.ex.state = this.ex.newState(10000); this.events = []; this.profile = null; } }
+    // take the server's copy of the account and any new notifications
+    adopt(r) {
+      if (!r) return;
+      if (r.state) this.ex.state = r.state;
+      if (r.profile) this.profile = r.profile;
+      for (const e of r.events || []) {
+        if (e.id <= this.serverEvent) continue;
+        this.serverEvent = e.id;
+        this.log(e.kind, e.msg);
+      }
     }
     // one operation at a time, so the background loop and clicks never interleave mid-trade
     locked(fn) { const p = this.queue.then(fn, fn); this.queue = p.catch(() => {}); return p; }
@@ -474,6 +496,7 @@
       const tick = async () => {
         try {
           await this.locked(async () => {
+            if (this.passive) { await this.ex.refresh(); return; }   // the server does the trading
             for (const e of await this.ex.update()) this.log(e.includes("LIQUIDATED") ? "liquidation" : "event", e);
           });
           this.error = null;
@@ -484,6 +507,14 @@
     }
 
     async handle(path, q = {}, body = {}) {
+      if (this.passive && ACTIONS.has(path)) {
+        if (!this.remote) throw new PaperError("Sign in to trade.");
+        return this.locked(async () => {
+          const r = await this.remote(path, body);
+          this.adopt(r);
+          return {messages: r.messages || [], warnings: r.warnings || [], leverage: r.leverage};
+        });
+      }
       const routes = {
         "/api/markets": () => this.markets(),
         "/api/state": () => this.state(+(q.since || 0)),
@@ -527,6 +558,7 @@
         stats: ex.stats(), curve: ex.state.equity_curve.slice(-1000),
         events: this.events.filter(e => e.id > since), last_event: this.eventId,
         error: this.error, saved: ex.saveOk,
+        server: this.passive, signed_in: !this.passive || !!this.remote, profile: this.profile,
       };
     }
     async book(coin) {

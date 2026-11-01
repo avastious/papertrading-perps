@@ -1,9 +1,21 @@
-// Cloudflare Workers config: serves the Aureous website (aureous/web) as static files.
-// Cloudflare rebuilds and redeploys automatically on every push to main.
+// aureous-api: the Aureous trading server (Cloudflare Workers, free plan).
+// Cloudflare deploys it from this repo on every push to main (Workers & Pages > Import a repository).
 {
-  "name": "aureous",
+  "name": "aureous-api",
+  "main": "worker/index.js",
   "compatibility_date": "2026-10-01",
-  "assets": {
-    "directory": "./aureous/web"
-  }
+  "durable_objects": {
+    "bindings": [{"name": "EXCHANGE", "class_name": "Exchange"}]
+  },
+  "migrations": [
+    {"tag": "v1", "new_sqlite_classes": ["Exchange"]}
+  ],
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "vars": {
+    "FIREBASE_PROJECT_ID": "aureous-14551",
+    "ALLOWED_ORIGINS": "https://aureous.pages.dev,https://avastious.github.io"
+  },
+  "observability": {"enabled": true}
 }

@@ -1,9 +1,11 @@
-// Sign-in settings for the public site. Leave `config` as null to run without accounts
-// (everyone trades as a guest, saved in their own browser).
+// Accounts for the public site.
 //
-// To turn accounts on, paste your Firebase web app config below (README: "Accounts").
-// These values are meant to be public: they identify your Firebase project, and access to
-// account data is controlled by the security rules in firestore.rules.
+// config:  your Firebase web app config (sign-in). These values are meant to be public: they
+//          identify the Firebase project; the trading server checks every sign-in itself.
+// apiUrl:  the Aureous trading server (Cloudflare Worker "aureous-api", see worker/ and README).
+//          With both set, signing in is required to trade, accounts live on the server, and the
+//          leaderboard is shown. Set config to null to run without accounts (guest trading in the
+//          browser only).
 window.AUREOUS_FIREBASE = {
   config: {
     apiKey: "AIzaSyBx8-kZGmX4KvGFylZBit6MJo49bJPC5CM",
@@ -13,6 +15,7 @@ window.AUREOUS_FIREBASE = {
     messagingSenderId: "999259128304",
     appId: "1:999259128304:web:da87db9b207134b101dd35",
   },
+  apiUrl: "https://aureous-api.billystorrs15.workers.dev",
 
   // Sign-in methods to show, in order. Each must also be switched on in
   // Firebase console > Authentication > Sign-in method.  Options: "google", "github", "microsoft", "email"

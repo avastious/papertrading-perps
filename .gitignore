@@ -7,3 +7,6 @@ build/
 dist/
 *.json.tmp
 account.json
+.wrangler/
+node_modules/
+.dev.vars

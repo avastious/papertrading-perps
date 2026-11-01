@@ -19,15 +19,20 @@ On Windows use `py -m pip install -e .`. With no Git, download the ZIP from GitH
 
 ## How the public site works
 
-The site is static files (`aureous/web/`) on GitHub Pages. The trading engine is `aureous/web/engine.js`, a JavaScript port of the Python engine, and runs inside the visitor's browser. The page fetches live data straight from Hyperliquid's public API and stores the paper account in `localStorage`, so there's no server and no sign-up. Orders, stops and funding only run while the page is open. Clearing browser data erases the account.
+- **The website** (`aureous/web/`) is static files on Cloudflare Pages and GitHub Pages. It shows live Hyperliquid prices, charts and order books straight from Hyperliquid's public API.
+- **Trading requires signing in** (Google or email, via Firebase Auth).
+- **Accounts live on the trading server** (`worker/`), a Cloudflare Worker named `aureous-api` on the free plan. The server:
+  - checks every sign-in token;
+  - runs every order with the same engine (`aureous/web/engine.js`) against live Hyperliquid prices;
+  - stores all accounts in a SQLite-backed Durable Object;
+  - every minute, fills stops, take-profits, limits and liquidations and settles funding, even with nobody's page open.
+- **The leaderboard is fair.** Everyone starts with $10,000 and ranks by account value (balance plus open positions at mark). Balances only ever change on the server. Resets always go back to $10,000.
 
-To publish changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which GitHub Pages serves. One-time setup: in the repo, go to Settings → Pages → Build and deployment, choose "Deploy from a branch", then pick `gh-pages` and `/ (root)`.
+To publish website changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which both Cloudflare Pages and GitHub Pages serve. Server changes deploy automatically when `main` is pushed.
 
 ## Cloudflare Pages (aureous.pages.dev)
 
 The main address is a Cloudflare Pages project built from the `gh-pages` branch, with no build command and no output directory. Every run of `scripts/publish_pages.sh` updates GitHub Pages and Cloudflare at once. `aureous.pages.dev` must be listed in Firebase → Authentication → Authorized domains.
-
-`wrangler.jsonc` is only for deploying as a Cloudflare Worker instead, which serves `aureous/web` from `main`. Pages doesn't need it.
 
 ## Custom domain
 
@@ -42,39 +47,47 @@ The main address is a Cloudflare Pages project built from the `gh-pages` branch,
 
 Also save the domain in `aureous/web/CNAME` (just the name, e.g. `example.com`). `scripts/publish_pages.sh` publishes only that file's domain, so without it the next publish removes the domain.
 
-## Accounts (sign in with Google, GitHub or email)
+## The trading server (aureous-api)
 
-The public site can let people sign in so their paper account follows them across devices. This uses Firebase (Auth + Firestore), which is free at this scale. Guests can still trade without signing in. The first time someone signs in, their guest account moves into their new account.
+One-time setup in Cloudflare (free plan):
 
-Accounts stay off until `aureous/web/firebase-config.js` has a config. To switch them on:
+1. **Workers & Pages → Create application → Import a repository →** `papertrading-perps`, branch `main`.
+2. Set the project name to **`aureous-api`** (it must match `wrangler.jsonc`), keep the deploy command `npx wrangler deploy`, and click **Deploy**. Cloudflare creates the database (Durable Object) and the every-minute job (Cron Trigger) from `wrangler.jsonc`.
+3. The server's address appears on its overview page, e.g. `https://aureous-api.<your-account>.workers.dev`. It must match `apiUrl` in `aureous/web/firebase-config.js`.
 
-1. Go to https://console.firebase.google.com, choose **Create a project** and name it (e.g. `aureous`). Google Analytics isn't needed.
-2. **Add an app → Web** (the `</>` icon) and register it. Don't tick Firebase Hosting. Copy the `firebaseConfig` values into `config` in `aureous/web/firebase-config.js`.
-3. **Build → Authentication → Get started → Sign-in method**: enable **Google** and **Email/Password**.
-4. **Authentication → Settings → Authorized domains → Add domain**: `avastious.github.io`.
-5. **Build → Firestore Database → Create database** in production mode (e.g. `australia-southeast1`). Then open **Rules**, paste in `firestore.rules` from this repo, and click **Publish**.
-6. Commit, then run `scripts/publish_pages.sh`.
+Settings live in `wrangler.jsonc`: `FIREBASE_PROJECT_ID`, and `ALLOWED_ORIGINS` (the websites allowed to call the server; add any new domain here).
 
-**Optional: GitHub sign-in.** Create an OAuth app at https://github.com/settings/developers with homepage `https://avastious.github.io/papertrading-perps/`. Use the callback URL that Firebase shows under Sign-in method → GitHub, paste the client ID and secret back into Firebase, and add `"github"` to `providers`. Microsoft works the same way with `"microsoft"`.
+Endpoints: `GET /api/leaderboard` (public), `GET /api/account`, `POST /api/order|close|cancel|tpsl|leverage|reset|profile|delete`. Everything except the leaderboard needs a Firebase ID token.
 
-What's stored: one document per person at `accounts/{uid}`, holding the paper account as JSON. The rules only let a signed-in person read, write or delete their own document. See the security checklist below. Since the account lives on the person's side, someone technical could edit their own paper balance. That doesn't matter for practice trading, but it would for a public leaderboard, which would need a server to check trades.
+## Accounts (sign in with Google or email)
+
+Sign-in uses Firebase Auth (project `aureous-14551`). In the Firebase console:
+
+- Enable **Google** and **Email/Password** under Authentication → Sign-in method.
+- Add `aureous.pages.dev` and `avastious.github.io` under Authentication → Settings → Authorized domains.
+
+**Optional: GitHub sign-in.** Create an OAuth app at https://github.com/settings/developers with homepage `https://aureous.pages.dev`. Use the callback URL that Firebase shows under Sign-in method → GitHub, paste the client ID and secret back into Firebase, and add `"github"` to `providers` in `firebase-config.js`.
+
+Firestore is no longer used. `firestore.rules` closes it completely.
 
 ## Security checklist
 
 Already built into the site:
 
 - **Passwords:** Google Firebase handles them; the site never sees or stores one.
-- **Database rules** (`firestore.rules`): each person can read, save and delete only their own account. Saves must match the exact shape the site writes, and everything else in the database is closed.
-- **What's stored:** only name, email (in Firebase Auth) and the paper account. No real money or wallets.
-- **Delete account** (account menu): confirms it's really them first, then removes their data and login.
+- **Server-checked trading:** the server verifies each sign-in token's Google signature, project, issuer and expiry before doing anything.
+  - Only the server changes balances; anything else in a request is ignored.
+  - Requests are size-limited, actions are rate-limited (40 a minute per person), and only the listed websites may call it.
+- **What's stored:** the paper account and a leaderboard name. Login details stay in Firebase Auth. The leaderboard never shows emails or user IDs. No real money or wallets.
+- **Delete account** (account menu): confirms it's really them first, then removes their trading data from the server and their login from Firebase.
 - **Safe display:** everything shown from data is escaped, so a market name or account field can't inject code into the page.
 
 Settings to switch on in the consoles:
 
-1. **Publish the rules:** Firebase → Firestore Database → Rules → paste `firestore.rules` → Publish. Re-publish whenever the file changes.
+1. **Close Firestore:** Firebase → Firestore Database → Rules → paste `firestore.rules` → Publish. It isn't used any more.
 2. **Restrict the API key:** Google Cloud console (project `aureous-14551`) → APIs & Services → Credentials → the "Browser key".
    - Under *Website restrictions*, allow `https://avastious.github.io/*` and `https://aureous-14551.firebaseapp.com/*`.
-   - Under *API restrictions*, allow Identity Toolkit API, Token Service API, Cloud Firestore API, Firebase Installations API and (if you use App Check) Firebase App Check API.
+   - Under *API restrictions*, allow Identity Toolkit API, Token Service API, Firebase Installations API and (if you use App Check) Firebase App Check API.
 3. **Sign-in hardening:** Firebase → Authentication → Settings.
    - Turn on *Email enumeration protection*, so the site doesn't reveal which emails have accounts.
    - Set a *Password policy* (e.g. at least 8 characters).
@@ -82,7 +95,7 @@ Settings to switch on in the consoles:
 4. **App Check** (stops scripts and bots from using your Firebase project directly):
    - Create a reCAPTCHA v3 key at https://www.google.com/recaptcha/admin with domain `avastious.github.io`, and register it in Firebase → App Check.
    - Put the *site key* in `appCheckSiteKey` in `aureous/web/firebase-config.js`, then publish.
-   - After a day of traffic shows as verified, click **Enforce** for Cloud Firestore and Authentication.
+   - After a day of traffic shows as verified, click **Enforce** for Authentication.
 5. **Protect the owner accounts:** turn on two-step verification for the Google account that owns Firebase and for your GitHub account. Whoever controls those controls the site and its data.
 6. **No surprise bills:** stay on Firebase's free *Spark* plan. If you ever upgrade, set a budget alert in Google Cloud billing.
 
@@ -165,10 +178,17 @@ These work for both the website and the terminal, e.g. `python -m aureous --bala
 
 ```bash
 pip install pytest && pytest -q          # Python engine + local web API
-node --test tests/engine.test.mjs        # browser engine (same cases)
+node --test tests/engine.test.mjs        # browser/server engine (same cases)
 ```
 
-The tests run both engines against a mock Hyperliquid client (no network needed).
+Trading server, run locally against stand-ins for Hyperliquid and Google's signing keys:
+
+```bash
+node tests/server/mock-hyperliquid.js &
+npx wrangler dev --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
+  --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 &
+node tests/server/api.check.mjs          # sign-in, trading, every-minute job, cheating attempts, leaderboard
+```
 
 ## Files
 
@@ -178,8 +198,9 @@ The tests run both engines against a mock Hyperliquid client (no network needed)
 - `aureous/server.py`: local web server and JSON API
 - `aureous/web/index.html`: the website (same page for the public site and the local server)
 - `aureous/web/engine.js`: the browser engine used by the public site
-- `aureous/web/auth.js`, `aureous/web/firebase-config.js`: sign-in and cloud-saved accounts (Firebase)
-- `firestore.rules`: who can read and write account data
+- `aureous/web/auth.js`, `aureous/web/firebase-config.js`: sign-in (Firebase Auth) and the connection to the trading server
+- `worker/`: the trading server (Cloudflare Worker + Durable Object), `wrangler.jsonc` its settings
+- `firestore.rules`: closes the unused Firestore database
 - `scripts/publish_pages.sh`: publish the site to GitHub Pages
 - `tests/`: engine and web API tests
 
