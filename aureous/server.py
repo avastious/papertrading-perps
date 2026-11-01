@@ -21,6 +21,7 @@ STATIC = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/lightweight-charts.js": ("lightweight-charts.js", "application/javascript"),  # TradingView, Apache-2.0
+    "/engine.js": ("engine.js", "application/javascript"),  # browser engine; unused in server mode
 }
 INTERVAL_SECS = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
 
@@ -261,7 +262,10 @@ def make_handler(app: App):
             if url.path in STATIC:
                 name, ctype = STATIC[url.path]
                 with open(os.path.join(WEB_DIR, name), "rb") as f:
-                    return self._send(200, f.read(), ctype)
+                    data = f.read()
+                if name == "index.html":  # same page as the website, but trading goes through this server
+                    data = data.replace(b'name="aureous-mode" content="browser"', b'name="aureous-mode" content="server"')
+                return self._send(200, data, ctype)
             routes = {
                 "/api/markets": lambda: app.markets(),
                 "/api/state": lambda: app.state(int(q.get("since", 0))),

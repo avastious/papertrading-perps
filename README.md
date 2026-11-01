@@ -2,7 +2,9 @@
 
 Paper-trade **Hyperliquid perpetuals** with **live Hyperliquid market data**: real prices, real order books, real funding. All fills are simulated against your own fake USDC balance. No wallet, no API key, no real orders. It only reads Hyperliquid's public `info` endpoint.
 
-Use it as a **website** (click to trade, runs on your own computer) or in the **terminal**. Both share the same paper account.
+**Live site: https://avastious.github.io/papertrading-perps/**. Open it and trade, nothing to install. Each visitor gets their own $10,000 paper account, saved in their own browser.
+
+You can also run it on your own computer, as a local website or in the terminal. Those two share one paper account, kept in a file.
 
 ## Install
 
@@ -15,7 +17,13 @@ pip install -e .
 
 On Windows use `py -m pip install -e .`. With no Git, download the ZIP from GitHub instead and run that line inside the unzipped folder.
 
-## The website
+## How the public site works
+
+The site is static files (`aureous/web/`) on GitHub Pages. The trading engine is `aureous/web/engine.js`, a JavaScript port of the Python engine, and runs inside the visitor's browser. The page fetches live data straight from Hyperliquid's public API and stores the paper account in `localStorage`, so there's no server and no sign-up. Orders, stops and funding only run while the page is open. Clearing browser data erases the account.
+
+To publish changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which GitHub Pages serves. One-time setup: in the repo, go to Settings → Pages → Build and deployment, choose "Deploy from a branch", then pick `gh-pages` and `/ (root)`.
+
+## The website on your own computer
 
 ```bash
 python -m aureous web        # Windows: py -m aureous web
@@ -91,10 +99,11 @@ These work for both the website and the terminal, e.g. `python -m aureous --bala
 ## Tests
 
 ```bash
-pip install pytest && pytest -q
+pip install pytest && pytest -q          # Python engine + local web API
+node --test tests/engine.test.mjs        # browser engine (same cases)
 ```
 
-The tests run the engine against a mock Hyperliquid client (no network needed).
+The tests run both engines against a mock Hyperliquid client (no network needed).
 
 ## Files
 
@@ -102,7 +111,9 @@ The tests run the engine against a mock Hyperliquid client (no network needed).
 - `aureous/engine.py`: the paper exchange (margin, fills, orders, funding, liquidation, persistence)
 - `aureous/cli.py`: terminal version
 - `aureous/server.py`: local web server and JSON API
-- `aureous/web/index.html`: the website
+- `aureous/web/index.html`: the website (same page for the public site and the local server)
+- `aureous/web/engine.js`: the browser engine used by the public site
+- `scripts/publish_pages.sh`: publish the site to GitHub Pages
 - `tests/`: engine and web API tests
 
 ## Third-party
