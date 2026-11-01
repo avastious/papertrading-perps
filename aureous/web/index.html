@@ -205,6 +205,8 @@ dialog form{display:flex;flex-direction:column;gap:12px}
 .user-email{padding:6px 8px 8px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
 .user-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 8px;border-radius:4px}
 .user-menu button:hover{background:var(--line-soft)}
+.user-menu .danger-item{color:var(--short)}
+.privacy{font-size:11.5px;color:var(--faint);line-height:1.45;border-top:1px solid var(--line-soft);padding-top:10px}
 .auth{position:relative;display:flex;flex-direction:column;gap:12px}
 .auth p{margin:0}
 .dlg-x{position:absolute;top:-8px;right:-6px;background:none;border:0;font-size:22px;color:var(--muted);padding:2px 6px}
@@ -256,6 +258,7 @@ dialog form{display:flex;flex-direction:column;gap:12px}
         <div class="user-menu" id="userMenu" role="menu" hidden>
           <div class="user-email" id="userEmail"></div>
           <button type="button" role="menuitem" id="signOutBtn">Sign out</button>
+          <button type="button" role="menuitem" id="deleteAcctBtn" class="danger-item">Delete account</button>
         </div>
       </div>
     </div>
@@ -396,7 +399,17 @@ dialog form{display:flex;flex-direction:column;gap:12px}
       <button class="btn primary" id="authSubmit" type="submit">Sign in</button>
       <div class="auth-links"><button type="button" class="link-btn" id="authForgot">Forgot password?</button><button type="button" class="link-btn" id="authSwitch">Create an account</button></div>
     </form>
+    <p class="privacy">Signing in stores your name, email and paper account with Google Firebase. Nothing else, and never real money. You can delete it all from the account menu.</p>
   </div>
+</dialog>
+
+<dialog id="deleteDlg">
+  <form method="dialog">
+    <h3>Delete your account?</h3>
+    <p>This permanently deletes your login and your paper account (positions, orders and history) from Aureous. It can't be undone.</p>
+    <label class="field" id="delPwField" hidden><span>Enter your password to confirm</span><div class="inp"><input id="delPw" type="password" autocomplete="current-password"></div></label>
+    <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Keep account</button><button class="btn danger" value="ok">Delete account</button></div>
+  </form>
 </dialog>
 
 <dialog id="resetDlg">
@@ -981,6 +994,16 @@ document.addEventListener("click", e => { if (!e.target.closest("#userBox")) { $
 $("#signOutBtn").addEventListener("click", async () => {
   $("#userMenu").hidden = true;
   try { await AUTH.signOut(); toast("Signed out. You're trading as a guest in this browser."); } catch (e) { toast(e.message, "error"); }
+});
+$("#deleteAcctBtn").addEventListener("click", () => {
+  $("#userMenu").hidden = true;
+  $("#delPwField").hidden = !(S.user && S.user.provider === "password"); $("#delPw").value = "";
+  $("#deleteDlg").showModal();
+});
+$("#deleteDlg").addEventListener("close", async () => {
+  if ($("#deleteDlg").returnValue !== "ok") return;
+  try { await AUTH.deleteAccount($("#delPw").value); $("#delPw").value = ""; toast("Your account and its data were deleted."); }
+  catch (e) { $("#delPw").value = ""; toast(e.message, "error"); }
 });
 async function reloadAccountView(){
   S.lastEvent = null; S.linesKey = null;

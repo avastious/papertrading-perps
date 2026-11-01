@@ -38,7 +38,36 @@ Accounts stay off until `aureous/web/firebase-config.js` has a config. To switch
 
 **Optional: GitHub sign-in.** Create an OAuth app at https://github.com/settings/developers with homepage `https://avastious.github.io/papertrading-perps/`. Use the callback URL that Firebase shows under Sign-in method → GitHub, paste the client ID and secret back into Firebase, and add `"github"` to `providers`. Microsoft works the same way with `"microsoft"`.
 
-What's stored: one document per person at `accounts/{uid}`, holding the paper account as JSON. The rules only let a signed-in person read and write their own document. Since the account lives on the person's side, someone technical could edit their own paper balance. That doesn't matter for practice trading, but it would for a public leaderboard, which would need a server to check trades.
+What's stored: one document per person at `accounts/{uid}`, holding the paper account as JSON. The rules only let a signed-in person read, write or delete their own document. See the security checklist below. Since the account lives on the person's side, someone technical could edit their own paper balance. That doesn't matter for practice trading, but it would for a public leaderboard, which would need a server to check trades.
+
+## Security checklist
+
+Already built into the site:
+
+- **Passwords:** Google Firebase handles them; the site never sees or stores one.
+- **Database rules** (`firestore.rules`): each person can read, save and delete only their own account. Saves must match the exact shape the site writes, and everything else in the database is closed.
+- **What's stored:** only name, email (in Firebase Auth) and the paper account. No real money or wallets.
+- **Delete account** (account menu): confirms it's really them first, then removes their data and login.
+- **Safe display:** everything shown from data is escaped, so a market name or account field can't inject code into the page.
+
+Settings to switch on in the consoles:
+
+1. **Publish the rules:** Firebase → Firestore Database → Rules → paste `firestore.rules` → Publish. Re-publish whenever the file changes.
+2. **Restrict the API key:** Google Cloud console (project `aureous-14551`) → APIs & Services → Credentials → the "Browser key".
+   - Under *Website restrictions*, allow `https://avastious.github.io/*` and `https://aureous-14551.firebaseapp.com/*`.
+   - Under *API restrictions*, allow Identity Toolkit API, Token Service API, Cloud Firestore API, Firebase Installations API and (if you use App Check) Firebase App Check API.
+3. **Sign-in hardening:** Firebase → Authentication → Settings.
+   - Turn on *Email enumeration protection*, so the site doesn't reveal which emails have accounts.
+   - Set a *Password policy* (e.g. at least 8 characters).
+   - Remove `localhost` from *Authorized domains* unless you're testing locally.
+4. **App Check** (stops scripts and bots from using your Firebase project directly):
+   - Create a reCAPTCHA v3 key at https://www.google.com/recaptcha/admin with domain `avastious.github.io`, and register it in Firebase → App Check.
+   - Put the *site key* in `appCheckSiteKey` in `aureous/web/firebase-config.js`, then publish.
+   - After a day of traffic shows as verified, click **Enforce** for Cloud Firestore and Authentication.
+5. **Protect the owner accounts:** turn on two-step verification for the Google account that owns Firebase and for your GitHub account. Whoever controls those controls the site and its data.
+6. **No surprise bills:** stay on Firebase's free *Spark* plan. If you ever upgrade, set a budget alert in Google Cloud billing.
+
+The Firebase config in `firebase-config.js` is not a secret. Google designs it to be public, and the rules, key restrictions and App Check are what protect the data.
 
 ## The website on your own computer
 

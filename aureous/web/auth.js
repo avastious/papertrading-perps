@@ -9,12 +9,17 @@ const UI = window.AureousUI;
 const settings = window.AUREOUS_FIREBASE || {};
 
 // ------------------------------------------------------------------ Firebase backend
-async function firebaseBackend(cfg) {
+async function firebaseBackend(cfg, appCheckSiteKey) {
   const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/`;
   const [{initializeApp}, A, F] = await Promise.all([
     import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js"),
   ]);
   const app = initializeApp(cfg);
+  if (appCheckSiteKey) {
+    // App Check: proves requests come from this website (reCAPTCHA v3), not a script using the API key.
+    const C = await import(base + "firebase-app-check.js");
+    C.initializeAppCheck(app, {provider: new C.ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true});
+  }
   const auth = A.getAuth(app), db = F.getFirestore(app);
   A.getRedirectResult(auth).catch(() => {});   // completes a redirect sign-in after the page reloads
   const providers = {
@@ -24,7 +29,8 @@ async function firebaseBackend(cfg) {
   };
   const ref = uid => F.doc(db, "accounts", uid);
   return {
-    onUser: cb => A.onAuthStateChanged(auth, u => cb(u && {uid: u.uid, name: u.displayName, email: u.email, photo: u.photoURL})),
+    onUser: cb => A.onAuthStateChanged(auth, u => cb(u && {uid: u.uid, name: u.displayName, email: u.email, photo: u.photoURL,
+                                                           provider: (u.providerData[0] || {}).providerId || null})),
     async signInWith(id) {
       const p = providers[id]();
       try { await A.signInWithPopup(auth, p); }
@@ -40,6 +46,20 @@ async function firebaseBackend(cfg) {
     },
     resetPassword: email => A.sendPasswordResetEmail(auth, email),
     signOut: () => A.signOut(auth),
+    // Confirms it's really them (recent sign-in, password or provider popup), then removes the
+    // account document and the login. Nothing is deleted if the check fails.
+    async deleteAccount(uid, password) {
+      const user = auth.currentUser;
+      const id = (user.providerData[0] || {}).providerId;
+      const recent = Date.now() - Date.parse(user.metadata.lastSignInTime || 0) < 4 * 60 * 1000;
+      if (id === "password") {
+        await A.reauthenticateWithCredential(user, A.EmailAuthProvider.credential(user.email, password || ""));
+      } else if (!recent && providers[(id || "").replace(".com", "")]) {
+        await A.reauthenticateWithPopup(user, providers[id.replace(".com", "")]());
+      }
+      await F.deleteDoc(ref(uid));
+      await A.deleteUser(user);
+    },
     async load(uid) { const s = await F.getDoc(ref(uid)); return s.exists() ? s.data().state : null; },
     save: (uid, json, session) => F.setDoc(ref(uid), {state: json, session, updated: F.serverTimestamp()}),
     // calls cb(json) when another tab or device saves this account
@@ -90,6 +110,7 @@ const MESSAGES = {
   "auth/too-many-requests": "Too many attempts. Wait a minute and try again.",
   "auth/account-exists-with-different-credential": "This email already signed up with a different method. Use that one.",
   "auth/operation-not-allowed": "That sign-in method isn't switched on in Firebase yet.",
+  "auth/requires-recent-login": "For your safety, sign out and sign back in, then delete your account again.",
   "auth/configuration-not-found": "Sign-in isn't set up yet. In Firebase, open Authentication, click Get started and enable a sign-in method.",
   "permission-denied": "Firestore refused access. Check that the rules from firestore.rules are published.",
   "failed-precondition": "Firestore isn't ready. In Firebase, create the Firestore database.",
@@ -103,7 +124,7 @@ function friendly(e) { return MESSAGES[e && e.code] || (e && e.message) || "Some
 // --------------------------------------------------------------------- wiring
 async function main() {
   if (!UI || UI.mode !== "browser") return;                         // local Python server: no accounts
-  const backend = window.AUREOUS_TEST_BACKEND || (settings.config ? await firebaseBackend(settings.config).catch(e => {
+  const backend = window.AUREOUS_TEST_BACKEND || (settings.config ? await firebaseBackend(settings.config, settings.appCheckSiteKey).catch(e => {
     UI.toast("Sign-in is unavailable right now: " + e.message, "error"); return null;
   }) : null);
   if (!backend) return;
@@ -122,6 +143,19 @@ async function main() {
     async signUpEmail(email, pw, name) { try { await backend.signUpEmail(email, pw, name); } catch (e) { throw new Error(friendly(e)); } },
     async resetPassword(email) { try { await backend.resetPassword(email); } catch (e) { throw new Error(friendly(e)); } },
     async signOut() { if (current) await current.store.flush(); await backend.signOut(); },
+    async deleteAccount(password) {
+      if (!current) throw new Error("You're not signed in.");
+      const c = current;
+      c.store.closed = true;                    // pause saving so nothing re-creates the data mid-delete
+      try {
+        await backend.deleteAccount(c.uid, password);
+      } catch (e) {
+        c.store.closed = false; c.store.schedule();
+        throw new Error(SILENT.has(e.code) ? "Account not deleted." : friendly(e));
+      }
+      if (c.unwatch) c.unwatch();
+      if (current === c) current = null;
+    },
   });
 
   const leave = async () => {

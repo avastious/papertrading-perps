@@ -17,4 +17,8 @@ window.AUREOUS_FIREBASE = {
   // Sign-in methods to show, in order. Each must also be switched on in
   // Firebase console > Authentication > Sign-in method.  Options: "google", "github", "microsoft", "email"
   providers: ["google", "email"],
+
+  // Optional bot protection (Firebase App Check with reCAPTCHA v3). Paste the reCAPTCHA v3 *site* key
+  // here, publish, check requests show as verified in Firebase > App Check, then turn on enforcement.
+  appCheckSiteKey: null,
 };
