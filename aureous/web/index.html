@@ -579,6 +579,7 @@ td.rank{color:var(--muted);width:56px}
       <span>Background</span>
       <button class="btn" type="button" id="shBgPick">Use my image or video…</button>
       <button class="btn" type="button" id="shBgClear" hidden>Back to default</button>
+      <button class="btn" type="button" id="shSound" hidden aria-pressed="true">Sound on</button>
       <label id="shDimWrap" hidden>Darken <input type="range" id="shDim" min="0" max="90" step="5" aria-label="Darken the background"></label>
       <input type="file" id="shBgFile" accept="image/*,video/*" hidden>
     </div>
@@ -1590,7 +1591,30 @@ async function drawProfileCard(d){
 }
 // ---- your own background (image or video). It stays on this device: kept in the browser's
 // storage so it's there next time, never uploaded anywhere.
-const BG = {media: null, kind: null, url: null, dim: store.get("cardDim", 55), loaded: false};
+const BG = {media: null, kind: null, url: null, dim: store.get("cardDim", 55), sound: store.get("cardSound", true), loaded: false};
+// The video's sound goes through Web Audio: one branch to the speakers (the preview, switchable)
+// and one into the recording, so the downloaded video keeps its sound.
+const AUD = {ctx: null, el: null, src: null, out: null, dest: null};
+function audioFor(v){
+  try {
+    if (!AUD.ctx) AUD.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (AUD.el !== v) {
+      AUD.src = AUD.ctx.createMediaElementSource(v);
+      AUD.out = AUD.ctx.createGain(); AUD.dest = AUD.ctx.createMediaStreamDestination();
+      AUD.src.connect(AUD.out); AUD.out.connect(AUD.ctx.destination); AUD.src.connect(AUD.dest);
+      AUD.el = v;
+    }
+    return AUD;
+  } catch { return null; }
+}
+async function videoSound(on){                     // call from a click so the browser lets sound play
+  const v = BG.media; if (!v || BG.kind !== "video") return false;
+  const a = on ? audioFor(v) : AUD.el === v ? AUD : null;
+  if (a) { try { await a.ctx.resume(); } catch {} a.out.gain.value = on ? 1 : 0; }
+  v.muted = !on || !a;
+  try { await v.play(); return !v.muted; }
+  catch { v.muted = true; v.play().catch(() => {}); return false; }
+}
 const BG_MAX = {image: 30e6, video: 300e6}, BG_KEEP = 100e6, VIDEO_MAX_S = 15;
 const bgDB = {
   open(){ return new Promise((res, rej) => { const r = indexedDB.open("aureous", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
@@ -1647,10 +1671,11 @@ function renderShareBg(){
   const custom = !!BG.media, video = BG.kind === "video";
   $("#shBgPick").textContent = custom ? "Change image or video…" : "Use my image or video…";
   $("#shBgClear").hidden = !custom; $("#shDimWrap").hidden = !custom; $("#shDim").value = BG.dim;
-  $("#shVideo").hidden = !video;
+  $("#shVideo").hidden = !video; $("#shSound").hidden = !video;
+  $("#shSound").textContent = BG.sound ? "Sound on" : "Sound off"; $("#shSound").setAttribute("aria-pressed", String(BG.sound));
   $("#shDownload").textContent = video ? "Download still" : "Download image";
   $("#shDownload").classList.toggle("primary", !video);
-  $("#shNote").textContent = video ? `The video is up to ${VIDEO_MAX_S} seconds long and has no sound. Attach the downloaded file to your post on X.` : "On X, attach the downloaded or copied image to your post.";
+  $("#shNote").textContent = video ? `The video is up to ${VIDEO_MAX_S} seconds long${BG.sound ? ", with its sound" : ", without sound"}. Attach the downloaded file to your post on X.` : "On X, attach the downloaded or copied image to your post.";
 }
 async function refreshShareImage(){                // the PNG used by Download, Copy and Share
   if (!S.share) return;
@@ -1675,7 +1700,7 @@ async function openShare(title, draw, text, link){
   $("#shCopyImg").hidden = !(navigator.clipboard && window.ClipboardItem);
   renderShareBg();
   $("#shareDlg").showModal();
-  if (BG.kind === "video") BG.media.play().catch(() => {});
+  if (BG.kind === "video") videoSound(BG.sound);
   drawSharePreview();
   await refreshShareImage();
   $("#shNative").hidden = !(navigator.canShare && navigator.canShare({files: [S.share.file]}));
@@ -1693,11 +1718,18 @@ $("#shBgFile").addEventListener("change", async () => {
   if (f.size > BG_MAX[kind]) { toast(`That ${kind} is too big (over ${BG_MAX[kind] / 1e6} MB).`, "error"); return; }
   try { await setBg(f, kind); }
   catch { toast(kind === "video" ? "Your browser can't play that video. Try an MP4." : "Couldn't open that image.", "error"); await setBg(null); }
+  if (BG.kind === "video") videoSound(BG.sound);
   if (BG.media) {
     if (f.size <= BG_KEEP) bgDB.set({blob: f, kind, name: f.name});
     else { bgDB.clear(); toast("Using it for now. It's too big to keep for next time."); }
   }
   await bgChanged();
+});
+$("#shSound").addEventListener("click", async () => {
+  BG.sound = !BG.sound; store.set("cardSound", BG.sound); S.share.video = null;
+  const playing = await videoSound(BG.sound);
+  if (BG.sound && !playing) toast("Your browser blocked the sound in the preview. It will still be in the downloaded video.");
+  renderShareBg();
 });
 $("#shBgClear").addEventListener("click", async () => { await setBg(null); bgDB.clear(); await bgChanged(); });
 $("#shDim").addEventListener("input", () => { BG.dim = +$("#shDim").value; store.set("cardDim", BG.dim); if (BG.kind !== "video") drawSharePreview(); });
@@ -1705,18 +1737,23 @@ $("#shDim").addEventListener("change", () => { S.share.video = null; refreshShar
 $("#shareDlg").addEventListener("close", () => { if (BG.kind === "video" && !S.recording) BG.media.pause(); });
 
 // ---- video: play the background from the start and record the card over it
-function videoType(){
+function videoType(audio){
   if (!window.MediaRecorder) return null;
-  return ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
-    .find(t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } }) || null;
+  // X wants H.264 video with AAC sound in an MP4; ask for exactly that first
+  const list = audio ? ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1.4D401F,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2",
+                        "video/mp4;codecs=avc1.42E01E,opus", "video/mp4;codecs=avc1,opus", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+                     : ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1.4D401F", "video/mp4;codecs=avc1", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  return list.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } }) || null;
 }
 async function recordCardVideo(){
-  const v = BG.media, type = videoType();
+  const v = BG.media, a = BG.sound ? audioFor(v) : null, type = videoType(!!a);
   if (!type) throw new Error("Your browser can't make videos. Try Chrome, Edge or Safari.");
   const cv = document.createElement("canvas"); cv.width = 1280; cv.height = 720;     // 16:9 with even sides, as video needs
-  const g = cv.getContext("2d"), stream = cv.captureStream(30);
+  const g = cv.getContext("2d"), canvasStream = cv.captureStream(30);
+  if (a) { try { await a.ctx.resume(); } catch {} v.muted = false; a.out.gain.value = 1; }
+  const stream = new MediaStream([...canvasStream.getVideoTracks(), ...(a ? a.dest.stream.getAudioTracks() : [])]);
   g.scale(1280 / 1200, 720 / 675);
-  const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: 8e6}), chunks = [];
+  const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: 8e6, audioBitsPerSecond: 160000}), chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   const secs = Math.min(isFinite(v.duration) && v.duration > 0 ? v.duration : VIDEO_MAX_S, VIDEO_MAX_S);
   S.recording = true; v.loop = false; v.pause(); v.currentTime = 0;
@@ -1735,11 +1772,11 @@ async function recordCardVideo(){
     requestAnimationFrame(frame);
   });
   await new Promise(r => { rec.onstop = r; rec.stop(); });
-  stream.getTracks().forEach(t => t.stop());
+  canvasStream.getTracks().forEach(t => t.stop());   // (the audio track stays: it belongs to the shared audio graph)
   S.recording = false; v.loop = true; v.play().catch(() => {}); drawSharePreview();
   const mime = type.split(";")[0], ext = mime === "video/mp4" ? "mp4" : "webm";
   const blob = new Blob(chunks, {type: mime});
-  return {blob, ext, file: new File([blob], "aureous." + ext, {type: mime}), url: URL.createObjectURL(blob)};
+  return {blob, ext, opusInMp4: ext === "mp4" && /opus/.test(type), file: new File([blob], "aureous." + ext, {type: mime}), url: URL.createObjectURL(blob)};
 }
 function saveFile(url, name){ const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
 $("#shVideo").addEventListener("click", async () => {
@@ -1750,7 +1787,8 @@ $("#shVideo").addEventListener("click", async () => {
     S.share.video = await recordCardVideo();
     btn.textContent = "Download video";
     saveFile(S.share.video.url, "aureous." + S.share.video.ext);
-    if (S.share.video.ext === "webm") toast("Saved as WebM, which X doesn't accept. Chrome 126+, Edge or Safari save MP4.", "error");
+    if (S.share.video.ext === "webm") toast("Saved as WebM, which X doesn't accept. Chrome, Edge or Safari save MP4.", "error");
+    else if (S.share.video.opusInMp4) toast("Your browser saved the sound in a format X may refuse. If the upload fails, turn Sound off and download again.");
     if (navigator.canShare && navigator.canShare({files: [S.share.video.file]})) $("#shNative").hidden = false;
   } catch (e) { S.recording = false; BG.media.loop = true; toast(e.message, "error"); btn.textContent = "Download video"; }
   finally { btn.disabled = false; }
