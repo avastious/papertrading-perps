@@ -246,6 +246,19 @@ tr.me td{background:var(--accent-wash)}
 .tname.gold{color:#E3B341}
 tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
 .bot-tag{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--muted);border:1px solid currentColor;opacity:.85;border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:1px;white-space:nowrap}
+.clan-tag{background:none;border:0;padding:0 5px 0 0;color:var(--muted);font:inherit;font-size:.86em;font-weight:600;letter-spacing:.03em;cursor:pointer;white-space:nowrap}
+.clan-tag:hover{color:var(--text);text-decoration:underline}
+.board-switch{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:8px 12px 0}
+.board-switch button{background:none;border:0;padding:5px 14px;color:var(--muted);font:inherit;font-size:12.5px}
+.board-switch button.on{background:var(--raise);color:var(--text)}
+.invite-box{display:flex;gap:6px;align-items:center;padding:0 20px 14px;flex-wrap:wrap}
+.invite-box .inp{flex:1 1 260px}
+.invite-box input{font-size:12.5px;color:var(--muted)}
+#clanNewDlg{width:min(420px,calc(100vw - 32px))}
+.clan-or{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:12px;margin:4px 0}
+.clan-or::before,.clan-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.clan-preview{font-size:22px;font-weight:600;margin:6px 0 2px}
+.clan-preview span{color:var(--muted);font-weight:500;font-size:16px;margin-right:6px}
 .spot-tag{font-size:11px;color:#E3B341;border:1px solid rgba(227,179,65,.45);border-radius:3px;padding:0 5px;margin-left:4px;white-space:nowrap}
 .milestones{display:flex;gap:8px;flex-wrap:wrap;padding:4px 12px 8px}
 .ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:3px 10px 3px 4px;color:var(--muted)}
@@ -257,8 +270,8 @@ tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
 .progress .bar i{display:block;height:100%;background:#E3B341;border-radius:2px;transition:width .4s}
 .progress .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
 .my-badges{display:inline-flex;gap:3px;margin-left:6px;vertical-align:-3px}
-#traderDlg{width:min(880px,calc(100vw - 24px));max-height:calc(100vh - 40px);padding:0}
-#traderDlg .tr-wrap{display:flex;flex-direction:column;max-height:calc(100vh - 40px)}
+#traderDlg,#clanDlg{width:min(880px,calc(100vw - 24px));max-height:calc(100vh - 40px);padding:0}
+#traderDlg .tr-wrap,#clanDlg .tr-wrap{display:flex;flex-direction:column;max-height:calc(100vh - 40px)}
 .tr-head{padding:18px 20px 12px;position:relative;border-bottom:1px solid var(--line-soft)}
 .tr-head h3{margin:0;font-size:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tr-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
@@ -390,6 +403,7 @@ td.rank{color:var(--muted);width:56px}
         <div class="user-menu" id="userMenu" role="menu" hidden>
           <div class="user-email" id="userEmail"></div>
           <button type="button" role="menuitem" id="myProfileBtn">My public profile</button>
+          <button type="button" role="menuitem" id="clanBtn">Clans</button>
           <button type="button" role="menuitem" id="nameBtn">Leaderboard name</button>
           <button type="button" role="menuitem" id="privacyBtn">Hide my trades</button>
           <button type="button" role="menuitem" id="signOutBtn">Sign out</button>
@@ -607,6 +621,45 @@ td.rank{color:var(--muted);width:56px}
     <label class="toggle"><input type="checkbox" id="cfNoAsk"> Don't ask again</label>
     <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" id="cfOk">Place order</button></div>
   </form>
+</dialog>
+
+<dialog id="clanDlg" aria-labelledby="clName">
+  <div class="tr-wrap">
+    <div class="tr-head"><button class="dlg-x" id="clClose" type="button" aria-label="Close" style="top:10px;right:12px">&times;</button>
+      <h3 id="clName">Clan</h3><p id="clSub"></p>
+      <div class="tr-actions" id="clActions"></div></div>
+    <div class="tr-body" id="clBody"><div class="empty">Loading…</div></div>
+  </div>
+</dialog>
+
+<dialog id="clanNewDlg">
+  <div class="auth">
+    <button class="dlg-x" id="cnClose" type="button" aria-label="Close">&times;</button>
+    <h3>Clans</h3>
+    <p style="margin:0">Trade against your friends. Start a clan, send your friends the invite link, and see who's best inside the clan and how your clan ranks against the others.</p>
+    <form id="cnCreate" class="auth">
+      <label class="field"><span>Clan name</span><div class="inp"><input id="cnName" maxlength="24" placeholder="e.g. Night Shift Traders" autocomplete="off"></div></label>
+      <label class="field"><span>Tag (2–5 letters or numbers, shown next to members' names)</span><div class="inp"><input id="cnTag" maxlength="5" placeholder="e.g. NIGHT" autocomplete="off" style="text-transform:uppercase"></div></label>
+      <button class="btn primary" type="submit">Start a clan</button>
+    </form>
+    <div class="clan-or">or join one</div>
+    <form id="cnJoin" class="auth">
+      <label class="field"><span>Invite link or code</span><div class="inp"><input id="cnCode" placeholder="Paste the link a friend sent you" autocomplete="off"></div></label>
+      <button class="btn" type="submit">Join clan</button>
+    </form>
+    <p class="auth-msg" id="cnMsg" hidden></p>
+  </div>
+</dialog>
+
+<dialog id="joinDlg">
+  <div class="auth">
+    <button class="dlg-x" id="jnClose" type="button" aria-label="Close">&times;</button>
+    <h3>You're invited to a clan</h3>
+    <div class="clan-preview" id="jnName"></div>
+    <p id="jnSub" style="margin:0"></p>
+    <p class="auth-msg" id="jnMsg" hidden></p>
+    <div class="dlg-btns"><button class="btn" type="button" id="jnCancel">Not now</button><button class="btn primary" type="button" id="jnOk">Join clan</button></div>
+  </div>
 </dialog>
 
 <dialog id="nameDlg">
@@ -1056,7 +1109,7 @@ function renderAccount(){
   $("#aAvail").textContent = usd(a.available);
   $("#aMaint").textContent = usd(a.maintenance);
   if (MODE === "browser") renderSaveNote();
-  renderMilestones();
+  renderMilestones(); renderClanBtn();
   const prof = a.profile;
   $("#privacyBtn").textContent = prof && prof.private ? "Show my trades" : "Hide my trades";
   $("#myProfileBtn").hidden = $("#privacyBtn").hidden = !SERVER_ACCOUNTS;
@@ -1357,29 +1410,56 @@ const hasTier = (badges, id) => (badges || []).some(b => b.tier === id);
 const topIndex = id => TIERS.findIndex(t => t.id === id);
 function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; }
 function left(until){ const m = Math.max(0, Math.round((until - Date.now()) / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}d ${Math.floor(m % 1440 / 60)}h left` : m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m left` : `${m}m left`; }
+function clanTag(tag){ return tag ? `<button class="clan-tag" data-clan="${esc(tag)}" title="Open the clan ${esc(tag)}">[${esc(tag)}]</button>` : ""; }
 function traderName(r){
   const gold = r.badge && topIndex(r.badge) >= topIndex("aureus");
-  return `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span></button>` +
+  return clanTag(r.clan) + `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span></button>` +
     (r.bot ? `<span class="bot-tag" title="An Aureous bot trading a simple strategy on real prices. Can you beat it?">BOT</span>` : "") +
     (r.spotlight_until ? `<span class="spot-tag" title="New milestone. Spotlight: ${left(r.spotlight_until)}">Spotlight</span>` : "");
 }
+S.boardView = "traders"; S.clans = null; S.clansAt = 0;
+const boardSwitch = () => `<div class="board-switch" role="tablist"><button data-view="traders" class="${S.boardView === "traders" ? "on" : ""}">Traders</button><button data-view="clans" class="${S.boardView === "clans" ? "on" : ""}">Clans</button></div>`;
+async function loadClans(force){
+  if (!AUTH || !AUTH.clans || (!force && Date.now() - S.clansAt < 20000)) return;
+  S.clansAt = Date.now();
+  try { S.clans = await AUTH.clans(); S.clansErr = null; } catch (e) { S.clansErr = e.message; }
+  if (S.tab === "board" && S.boardView === "clans") renderBottom();
+}
+function renderClans(){
+  const v = $("#bview"), c = S.clans, mine = S.acct && S.acct.profile && S.acct.profile.clan;
+  if (!c) { v.innerHTML = boardSwitch() + `<div class="empty">${S.clansErr ? esc("Couldn't load clans: " + S.clansErr) : "Loading clans…"}</div>`; return; }
+  const head = `<div class="board-head"><span>Clans are ranked by their members' average account value. A clan needs ${c.min_members} members to be ranked. Click a clan to see who's winning inside it.</span>` +
+    (mine ? `<span>Your clan: <button class="clan-tag" data-clan="${esc(mine.tag)}" style="padding:0">[${esc(mine.tag)}] ${esc(mine.name)}</button></span>` : S.user ? `<span><button class="btn sm" type="button" data-clan-new>Start or join a clan</button></span>` : `<span>Sign in to start a clan</span>`) + `</div>`;
+  if (!c.rows.length) { v.innerHTML = boardSwitch() + head + `<div class="empty">No clans yet. Start one and invite your friends.</div>`; return; }
+  const row = r => `<tr class="${mine && r.tag === mine.tag ? "me" : ""}"><td class="rank">${r.rank ? "#" + r.rank : "–"}</td>
+    <td style="text-align:left"><button class="trader-btn" data-clan="${esc(r.tag)}"><span class="clan-tag" style="padding-right:6px">[${esc(r.tag)}]</span><span class="tname">${esc(r.name)}</span></button></td>
+    <td>${r.members}</td><td>${usd(r.average)}</td><td class="${cls(r.return)}">${pct(r.return)}</td>
+    <td style="text-align:left">${r.top ? `<button class="trader-btn" data-pid="${esc(r.top.pid)}"><span class="tname">${esc(r.top.name)}</span></button> <span class="${cls(r.top.return)}">${pct(r.top.return)}</span>` : "–"}</td></tr>`;
+  v.innerHTML = boardSwitch() + head + `<table><thead><tr><th>Rank</th><th style="text-align:left">Clan</th><th>Members</th><th>Average value</th><th>Average return</th><th style="text-align:left">Top trader</th></tr></thead><tbody>${c.rows.map(row).join("")}</tbody></table>`;
+}
 function renderBoard(){
+  if (S.boardView === "clans") return renderClans();
   const v = $("#bview"), b = S.board;
-  if (!b) { v.innerHTML = `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
+  if (!b) { v.innerHTML = boardSwitch() + `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
   const me = b.me;
   const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades. <span class="bot-tag" style="margin-left:0">BOT</span> accounts are Aureous bots trading simple strategies. Beat them.</span>` +
     (me ? `<span>You're <b>#${me.rank}</b> of ${b.total}</span>` : S.user ? "" : `<span>Sign in to join</span>`) + `</div>`;
   const ms = (b.milestones || []).slice(0, 6).map(m => { const t = tierOf(m.tier);
     return `<span class="ms-chip">${badgeSvg(m.tier, 18)}<span><button data-pid="${esc(m.pid)}">${esc(m.name)}</button> reached ${t ? t.name : m.tier} ${ago(m.at)}</span></span>`; }).join("");
   const strip = ms ? `<div class="milestones" aria-label="Recent milestones">${ms}</div>` : "";
-  if (!b.rows.length) { v.innerHTML = head + `<div class="empty">No traders yet. Be the first.</div>`; return; }
+  if (!b.rows.length) { v.innerHTML = boardSwitch() + head + `<div class="empty">No traders yet. Be the first.</div>`; return; }
   const row = r => `<tr class="${me && r.pid === me.pid ? "me" : ""}${r.spotlight_until ? " spot" : ""}"><td class="rank">#${r.rank}</td><td style="text-align:left">${traderName(r)}</td>
     <td>${usd(r.equity)}</td><td class="${cls(r.return)}">${pct(r.return)}</td><td>${r.positions}</td></tr>`;
   let rows = b.rows.map(row).join("");
   if (me && me.rank > b.rows.length) rows += `<tr><td colspan="5" style="text-align:center;color:var(--faint)">…</td></tr>` + row(me);
-  v.innerHTML = head + strip + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
+  v.innerHTML = boardSwitch() + head + strip + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
-$("#bview").addEventListener("click", e => { const t = e.target.closest("[data-pid]"); if (t) openTrader(t.dataset.pid); });
+$("#bview").addEventListener("click", e => {
+  const sw = e.target.closest("[data-view]"); if (sw) { S.boardView = sw.dataset.view; renderBoard(); if (S.boardView === "clans") loadClans(true); else loadBoard(true); return; }
+  if (e.target.closest("[data-clan-new]")) { openClanNew(); return; }
+  const c = e.target.closest("[data-clan]"); if (c) { openClan(c.dataset.clan); return; }
+  const t = e.target.closest("[data-pid]"); if (t) openTrader(t.dataset.pid);
+});
 
 // ---------- share cards ----------
 const SITE_URL = (document.querySelector('meta[property="og:url"]') || {}).content || location.origin + location.pathname;
@@ -1552,7 +1632,7 @@ function renderTrader(){
   const d = S.trader && S.trader.data; if (!d) return;
   const top = (d.badges || []).map(b => b.tier).sort((a, b) => topIndex(a) - topIndex(b)).pop();
   $("#trName").innerHTML = `${top ? badgeSvg(top, 22) : ""}<span class="tname${top && topIndex(top) >= topIndex("aureus") ? " gold" : ""}">${esc(d.name)}</span>` +
-    (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.bot ? `<span class="bot-tag">BOT</span>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
+    (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.bot ? `<span class="bot-tag">BOT</span>` : "") + (d.clan ? ` <button class="clan-tag" data-clan="${esc(d.clan.tag)}" title="${esc(d.clan.name)}" style="font-size:15px">[${esc(d.clan.tag)}] ${esc(d.clan.name)}</button>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
   $("#trSub").textContent = d.bot ? `${d.rank ? `#${d.rank} of ${d.total}. ` : ""}Aureous bot. ${d.strategy || ""}` : `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
   $("#trActions").hidden = false;
   // live values from this page's prices where we have them
@@ -1579,12 +1659,158 @@ function renderTrader(){
   $("#trBody").innerHTML = html;
 }
 $("#trClose").addEventListener("click", () => $("#traderDlg").close());
+$("#trName").addEventListener("click", e => { const c = e.target.closest("[data-clan]"); if (c) { $("#traderDlg").close(); openClan(c.dataset.clan); } });
 $("#traderDlg").addEventListener("close", () => { S.trader = null; if (location.hash.startsWith("#trader-")) history.replaceState(null, "", location.pathname + location.search); });
 $("#trShare").addEventListener("click", () => { if (S.trader && S.trader.data) shareProfile(S.trader.data); });
 $("#trLink").addEventListener("click", () => { if (S.trader) copyText(profileLink(S.trader.pid), "Profile link copied."); });
 const hashTrader = () => { const m = /^#trader-([0-9a-f]{12})$/.exec(location.hash); return m && m[1]; };
 window.addEventListener("hashchange", () => { const pid = hashTrader(); if (pid && AUTH && AUTH.trader && !(S.trader && S.trader.pid === pid)) openTrader(pid); });
 $("#traderDlg").addEventListener("click", e => { if (e.target === $("#traderDlg")) $("#traderDlg").close(); });
+
+// ---------- clans ----------
+const siteBase = () => SITE_URL.replace(/#.*$/, "");
+const inviteLink = code => siteBase() + "#join-" + code;
+const clanLink = tag => siteBase() + "#clan-" + tag;
+const myClan = () => (S.acct && S.acct.profile && S.acct.profile.clan) || null;
+S.clan = null; S.pendingJoin = null;
+async function openClan(tag){
+  if (!AUTH || !AUTH.clan) return;
+  tag = String(tag).toUpperCase();
+  S.clan = {tag, data: null};
+  $("#clName").textContent = "[" + tag + "]"; $("#clSub").textContent = ""; $("#clActions").innerHTML = ""; $("#clBody").innerHTML = `<div class="empty">Loading…</div>`;
+  if (location.hash !== "#clan-" + tag) history.replaceState(null, "", "#clan-" + tag);
+  if (!$("#clanDlg").open) $("#clanDlg").showModal();
+  try { const d = await AUTH.clan(tag); if (S.clan && S.clan.tag === tag) { S.clan.data = d; renderClan(); } }
+  catch (e) { $("#clBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderClan(){
+  const d = S.clan && S.clan.data; if (!d) return;
+  const me = d.me || null, n = d.members.length;
+  $("#clName").innerHTML = `<span class="clan-tag" style="font-size:20px;cursor:default;padding-right:2px">[${esc(d.tag)}]</span><span>${esc(d.name)}</span>` + (me ? ` <span class="lev-chip">${me.leader ? "Your clan, you lead it" : "Your clan"}</span>` : "");
+  $("#clSub").textContent = `${d.rank ? `#${d.rank} of ${d.ranked_total} ranked clans` : `Not ranked yet: needs ${d.min_members} members`}. ${n} of ${d.max} member${d.max === 1 ? "" : "s"}. Started ${new Date(d.created).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
+  const acts = [];
+  if (me) {
+    acts.push(`<button class="btn primary" type="button" data-ca="copy">Copy invite link</button>`, `<button class="btn" type="button" data-ca="x">Invite on X</button>`);
+    if (me.leader) acts.push(`<button class="btn" type="button" data-ca="invite" title="Make a new link; the old one stops working">New invite link</button>`, `<button class="btn" type="button" data-ca="rename">Rename</button>`);
+    acts.push(`<button class="btn" type="button" data-ca="leave">Leave clan</button>`);
+  } else acts.push(`<button class="btn" type="button" data-ca="link">Copy clan link</button>`);
+  $("#clActions").innerHTML = acts.join(""); $("#clActions").hidden = false;
+  const stats = [["Average value", usd(d.average), ""], ["Average return", pct(d.return), cls(d.return)], ["Combined value", usd(d.total), ""],
+    ["Members", String(n), ""], ["Best return", n ? pct(d.best) : "–", cls(d.best)]];
+  let html = `<div class="tr-stats">${stats.map(([k, v, c]) => `<div><span>${k}</span><b class="${c}">${v}</b></div>`).join("")}</div>`;
+  if (me) html += `<div class="invite-box"><div class="inp"><input readonly value="${esc(inviteLink(me.invite))}" aria-label="Invite link" onfocus="this.select()"></div><span class="note" style="color:var(--muted);font-size:12px">Anyone with this link can join.</span></div>`;
+  else if (S.user && !myClan()) html += `<div class="tr-private" style="margin-top:0">To join ${esc(d.name)}, ask a member for their invite link.</div>`;
+  html += `<div class="tr-section"><h4>Members</h4>` + (n ? `<div class="tbl-wrap"><table><thead><tr><th>#</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th><th>Overall rank</th>${me && me.leader ? "<th></th>" : ""}</tr></thead><tbody>` +
+    d.members.map(m => `<tr class="${S.acct && S.acct.profile && m.pid === S.acct.profile.pid ? "me" : ""}"><td class="rank">${m.pos}</td>
+      <td style="text-align:left">${traderName({pid: m.pid, name: m.name, badge: m.badge})}${m.leader ? `<span class="bot-tag" title="Clan leader">LEADER</span>` : ""}</td>
+      <td>${usd(m.equity)}</td><td class="${cls(m.return)}">${pct(m.return)}</td><td>${m.positions}</td><td>#${m.rank}</td>
+      ${me && me.leader ? `<td>${m.leader ? "" : `<span class="act"><button type="button" data-kick="${esc(m.pid)}" data-name="${esc(m.name)}">Remove</button></span>`}</td>` : ""}</tr>`).join("") +
+    `</tbody></table></div>` : `<div class="empty" style="padding:14px">No members.</div>`) + `</div>`;
+  $("#clBody").innerHTML = html;
+}
+async function clanDo(action, body = {}){
+  try {
+    const r = await AUTH.clanAction(action, body);
+    if (r.messages && r.messages[0]) toast(r.messages[0]);
+    S.clansAt = 0; loadClans(true); loadBoard(true);
+    return r;
+  } catch (e) { toast(e.message, "error"); throw e; }
+}
+$("#clActions").addEventListener("click", async e => {
+  const b = e.target.closest("[data-ca]"); if (!b || !S.clan || !S.clan.data) return;
+  const d = S.clan.data, a = b.dataset.ca;
+  if (a === "copy") return copyText(inviteLink(d.me.invite), "Invite link copied. Send it to your friends.");
+  if (a === "link") return copyText(clanLink(d.tag), "Clan link copied.");
+  if (a === "x") {
+    const text = `Join my clan [${d.tag}] ${d.name} on Aureous and let's see who's the better trader. $10k of paper money on live Hyperliquid prices.`;
+    return window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(inviteLink(d.me.invite))}`, "_blank", "noopener");
+  }
+  try {
+    if (a === "invite") { if (!confirm("Make a new invite link? The current link will stop working.")) return; await clanDo("invite"); }
+    if (a === "rename") { const n = prompt("New clan name (3–24 characters):", d.name); if (!n || n.trim() === d.name) return; await clanDo("rename", {name: n}); }
+    if (a === "leave") {
+      const alone = d.members.length <= 1;
+      if (!confirm(alone ? `Leave ${d.name}? You're the only member, so the clan will close.` : `Leave ${d.name}?${d.me.leader ? " The longest-standing member becomes leader." : ""}`)) return;
+      await clanDo("leave"); $("#clanDlg").close(); return;
+    }
+    openClan(d.tag);
+  } catch {}
+});
+$("#clBody").addEventListener("click", async e => {
+  const k = e.target.closest("[data-kick]");
+  if (k) { if (confirm(`Remove ${k.dataset.name} from the clan?`)) { try { await clanDo("kick", {pid: k.dataset.kick}); openClan(S.clan.tag); } catch {} } return; }
+  const t = e.target.closest("[data-pid]"); if (t) { $("#clanDlg").close(); openTrader(t.dataset.pid); }
+});
+$("#clClose").addEventListener("click", () => $("#clanDlg").close());
+$("#clanDlg").addEventListener("click", e => { if (e.target === $("#clanDlg")) $("#clanDlg").close(); });
+$("#clanDlg").addEventListener("close", () => { S.clan = null; if (location.hash.startsWith("#clan-")) history.replaceState(null, "", location.pathname + location.search); });
+
+function openClanNew(){
+  if (!S.user) { toast("Sign in to start or join a clan."); openAuth(); return; }
+  const mine = myClan(); if (mine) { openClan(mine.tag); return; }
+  $("#cnMsg").hidden = true; $("#cnName").value = ""; $("#cnTag").value = ""; $("#cnCode").value = "";
+  $("#clanNewDlg").showModal(); $("#cnName").focus();
+}
+const cnErr = m => { $("#cnMsg").hidden = false; $("#cnMsg").textContent = m; };
+$("#cnClose").addEventListener("click", () => $("#clanNewDlg").close());
+$("#cnTag").addEventListener("input", () => { const el = $("#cnTag"); el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+$("#cnName").addEventListener("input", () => {     // suggest a tag from the name until the person types their own
+  const el = $("#cnTag"); if (el.dataset.touched) return;
+  const w = $("#cnName").value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+  el.value = (w.length > 1 ? w.map(x => x[0]).join("") : (w[0] || "")).slice(0, 5);
+});
+$("#cnTag").addEventListener("keydown", () => { $("#cnTag").dataset.touched = "1"; });
+$("#cnCreate").addEventListener("submit", async e => {
+  e.preventDefault();
+  try { const r = await AUTH.clanAction("create", {name: $("#cnName").value, tag: $("#cnTag").value}); toast(r.messages[0]); $("#clanNewDlg").close(); S.clansAt = 0; loadBoard(true); openClan(r.clan); }
+  catch (err) { cnErr(err.message); }
+});
+$("#cnJoin").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = $("#cnCode").value.trim(), m = /(?:#join-)?([A-Za-z0-9]{6,16})\s*$/.exec(v);
+  if (!m) { cnErr("Paste the invite link a friend sent you."); return; }
+  try { const r = await AUTH.clanAction("join", {code: m[1]}); toast(r.messages[0]); $("#clanNewDlg").close(); S.clansAt = 0; loadBoard(true); openClan(r.clan); }
+  catch (err) { cnErr(err.message); }
+});
+
+// invite links: aureous.trade/#join-<code>
+const hashJoin = () => { const m = /^#join-([A-Za-z0-9]{6,16})$/.exec(location.hash); return m && m[1]; };
+const hashClan = () => { const m = /^#clan-([A-Za-z0-9]{2,5})$/.exec(location.hash); return m && m[1].toUpperCase(); };
+async function openJoin(code){
+  if (!AUTH || !AUTH.invitePreview) return;
+  S.pendingJoin = null;
+  $("#jnMsg").hidden = true; $("#jnName").textContent = "Loading…"; $("#jnSub").textContent = ""; $("#jnOk").disabled = true;
+  if (!$("#joinDlg").open) $("#joinDlg").showModal();
+  try {
+    const p = await AUTH.invitePreview(code);
+    $("#jnName").innerHTML = `<span>[${esc(p.tag)}]</span>${esc(p.name)}`;
+    $("#jnSub").textContent = `${p.members} member${p.members === 1 ? "" : "s"}${p.leader ? `, led by ${p.leader.replace(/\.$/, "")}` : ""}. Everyone trades their own $10,000; the clan page ranks you against each other, and the clan against other clans.`;
+    const mine = myClan();
+    if (mine && mine.tag === p.tag) { $("#jnSub").textContent = "You're already in this clan."; $("#jnOk").textContent = "Open clan"; $("#jnOk").dataset.open = p.tag; }
+    else { $("#jnOk").textContent = S.user ? "Join clan" : "Sign in to join"; delete $("#jnOk").dataset.open; }
+    if (mine && mine.tag !== p.tag) { $("#jnMsg").hidden = false; $("#jnMsg").textContent = `You're in ${mine.name}. Joining ${p.name} means leaving it first (from your clan page).`; }
+    $("#jnOk").dataset.code = code; $("#jnOk").disabled = !!(mine && mine.tag !== p.tag);
+  } catch (e) { $("#jnName").textContent = "Invite not found"; $("#jnSub").textContent = e.message; }
+}
+async function doJoin(code){
+  try {
+    const r = await AUTH.clanAction("join", {code});
+    toast(r.messages[0]); if ($("#joinDlg").open) $("#joinDlg").close();
+    S.clansAt = 0; loadBoard(true); openBoard(); openClan(r.clan);
+  } catch (e) { if ($("#joinDlg").open) { $("#jnMsg").hidden = false; $("#jnMsg").textContent = e.message; } else toast(e.message, "error"); }
+}
+$("#jnOk").addEventListener("click", () => {
+  const b = $("#jnOk");
+  if (b.dataset.open) { $("#joinDlg").close(); openClan(b.dataset.open); return; }
+  if (!S.user) { S.pendingJoin = b.dataset.code; $("#joinDlg").close(); openAuth(); return; }
+  doJoin(b.dataset.code);
+});
+$("#jnCancel").addEventListener("click", () => $("#joinDlg").close());
+$("#jnClose").addEventListener("click", () => $("#joinDlg").close());
+$("#joinDlg").addEventListener("close", () => { if (location.hash.startsWith("#join-")) history.replaceState(null, "", location.pathname + location.search); });
+window.addEventListener("hashchange", () => { const j = hashJoin(), c = hashClan(); if (j) openJoin(j); else if (c && !(S.clan && S.clan.tag === c)) openClan(c); });
+$("#clanBtn").addEventListener("click", () => { $("#userMenu").hidden = true; openClanNew(); });
+function renderClanBtn(){ const c = myClan(); $("#clanBtn").hidden = !SERVER_ACCOUNTS; $("#clanBtn").textContent = c ? `My clan [${c.tag}]` : "Clans: start or join"; }
 
 // ---------- milestones on your own account ----------
 function renderMilestones(){
@@ -1607,7 +1833,7 @@ $("#privacyBtn").addEventListener("click", async () => {
   try { const r = await AUTH.setPrivate(!p.private); toast(r.messages[0]); loadBoard(true); } catch (e) { toast(e.message, "error"); }
 });
 
-document.querySelector('[data-t="board"]').addEventListener("click", () => loadBoard(true));
+document.querySelector('[data-t="board"]').addEventListener("click", () => { loadBoard(true); if (S.boardView === "clans") loadClans(true); });
 function openBoard(){ document.querySelector('[data-t="board"]').click(); $(".bottom").scrollIntoView({block: "nearest", behavior: "smooth"}); }
 $("#navBoard").addEventListener("click", e => { e.preventDefault(); history.replaceState(null, "", "#leaderboard"); openBoard(); });
 window.addEventListener("hashchange", () => { if (location.hash === "#leaderboard" && AUTH && AUTH.leaderboard) openBoard(); });
@@ -1635,17 +1861,23 @@ window.AureousUI = {
       else LOCAL.adopt(r);
     }).then(opts.silent ? reloadAccountView : () => refreshState().catch(() => {}));   // keep new notifications
   },
-  setUser(user, phase){ S.user = user; S.authPhase = phase || null; renderUser(); renderSaveNote(); renderSummary(); renderNameBtn(); if (S.tab === "board") loadBoard(true); },
+  setUser(user, phase){
+    S.user = user; S.authPhase = phase || null; renderUser(); renderSaveNote(); renderSummary(); renderNameBtn(); renderClanBtn();
+    if (S.tab === "board") { loadBoard(true); if (S.boardView === "clans") loadClans(true); }
+    if (phase === "ready" && S.pendingJoin) { const c = S.pendingJoin; S.pendingJoin = null; doJoin(c); }
+  },
   syncStatus(status, msg){ S.syncError = status === "error" ? msg : null; renderSaveNote(); },
   enableAccounts(api){
     AUTH = api; renderUser(); renderSaveNote(); renderSummary();
     $("#boardTab").hidden = !api.leaderboard; $("#navBoard").hidden = !api.leaderboard;
     if (location.hash === "#leaderboard" && api.leaderboard) openBoard();
     if (hashTrader() && api.trader) { openBoard(); openTrader(hashTrader()); }
+    if (hashJoin() && api.invitePreview) openJoin(hashJoin());
+    if (hashClan() && api.clan) { S.boardView = "clans"; openBoard(); openClan(hashClan()); }
   },
 };
 function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }
-renderNameBtn();
+renderNameBtn(); renderClanBtn();
 
 // ---------- loops ----------
 function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) { $("#conn").classList.add("bad"); $("#connText").textContent = "Offline"; } setTimeout(run, ms); }; run(); }
@@ -1662,7 +1894,7 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   loop(refreshBook, 1500);
   setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
   countdown(); setInterval(countdown, 1000);
-  setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") loadBoard(); }, 30000);
+  setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView === "clans") loadClans(); } }, 30000);
 })();
 </script>
 <script type="module" src="auth.js"></script>

@@ -93,6 +93,7 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
     <div class="card"><h2>Markets today</h2><div class="list" id="markets"></div></div>
     <div class="card"><h2>Badges earned</h2><div class="list" id="badges"></div></div>
   </div>
+  <div class="card" style="margin-top:16px"><h2>Clans</h2><div class="list" id="clans"></div></div>
   <div class="users">
     <div class="tools">
       <input id="q" placeholder="Search name or ID" aria-label="Search traders">
@@ -161,6 +162,9 @@ function render(){
   $("#barsFrom").textContent = new Date(data.signups[0].day).toLocaleDateString(undefined, {day: "numeric", month: "short"});
   $("#markets").innerHTML = data.markets.length ? data.markets.map(m => `<div class="li"><span>${esc(m.coin)}</span><span>${m.trades} trade${m.trades === 1 ? "" : "s"}</span><span>${m.positions} open</span></div>`).join("") : `<div class="muted">No trades yet today.</div>`;
   $("#badges").innerHTML = TIERS.map(tr => `<div class="li"><span>${badge(tr.id)} ${tr.name}</span><span>$${num(tr.at)}</span><span>${num(data.badges[tr.id] || 0)}</span></div>`).join("");
+  const clans = data.clans || [];
+  $("#clans").innerHTML = clans.length ? clans.map(c => `<div class="li" style="grid-template-columns:1fr auto auto auto"><span><b>[${esc(c.tag)}]</b> ${esc(c.name)} <span class="muted">led by ${esc(c.leader || "?")}, started ${when(c.created)}</span></span>` +
+    `<span>${c.members} member${c.members === 1 ? "" : "s"}</span><span></span><button class="btn" data-close-clan="${esc(c.tag)}" data-name="${esc(c.name)}" style="padding:2px 10px;font-size:12px">Close</button></div>`).join("") : `<div class="muted">No clans yet.</div>`;
   renderUsers();
   $("#meta").textContent = `Updated ${new Date(data.at).toLocaleTimeString()}, refreshes every 15 seconds`;
 }
@@ -210,6 +214,11 @@ async function openUser(uid){
   $("#aRemove").onclick = () => { if (confirm(`Remove ${d.name} from Aureous? Their trading data, badges and leaderboard entry are deleted. Their login stays in Firebase (delete it there if needed).`)) act("remove", {}, "Removed."); };
 }
 $("#dClose").onclick = () => $("#dlg").close();
+$("#clans").addEventListener("click", async e => {
+  const b = e.target.closest("[data-close-clan]"); if (!b) return;
+  if (!confirm(`Close the clan ${b.dataset.name} [${b.dataset.closeClan}]? Its members stay on Aureous but leave the clan, and they're told it was closed.`)) return;
+  try { const r = await call("/api/admin/clan-remove", {tag: b.dataset.closeClan}); toast(r.messages[0]); await load(); } catch (err) { toast(err.message); }
+});
 $("#dlg").addEventListener("click", e => { if (e.target === $("#dlg")) $("#dlg").close(); });
 
 if (!backend || !API) gate("Admin isn't set up", "Sign-in and the trading server need to be configured in firebase-config.js.");

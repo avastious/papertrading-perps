@@ -72,6 +72,17 @@ Endpoints:
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
+## Clans
+
+Clans let friends compete. Anyone signed in can start one from the account menu with a name and a 2–5 character tag, then share its invite link (`aureous.trade/#join-<code>`). Everyone still trades their own $10,000.
+
+- **Clan page** (`#clan-<TAG>`): ranks the members against each other.
+- **Clans view on the leaderboard:** ranks clans by their members' average account value. A clan needs 2 members to be ranked and can hold up to 50.
+- **One clan per trader.** Each member's tag shows next to their name.
+- **The leader** can rename the clan, make a new invite link (the old one stops working) and remove members.
+- **When people leave:** if the leader leaves or deletes their account, the longest-standing member takes over. When the last member leaves, the clan closes.
+- **Moderation:** the admin dashboard lists every clan and can close offensive ones.
+
 ## Bots
 
 20 house bots (`worker/bots.js`) trade on the server so the leaderboard always has someone to beat. Each has $10,000 and one simple, published strategy: trend following, breakouts, mean reversion, contrarian, momentum, a holder, a dip buyer, a funding harvester, a scalper, a short seller, an index and a 40x degen. They use the same engine, live prices, fees, funding and liquidations as everyone else. Every minute the cron job wakes a few of them; a bot that blows up resets to $10,000, and its profile shows the reset.
@@ -222,6 +233,7 @@ node tests/server/api.check.mjs          # sign-in, trading, every-minute job, c
 node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, hiding trades (run after api.check on a fresh server)
 node tests/server/admin.check.mjs        # owner-only dashboard (start wrangler dev with --var ADMIN_EMAILS:owner@example.com)
 node tests/server/bots.check.mjs         # house bots (fresh server, bots on, with the ADMIN_EMAILS var above)
+node tests/server/clans.check.mjs        # clans: create, invite, join, leader rules, rankings, moderation
 ```
 
 ## Files

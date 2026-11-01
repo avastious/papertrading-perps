@@ -17,6 +17,9 @@ const MAX_ACTIONS_PER_MIN = 40, MAX_EVENTS = 50, BOARD_TTL = 20000, CURVE_MS = 1
 const PEAK_STEP = 1.002;                      // only store a new peak when it's 0.2% higher (saves writes)
 const newPid = () => [...crypto.getRandomValues(new Uint8Array(6))].map(b => b.toString(16).padStart(2, "0")).join("");
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} ._-]{1,22}[\p{L}\p{N}._-]$/u;
+const TAG_RE = /^[A-Z0-9]{2,5}$/, CLAN_MAX = 50, CLAN_MIN_RANKED = 2;
+const newInvite = () => [...crypto.getRandomValues(new Uint8Array(6))].map(b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("") +
+                        [...crypto.getRandomValues(new Uint8Array(4))].map(b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
 
 // Shares Hyperliquid responses between accounts so one price snapshot serves everyone.
 class SharedClient {
@@ -68,6 +71,11 @@ export class Exchange extends DurableObject {
     add("pid", "TEXT"); add("badges", "TEXT NOT NULL DEFAULT '[]'"); add("peak", "REAL NOT NULL DEFAULT 10000");
     add("spotlight_until", "INTEGER NOT NULL DEFAULT 0"); add("resets", "INTEGER NOT NULL DEFAULT 0"); add("private", "INTEGER NOT NULL DEFAULT 0");
     add("last_seen", "INTEGER NOT NULL DEFAULT 0");
+    add("clan", "INTEGER"); add("clan_joined", "INTEGER NOT NULL DEFAULT 0");
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS clans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, tag TEXT NOT NULL UNIQUE, name TEXT NOT NULL, owner TEXT NOT NULL,
+      invite TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)`);
+    this.sql.exec("CREATE INDEX IF NOT EXISTS accounts_clan ON accounts(clan)");
     for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
     this.client = new SharedClient(env.HL_API_URL || "https://api.hyperliquid.xyz");
@@ -232,9 +240,11 @@ export class Exchange extends DurableObject {
   }
 
   ownProfile(uid) {
-    const r = this.sql.exec("SELECT pid, name, badges, peak, spotlight_until, private, resets FROM accounts WHERE uid = ?", uid).toArray()[0];
-    return r ? {pid: r.pid, name: r.name, badges: JSON.parse(r.badges || "[]"), peak: r.peak, spotlight_until: r.spotlight_until,
-                private: !!r.private, resets: r.resets} : null;
+    const r = this.sql.exec("SELECT pid, name, badges, peak, spotlight_until, private, resets, clan FROM accounts WHERE uid = ?", uid).toArray()[0];
+    if (!r) return null;
+    const c = r.clan ? this.sql.exec("SELECT tag, name, owner FROM clans WHERE id = ?", r.clan).toArray()[0] : null;
+    return {pid: r.pid, name: r.name, badges: JSON.parse(r.badges || "[]"), peak: r.peak, spotlight_until: r.spotlight_until,
+            private: !!r.private, resets: r.resets, clan: c ? {tag: c.tag, name: c.name, owner: c.owner === uid} : null};
   }
 
   async setPrivate(uid, priv) {
@@ -255,6 +265,7 @@ export class Exchange extends DurableObject {
 
   async remove(uid) {
     return this.withLock(uid, async () => {
+      this.leaveClan(uid);
       this.sql.exec("DELETE FROM accounts WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM milestones WHERE uid = ?", uid);
@@ -268,7 +279,8 @@ export class Exchange extends DurableObject {
       if (!this.board || Date.now() - this.board.t > BOARD_TTL) {
         const ex = new PaperExchange(this.client, {storage: null, refreshMs: 0});
         await ex.refresh();
-        const rows = this.sql.exec("SELECT uid, pid, name, core, badges, spotlight_until FROM accounts").toArray().map(r => {
+        const tags = new Map(this.sql.exec("SELECT id, tag FROM clans").toArray().map(c => [c.id, c.tag]));
+        const rows = this.sql.exec("SELECT uid, pid, name, core, badges, spotlight_until, clan, clan_joined FROM accounts").toArray().map(r => {
           const core = JSON.parse(r.core);
           let equity = core.balance;
           for (const [coin, p] of Object.entries(core.positions)) {
@@ -279,13 +291,15 @@ export class Exchange extends DurableObject {
           const badges = JSON.parse(r.badges || "[]");
           const top = TIERS.filter(t => badges.some(b => b.tier === t.id)).pop();
           return {uid: r.uid, pid: r.pid, name: r.name, equity, positions: Object.keys(core.positions).length, bot: isBot(r.uid),
+                  clan: r.clan || null, clan_tag: r.clan ? tags.get(r.clan) || null : null, clan_joined: r.clan_joined,
                   badge: top ? top.id : null, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0};
         }).sort((a, b) => b.equity - a.equity);
         rows.forEach((r, i) => { r.rank = i + 1; r.return = r.equity / START_BALANCE - 1; });
         this.board = {t: Date.now(), rows};
       }
       const pub = r => ({rank: r.rank, pid: r.pid, name: r.name, equity: r.equity, return: r.return, positions: r.positions,
-                         badge: r.badge, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0, ...(r.bot ? {bot: true} : {})});
+                         badge: r.badge, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0, ...(r.bot ? {bot: true} : {}),
+                         ...(r.clan_tag ? {clan: r.clan_tag} : {})});
       const me = uid ? this.board.rows.find(r => r.uid === uid) : null;
       const milestones = this.sql.exec(`SELECT m.tier, m.at, a.name, a.pid FROM milestones m JOIN accounts a ON a.uid = m.uid
                                         WHERE m.at > ? ORDER BY m.at DESC LIMIT 10`, Date.now() - SPOTLIGHT_MS).toArray();
@@ -311,6 +325,7 @@ export class Exchange extends DurableObject {
         badges: JSON.parse(row.badges || "[]"), spotlight_until: row.spotlight_until > Date.now() ? row.spotlight_until : 0,
         private: !!row.private, stats: ex.stats(),
       };
+      if (row.clan) { const c = this.sql.exec("SELECT tag, name FROM clans WHERE id = ?", row.clan).toArray()[0]; if (c) out.clan = {tag: c.tag, name: c.name}; }
       if (isBot(row.uid)) { out.bot = true; const b = BOT_BY_UID.get(row.uid); if (b) out.strategy = describe(b); }
       delete out.stats.equity; delete out.stats.start;
       if (!row.private || self) {
@@ -325,6 +340,131 @@ export class Exchange extends DurableObject {
       }
       return out;
     } catch (e) { return fail(e); }
+  }
+
+  // ------------------------------------------------------------------ clans
+  // A clan is a group of friends competing together: one clan per trader, joined by invite link,
+  // ranked by its members' average account value (clans need 2+ members to be ranked).
+  clanRow(id) { return this.sql.exec("SELECT * FROM clans WHERE id = ?", id).toArray()[0] || null; }
+  memberCount(id) { return this.sql.exec("SELECT COUNT(*) AS n FROM accounts WHERE clan = ?", id).toArray()[0].n; }
+  leaveClan(uid) {                                 // no lock: callers hold the account's lock or don't need it
+    const r = this.sql.exec("SELECT clan FROM accounts WHERE uid = ?", uid).toArray()[0];
+    if (!r || !r.clan) return null;
+    const c = this.clanRow(r.clan);
+    this.sql.exec("UPDATE accounts SET clan = NULL, clan_joined = 0 WHERE uid = ?", uid);
+    this.board = null;
+    if (!c) return null;
+    if (c.owner === uid) {                         // hand the clan to the longest-standing member, or close it
+      const next = this.sql.exec("SELECT uid FROM accounts WHERE clan = ? ORDER BY clan_joined, created LIMIT 1", c.id).toArray()[0];
+      if (next) this.sql.exec("UPDATE clans SET owner = ? WHERE id = ?", next.uid, c.id);
+      else this.sql.exec("DELETE FROM clans WHERE id = ?", c.id);
+      return {clan: c, closed: !next};
+    }
+    return {clan: c, closed: false};
+  }
+  async clanAction(uid, profile, action, body) {
+    if (this.limited(uid)) return {ok: false, status: 429, error: "Too many requests. Wait a moment and try again."};
+    return this.withLock(uid, async () => {
+      const row = this.row(uid) || this.create(uid, profile);
+      this.touch(uid);
+      const mine = row.clan ? this.clanRow(row.clan) : null;
+      const done = (messages, extra = {}) => { this.board = null; return {ok: true, messages, profile: this.ownProfile(uid), ...extra}; };
+      if (action === "create") {
+        if (mine) return {ok: false, status: 400, error: `You're already in ${mine.name}. Leave it first.`};
+        const name = String(body.name || "").trim().replace(/\s+/g, " "), tag = String(body.tag || "").trim().toUpperCase();
+        if (!NAME_RE.test(name)) return {ok: false, status: 400, error: "Clan name: use 3–24 letters, numbers, spaces, dots, dashes or underscores."};
+        if (!TAG_RE.test(tag)) return {ok: false, status: 400, error: "Clan tag: use 2–5 letters or numbers."};
+        if (this.sql.exec("SELECT 1 FROM clans WHERE tag = ?", tag).toArray().length) return {ok: false, status: 409, error: `The tag ${tag} is taken. Try another.`};
+        const now = Date.now();
+        this.sql.exec("INSERT INTO clans (tag, name, owner, invite, created) VALUES (?, ?, ?, ?, ?)", tag, name, uid, newInvite(), now);
+        const id = this.sql.exec("SELECT id FROM clans WHERE tag = ?", tag).toArray()[0].id;
+        this.sql.exec("UPDATE accounts SET clan = ?, clan_joined = ? WHERE uid = ?", id, now, uid);
+        return done([`Clan ${name} [${tag}] created. Send your invite link to friends.`], {clan: tag});
+      }
+      if (action === "join") {
+        const code = String(body.code || "").trim().toLowerCase();
+        const c = /^[a-z0-9]{6,16}$/.test(code) ? this.sql.exec("SELECT * FROM clans WHERE invite = ?", code).toArray()[0] : null;
+        if (!c) return {ok: false, status: 404, error: "That invite link doesn't work any more. Ask for a new one."};
+        if (mine && mine.id === c.id) return done([`You're already in ${c.name}.`], {clan: c.tag});
+        if (mine) return {ok: false, status: 400, error: `You're in ${mine.name}. Leave it before joining ${c.name}.`};
+        if (this.memberCount(c.id) >= CLAN_MAX) return {ok: false, status: 400, error: `${c.name} is full (${CLAN_MAX} members).`};
+        this.sql.exec("UPDATE accounts SET clan = ?, clan_joined = ? WHERE uid = ?", c.id, Date.now(), uid);
+        return done([`You joined ${c.name} [${c.tag}].`], {clan: c.tag});
+      }
+      if (!mine) return {ok: false, status: 400, error: "You're not in a clan."};
+      if (action === "leave") {
+        const r = this.leaveClan(uid);
+        return done([r && r.closed ? `You left ${mine.name}. It had no other members, so it's closed.` : `You left ${mine.name}.`]);
+      }
+      if (mine.owner !== uid) return {ok: false, status: 403, error: "Only the clan's leader can do that."};
+      if (action === "invite") {
+        this.sql.exec("UPDATE clans SET invite = ? WHERE id = ?", newInvite(), mine.id);
+        return done(["New invite link made. The old link no longer works."], {clan: mine.tag});
+      }
+      if (action === "kick") {
+        const t = typeof body.pid === "string" ? this.sql.exec("SELECT uid, name, clan FROM accounts WHERE pid = ?", body.pid).toArray()[0] : null;
+        if (!t || t.clan !== mine.id) return {ok: false, status: 404, error: "That trader isn't in your clan."};
+        if (t.uid === uid) return {ok: false, status: 400, error: "To leave your own clan, use Leave clan."};
+        this.sql.exec("UPDATE accounts SET clan = NULL, clan_joined = 0 WHERE uid = ?", t.uid);
+        this.addEvents(t.uid, [{kind: "event", msg: `You were removed from the clan ${mine.name}.`}]);
+        return done([`${t.name} was removed from the clan.`], {clan: mine.tag});
+      }
+      if (action === "rename") {
+        const name = String(body.name || "").trim().replace(/\s+/g, " ");
+        if (!NAME_RE.test(name)) return {ok: false, status: 400, error: "Clan name: use 3–24 letters, numbers, spaces, dots, dashes or underscores."};
+        this.sql.exec("UPDATE clans SET name = ? WHERE id = ?", name, mine.id);
+        return done([`Clan renamed to ${name}.`], {clan: mine.tag});
+      }
+      return {ok: false, status: 404, error: "Not found"};
+    });
+  }
+  // public: what an invite link leads to
+  clanPreview(code) {
+    code = String(code || "").toLowerCase();
+    const c = /^[a-z0-9]{6,16}$/.test(code) ? this.sql.exec("SELECT * FROM clans WHERE invite = ?", code).toArray()[0] : null;
+    if (!c) return {ok: false, status: 404, error: "That invite link doesn't work any more. Ask for a new one."};
+    const leader = this.sql.exec("SELECT name FROM accounts WHERE uid = ?", c.owner).toArray()[0];
+    return {ok: true, tag: c.tag, name: c.name, members: this.memberCount(c.id), max: CLAN_MAX, leader: leader ? leader.name : null};
+  }
+  clanStats(rows) {
+    const n = rows.length, total = rows.reduce((s, r) => s + r.equity, 0), avg = n ? total / n : 0;
+    return {members: n, total, average: avg, return: avg / START_BALANCE - 1, best: n ? Math.max(...rows.map(r => r.return)) : 0};
+  }
+  // clan leaderboard, built from the same numbers as the trader leaderboard
+  async clans(uid = null) {
+    const lb = await this.leaderboard();
+    if (lb.ok === false) return lb;
+    const byClan = new Map();
+    for (const r of this.board.rows) if (r.clan) (byClan.get(r.clan) || byClan.set(r.clan, []).get(r.clan)).push(r);
+    const list = this.sql.exec("SELECT id, tag, name, created FROM clans").toArray().map(c => {
+      const rows = byClan.get(c.id) || [], st = this.clanStats(rows);
+      const top = rows.slice().sort((a, b) => b.equity - a.equity)[0];
+      return {id: c.id, tag: c.tag, name: c.name, created: c.created, ...st, ranked: st.members >= CLAN_MIN_RANKED,
+              top: top ? {pid: top.pid, name: top.name, return: top.return} : null};
+    }).sort((a, b) => (b.ranked - a.ranked) || b.average - a.average || b.members - a.members);
+    let rank = 0; for (const c of list) c.rank = c.ranked ? ++rank : null;
+    this.clanRanks = new Map(list.map(c => [c.id, c.rank]));
+    const mineId = uid ? (this.sql.exec("SELECT clan FROM accounts WHERE uid = ?", uid).toArray()[0] || {}).clan : null;
+    const pub = c => { const {id, ...rest} = c; return rest; };
+    const me = mineId ? list.find(c => c.id === mineId) : null;
+    return {ok: true, updated: this.board.t, total: list.length, ranked: rank, min_members: CLAN_MIN_RANKED,
+            rows: list.slice(0, 100).map(pub), me: me ? pub(me) : null};
+  }
+  // a clan's page: its members ranked, plus the invite link for members
+  async clanInfo(tag, uid = null) {
+    tag = String(tag || "").toUpperCase();
+    const c = TAG_RE.test(tag) ? this.sql.exec("SELECT * FROM clans WHERE tag = ?", tag).toArray()[0] : null;
+    if (!c) return {ok: false, status: 404, error: "Clan not found."};
+    const board = await this.clans();
+    if (board.ok === false) return board;
+    const rows = this.board.rows.filter(r => r.clan === c.id).sort((a, b) => b.equity - a.equity);
+    const member = uid ? rows.find(r => r.uid === uid) : null;
+    const out = {ok: true, tag: c.tag, name: c.name, created: c.created, rank: this.clanRanks.get(c.id) || null, ranked_total: board.ranked,
+                 total: board.total, min_members: CLAN_MIN_RANKED, max: CLAN_MAX, ...this.clanStats(rows),
+                 members: rows.map((r, i) => ({pos: i + 1, pid: r.pid, name: r.name, equity: r.equity, return: r.return, positions: r.positions,
+                                               badge: r.badge, rank: r.rank, leader: r.uid === c.owner, joined: r.clan_joined}))};
+    if (member) out.me = {member: true, leader: c.owner === uid, invite: c.invite};
+    return out;
   }
 
   // ------------------------------------------------------------------ admin (site owner only)
@@ -390,6 +530,8 @@ export class Exchange extends DurableObject {
                  trades_today: tradesToday, trades_7d: trades7, volume_today: volumeToday, open_positions: openPositions,
                  liquidations_today: liquidationsToday, private_profiles: people.filter(u => u.private).length},
         signups: days, badges: badgeCount,
+        clans: this.sql.exec(`SELECT c.tag, c.name, c.created, (SELECT COUNT(*) FROM accounts a WHERE a.clan = c.id) AS members,
+                              (SELECT name FROM accounts a WHERE a.uid = c.owner) AS leader FROM clans c ORDER BY members DESC, c.created`).toArray(),
         markets: [...markets.values()].sort((a, b) => b.volume - a.volume || b.positions - a.positions).slice(0, 12),
         users,
       };
@@ -426,6 +568,17 @@ export class Exchange extends DurableObject {
       });
     }
     return {ok: false, status: 404, error: "Unknown action."};
+  }
+
+  adminClanRemove(tag) {
+    const c = this.sql.exec("SELECT * FROM clans WHERE tag = ?", String(tag || "").toUpperCase()).toArray()[0];
+    if (!c) return {ok: false, status: 404, error: "No such clan."};
+    for (const m of this.sql.exec("SELECT uid FROM accounts WHERE clan = ?", c.id).toArray())
+      this.addEvents(m.uid, [{kind: "event", msg: `The clan ${c.name} was closed by Aureous.`}]);
+    this.sql.exec("UPDATE accounts SET clan = NULL, clan_joined = 0 WHERE clan = ?", c.id);
+    this.sql.exec("DELETE FROM clans WHERE id = ?", c.id);
+    this.board = null; this.adminCache = null;
+    return {ok: true, messages: [`Clan ${c.name} [${c.tag}] closed.`]};
   }
 
   // every minute (Cron Trigger): settle all accounts with open positions or orders

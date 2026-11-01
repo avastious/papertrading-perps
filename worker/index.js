@@ -7,7 +7,11 @@
 //   POST /api/profile {name}       set your leaderboard name
 //   POST /api/privacy {private}    hide (or show) your positions and trades on your profile
 //   POST /api/delete               delete your account data
-//   /api/admin/...                 owner-only dashboard data (overview, user detail, rename/reset/remove)
+//   GET  /api/clans                public; clan leaderboard (plus your clan when signed in)
+//   GET  /api/clan/<TAG>           public; a clan's members ranked (plus the invite link for members)
+//   GET  /api/invite/<code>        public; which clan an invite link is for
+//   POST /api/clan/create {name, tag} | join {code} | leave | invite (new link) | kick {pid} | rename {name}
+//   /api/admin/...                 owner-only dashboard data (overview, user detail, rename/reset/remove, clan-remove)
 //
 // Every request except the leaderboard needs "Authorization: Bearer <Firebase ID token>".
 import {verifyIdToken, AuthError} from "./firebase-auth.js";
@@ -48,6 +52,11 @@ export default {
       if (url.pathname === "/api/leaderboard" && req.method === "GET") return reply(await ex.leaderboard(user ? user.uid : null));
       const tm = /^\/api\/trader\/([0-9a-f]{12})$/.exec(url.pathname);
       if (tm && req.method === "GET") return reply(await ex.trader(tm[1], user ? user.uid : null));
+      if (url.pathname === "/api/clans" && req.method === "GET") return reply(await ex.clans(user ? user.uid : null));
+      const cm = /^\/api\/clan\/([A-Za-z0-9]{2,5})$/.exec(url.pathname);
+      if (cm && req.method === "GET") return reply(await ex.clanInfo(cm[1], user ? user.uid : null));
+      const im = /^\/api\/invite\/([A-Za-z0-9]{6,16})$/.exec(url.pathname);
+      if (im && req.method === "GET") return reply(await ex.clanPreview(im[1]));
       if (!user) return json({ok: false, error: "Sign in to trade."}, 401, cors);
 
       // ---- admin: only the site owner's verified sign-in email (ADMIN_EMAILS in wrangler.jsonc)
@@ -59,6 +68,10 @@ export default {
         if (url.pathname === "/api/admin/overview" && req.method === "GET") return reply(await ex.adminOverview());
         const um = /^\/api\/admin\/user\/([\w-]{1,128})$/.exec(url.pathname);
         if (um && req.method === "GET") return reply(await ex.adminUser(um[1]));
+        if (url.pathname === "/api/admin/clan-remove" && req.method === "POST") {
+          let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
+          return reply(await ex.adminClanRemove(b.tag));
+        }
         const am = /^\/api\/admin\/(rename|reset|remove)$/.exec(url.pathname);
         if (am && req.method === "POST") {
           let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
@@ -81,6 +94,8 @@ export default {
       if (url.pathname === "/api/profile") return reply(await ex.setName(user.uid, body.name));
       if (url.pathname === "/api/privacy") return reply(await ex.setPrivate(user.uid, body.private === true));
       if (url.pathname === "/api/delete") return reply(await ex.remove(user.uid));
+      const ca = /^\/api\/clan\/(create|join|leave|invite|kick|rename)$/.exec(url.pathname);
+      if (ca) return reply(await ex.clanAction(user.uid, {name: user.name}, ca[1], body));
       return reply(await ex.act(user.uid, {name: user.name}, url.pathname, body, +body.since || 0));
     } catch (e) {
       if (e instanceof AuthError) return json({ok: false, error: e.message}, 401, cors);

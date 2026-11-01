@@ -134,6 +134,10 @@ async function main() {
     leaderboard: () => call("/api/leaderboard", undefined, signedIn),
     trader: pid => call(`/api/trader/${encodeURIComponent(pid)}`, undefined, signedIn),
     async setPrivate(priv) { const r = await call("/api/privacy", {private: !!priv}); UI.adoptRemote(r); return r; },
+    clans: () => call("/api/clans", undefined, signedIn),
+    clan: tag => call(`/api/clan/${encodeURIComponent(tag)}`, undefined, signedIn),
+    invitePreview: code => call(`/api/invite/${encodeURIComponent(code)}`, undefined, false),
+    async clanAction(action, body = {}) { const r = await call(`/api/clan/${action}`, body); UI.adoptRemote(r); return r; },
   });
 
   backend.onUser(async user => {
