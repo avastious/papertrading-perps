@@ -23,6 +23,19 @@ The site is static files (`aureous/web/`) on GitHub Pages. The trading engine is
 
 To publish changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which GitHub Pages serves. One-time setup: in the repo, go to Settings → Pages → Build and deployment, choose "Deploy from a branch", then pick `gh-pages` and `/ (root)`.
 
+## Custom domain
+
+1. Buy a domain from any registrar (Cloudflare, Porkbun, Namecheap, Squarespace, ...).
+2. In the repo, go to Settings → Pages → Custom domain, enter the domain (e.g. `example.com`) and click Save.
+3. At the registrar's DNS settings, add four `A` records for `@` pointing to `185.199.108.153`, `185.199.109.153`, `185.199.110.153` and `185.199.111.153`. Then add a `CNAME` record for `www` pointing to `avastious.github.io`. Delete any other `A` or `CNAME` records for `@` and `www`, such as the registrar's parking page.
+4. Once GitHub shows the DNS check passed (minutes to a few hours), tick **Enforce HTTPS**.
+5. Add the domain everywhere sign-in is allowed:
+   - Firebase → Authentication → Settings → Authorized domains (add both `example.com` and `www.example.com`).
+   - The API key's website restrictions.
+   - The reCAPTCHA key's domains, if you use App Check.
+
+`scripts/publish_pages.sh` keeps the domain when republishing. It reads `aureous/web/CNAME` if present, otherwise it keeps whatever the live site has.
+
 ## Accounts (sign in with Google, GitHub or email)
 
 The public site can let people sign in so their paper account follows them across devices. This uses Firebase (Auth + Firestore), which is free at this scale. Guests can still trade without signing in. The first time someone signs in, their guest account moves into their new account.
