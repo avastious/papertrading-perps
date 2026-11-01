@@ -40,7 +40,7 @@ The main address is a Cloudflare Pages project built from the `gh-pages` branch,
    - The API key's website restrictions.
    - The reCAPTCHA key's domains, if you use App Check.
 
-`scripts/publish_pages.sh` keeps the domain when republishing. It reads `aureous/web/CNAME` if present, otherwise it keeps whatever the live site has.
+Also save the domain in `aureous/web/CNAME` (just the name, e.g. `example.com`). `scripts/publish_pages.sh` publishes only that file's domain, so without it the next publish removes the domain.
 
 ## Accounts (sign in with Google, GitHub or email)
 

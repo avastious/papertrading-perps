@@ -13,13 +13,9 @@ trap 'rm -rf "$tmp"' EXIT
 cp -r "$root/aureous/web/." "$tmp/"
 touch "$tmp/.nojekyll"   # serve files as-is, no Jekyll processing
 
-# Custom domain: GitHub Pages reads it from a CNAME file on the published branch. Use
-# aureous/web/CNAME if it exists; otherwise keep whatever the live site already has, so a
-# domain set in the repo's Pages settings isn't wiped by this force-push.
-if [ ! -f "$tmp/CNAME" ] && git -C "$root" fetch -q origin gh-pages 2>/dev/null \
-   && git -C "$root" cat-file -e FETCH_HEAD:CNAME 2>/dev/null; then
-  git -C "$root" show FETCH_HEAD:CNAME > "$tmp/CNAME"
-fi
+# Custom domain: GitHub Pages reads it from a CNAME file on the published branch. Only a domain
+# saved in aureous/web/CNAME is published, so a domain never lingers after it's been removed.
+# (If you set a domain in the repo's Pages settings, add the same name to aureous/web/CNAME.)
 [ -f "$tmp/CNAME" ] && echo "Custom domain: $(cat "$tmp/CNAME")"
 
 cd "$tmp"
