@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hl-papertrade"
+name = "aureous"
 version = "0.1.0"
-description = "Paper-trade Hyperliquid perps with live market data"
+description = "Aureous: paper-trade Hyperliquid perps with live market data"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["requests>=2.28"]
@@ -14,10 +14,13 @@ dependencies = ["requests>=2.28"]
 test = ["pytest"]
 
 [project.scripts]
-hlpaper = "hlpaper.__main__:main"
+aureous = "aureous.__main__:main"
 
 [tool.setuptools]
-packages = ["hlpaper"]
+packages = ["aureous"]
+
+[tool.setuptools.package-data]
+aureous = ["web/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

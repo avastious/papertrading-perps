@@ -1,7 +1,7 @@
 """Engine tests against a fake Hyperliquid client that returns real-shaped responses."""
 import pytest
 
-from hlpaper.engine import HOUR_MS, PaperError, PaperExchange, apply_fill, round_px, round_size
+from aureous.engine import HOUR_MS, PaperError, PaperExchange, apply_fill, round_px, round_size
 
 
 class FakeClient:

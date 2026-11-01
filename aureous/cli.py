@@ -101,9 +101,9 @@ def parse_size(token: str, mark: float) -> float:
 
 
 class PaperShell(cmd.Cmd):
-    intro = (bold("Hyperliquid perps paper trader") +
+    intro = (bold("Aureous") + " - Hyperliquid perps paper trading" +
              dim("  - live market data, simulated fills. Type 'help' or '?' for commands."))
-    prompt = "hl-paper> "
+    prompt = "aureous> "
     NO_UPDATE = {"help", "quit", "exit", "EOF", "reset", ""}
 
     def __init__(self, ex: PaperExchange):

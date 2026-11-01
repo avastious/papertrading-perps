@@ -1,4 +1,4 @@
-"""Paper-trade Hyperliquid perpetuals against live market data."""
+"""Aureous - paper-trade Hyperliquid perpetuals against live market data."""
 from .api import HyperliquidClient
 from .engine import PaperError, PaperExchange
 
