@@ -23,6 +23,10 @@ The site is static files (`aureous/web/`) on GitHub Pages. The trading engine is
 
 To publish changes: commit them, then run `scripts/publish_pages.sh`. It pushes `aureous/web` to the `gh-pages` branch, which GitHub Pages serves. One-time setup: in the repo, go to Settings → Pages → Build and deployment, choose "Deploy from a branch", then pick `gh-pages` and `/ (root)`.
 
+## Cloudflare (alternative host)
+
+`wrangler.jsonc` lets Cloudflare serve the same site: Workers & Pages → Create → Import a repository → this repo, branch `main`. Cloudflare redeploys on every push to `main`; its address is shown on the Worker's overview page. Add that address to Firebase → Authentication → Authorized domains.
+
 ## Custom domain
 
 1. Buy a domain from any registrar (Cloudflare, Porkbun, Namecheap, Squarespace, ...).

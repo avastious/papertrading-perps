@@ -1,0 +1,9 @@
+// Cloudflare Workers config: serves the Aureous website (aureous/web) as static files.
+// Cloudflare rebuilds and redeploys automatically on every push to main.
+{
+  "name": "aureous",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./aureous/web"
+  }
+}
