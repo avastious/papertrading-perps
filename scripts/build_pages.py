@@ -83,6 +83,7 @@ ABOUT = """
 
 <h2>The leaderboard</h2>
 <p>Everyone starts with the same $10,000, and the leaderboard ranks accounts by their current value, including open positions at the mark price. Trades are checked on the Aureous server against live prices, so a balance can't be edited to climb the rankings.</p>
+<p>You'll also find 20 Aureous bots on the board, each tagged <b>BOT</b>. Each one trades a simple strategy (trend following, breakouts, mean reversion, buying dips, a maximum-leverage degen) on the same live prices, fees and rules as you. Click one to see its strategy and trades, then try to beat it.</p>
 <p>Click any trader to see their open positions and recent trades, and learn from the best on the board. Account-value milestones earn Roman-coin badges, from the bronze Sestertius at $20,000 to Imperium at $1,000,000. Each new badge also earns a week in the spotlight.</p>
 
 <h2>Who's behind it</h2>
@@ -101,7 +102,7 @@ HOW = """
 <ol class="steps">
   <li><b>Sign in</b>with Google or an email address. Your account opens with $10,000 of paper money.</li>
   <li><b>Pick a market</b>from the list on the left. Star the ones you trade most to keep them at the top.</li>
-  <li><b>Choose a direction and size</b>in the order panel. Long if you think the price will rise, short if you think it will fall. Size can be in dollars or coins, and leverage sets how much margin the trade ties up.</li>
+  <li><b>Choose a direction and size</b>in the order panel. Long if you think the price will rise, short if you think it will fall. By default you enter your <b>margin</b>, the part of your own money you're putting in, and leverage multiplies it: $1,000 at 20x opens a $20,000 position. Tap the box next to the size to enter the position value or a number of coins instead. Max uses everything available, leaving room for the fee.</li>
   <li><b>Protect the trade</b>with a take-profit and a stop-loss. They're drawn on the chart and fire automatically.</li>
   <li><b>Watch it and close it</b>from the Positions tab, all at once or half at a time. Your result counts towards the leaderboard straight away.</li>
 </ol>
@@ -119,6 +120,7 @@ HOW = """
 <details><summary>What is funding?</summary><div><p>Every hour, one side of each market pays the other to keep the perpetual's price close to the underlying asset. When the rate is positive, longs pay shorts; when it's negative, shorts pay longs. Aureous uses Hyperliquid's actual hourly rates, so holding a position for days can cost or earn real (paper) money.</p></div></details>
 <details><summary>Do stops and limits work when I close the page?</summary><div><p>Yes. The Aureous server checks every account once a minute and fills any take-profits, stop-losses and limit orders that have been reached, settles funding and handles liquidations. Because the check runs once a minute, a fast move can fill a stop at a worse price than you set, much like a real market gapping through it.</p></div></details>
 <details><summary>How does the leaderboard work?</summary><div><p>Everyone starts with $10,000. Accounts are ranked by current value: cash balance plus the profit or loss of open positions at the mark price. The board refreshes every 20 seconds or so. Choose the name others see from the account menu; your email is never shown.</p></div></details>
+<details><summary>Who are the BOT accounts?</summary><div><p>They're 20 house bots run by Aureous, so the leaderboard always has someone to beat. Each trades one simple, published strategy with $10,000, on the same live prices, fees, funding and liquidation rules as everyone else. If a bot blows up, it resets to $10,000 and its profile shows the reset. They're always tagged BOT and never pretend to be people.</p></div></details>
 <details><summary>Can I see other traders' positions?</summary><div><p>Yes. Click any name on the leaderboard to open their profile: account value, best value, win rate, badges, open positions and their last 50 trades. Profit and loss on open positions updates live. Traders can hide their positions and trades from the account menu; their summary and badges stay visible.</p></div></details>
 <details><summary>What are badges?</summary><div>
   <p>Badges mark account-value milestones. Each is named after a Roman coin:</p>

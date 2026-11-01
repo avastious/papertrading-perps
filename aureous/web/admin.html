@@ -97,7 +97,7 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
     <div class="tools">
       <input id="q" placeholder="Search name or ID" aria-label="Search traders">
       <select id="filter" aria-label="Filter traders">
-        <option value="all">All traders</option><option value="online">Online now</option><option value="24h">Active in last 24 hours</option>
+        <option value="people">People</option><option value="all">People and bots</option><option value="bots">Bots</option><option value="online">Online now</option><option value="24h">Active in last 24 hours</option>
         <option value="new">Joined in last 7 days</option><option value="positions">With open positions</option><option value="private">Trades hidden</option>
       </select>
       <span class="meta" id="meta"></span>
@@ -151,10 +151,10 @@ async function load(){
 function render(){
   $("#gate").hidden = true; $("#dash").hidden = false;
   const t = data.totals;
-  const tiles = [["Online now", num(t.online), "live", "using the site this minute"], ["Traders", num(t.traders), "", `${num(t.private_profiles)} with trades hidden`],
+  const tiles = [["Online now", num(t.online), "live", "using the site this minute"], ["Traders", num(t.traders), "", `${num(t.private_profiles)} with trades hidden, plus ${num(t.bots || 0)} bots`],
     ["New today", num(t.new_today), "", `${num(t.new_7d)} this week`], ["Active today", num(t.active_24h), "", `last 24 hours, ${num(t.active_1h)} in the last hour`],
     ["Trades today", num(t.trades_today), "", `${num(t.trades_7d)} this week`], ["Volume today", usd0(t.volume_today), "", `${num(t.liquidations_today)} liquidations`],
-    ["Open positions", num(t.open_positions), "", `across ${num(data.users.filter(u => u.positions).length)} traders`], ["Active this week", num(t.active_7d), "", "signed-in traders"]];
+    ["Open positions", num(t.open_positions), "", `across ${num(data.users.filter(u => u.positions && !u.bot).length)} traders`], ["Active this week", num(t.active_7d), "", "signed-in traders"]];
   $("#tiles").innerHTML = tiles.map(([k, v, c, sub]) => `<div class="tile ${c}"><span>${k}</span><b>${v}</b><small>${esc(sub)}</small></div>`).join("");
   const max = Math.max(1, ...data.signups.map(d => d.signups));
   $("#bars").innerHTML = data.signups.map(d => `<div style="height:${d.signups / max * 100}%" title="${d.day}: ${d.signups} new"></div>`).join("");
@@ -169,13 +169,13 @@ const COLS = [["name", "Trader", "l"], ["last_seen", "Last seen"], ["created", "
 function renderUsers(){
   const q = $("#q").value.trim().toLowerCase(), f = $("#filter").value, now = Date.now();
   let list = data.users.filter(u => !q || u.name.toLowerCase().includes(q) || u.uid.toLowerCase().includes(q) || u.pid.includes(q));
-  list = list.filter(u => f === "all" || (f === "online" && u.online) || (f === "24h" && now - u.last_seen < 864e5) ||
-    (f === "new" && now - u.created < 7 * 864e5) || (f === "positions" && u.positions) || (f === "private" && u.private));
+  list = list.filter(u => f === "all" || (f === "people" && !u.bot) || (f === "bots" && u.bot) || (f === "online" && u.online) || (f === "24h" && now - u.last_seen < 864e5) ||
+    (f === "new" && !u.bot && now - u.created < 7 * 864e5) || (f === "positions" && u.positions) || (f === "private" && u.private));
   list.sort((a, b) => { const x = a[sort.key], y = b[sort.key]; return (typeof x === "string" ? x.localeCompare(y) : x - y) * sort.dir; });
   $("#cols").innerHTML = COLS.map(([k, label, c]) => `<th class="${c || ""}${sort.key === k ? " on" : ""}" data-k="${k}">${label}${sort.key === k ? (sort.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("");
   $("#rows").innerHTML = list.map(u => `<tr data-uid="${esc(u.uid)}">
-    <td class="l"><span class="dot${u.online ? " on" : ""}" title="${u.online ? "Online now" : "Offline"}"></span>${u.badges.length ? badge(u.badges[u.badges.length - 1]) : ""}${esc(u.name)}${u.private ? `<span class="tag">hidden</span>` : ""}${u.spotlight ? `<span class="tag">spotlight</span>` : ""}</td>
-    <td>${u.online ? `<span class="up">online</span>` : ago(u.last_seen)}</td><td>${when(u.created)}</td><td>${usd(u.equity)}</td><td class="${cls(u.return)}">${pct(u.return)}</td>
+    <td class="l"><span class="dot${u.online ? " on" : ""}" title="${u.online ? "Online now" : "Offline"}"></span>${u.badges.length ? badge(u.badges[u.badges.length - 1]) : ""}${esc(u.name)}${u.bot ? `<span class="tag">bot</span>` : ""}${u.private ? `<span class="tag">hidden</span>` : ""}${u.spotlight ? `<span class="tag">spotlight</span>` : ""}</td>
+    <td>${u.bot ? `<span class="muted">bot</span>` : u.online ? `<span class="up">online</span>` : ago(u.last_seen)}</td><td>${when(u.created)}</td><td>${usd(u.equity)}</td><td class="${cls(u.return)}">${pct(u.return)}</td>
     <td>${u.positions}${u.orders ? ` <span class="muted">+${u.orders} orders</span>` : ""}</td><td>${num(u.trades)}</td><td>${num(u.trades_today)}</td><td>${usd0(u.volume)}</td><td>${u.resets}</td></tr>`).join("")
     || `<tr><td colspan="${COLS.length}" class="empty">No traders match.</td></tr>`;
 }
@@ -188,7 +188,7 @@ async function openUser(uid){
   $("#dName").textContent = "Loading…"; $("#dSub").textContent = ""; $("#dBody").innerHTML = ""; if (!$("#dlg").open) $("#dlg").showModal();
   let d; try { d = await call("/api/admin/user/" + encodeURIComponent(uid)); } catch (e) { $("#dBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   $("#dName").innerHTML = `${(d.badges || []).map(b => badge(b.tier, 20)).join("")} ${esc(d.name)}`;
-  $("#dSub").innerHTML = `${d.online ? `<span class="up">Online now</span>` : "Last seen " + ago(d.last_seen)}. Joined ${when(d.created)}. Rank ${d.rank ? "#" + d.rank + " of " + d.total : "–"}.`;
+  $("#dSub").innerHTML = d.bot ? `Aureous bot. ${esc(d.strategy || "")} Rank ${d.rank ? "#" + d.rank + " of " + d.total : "–"}.` : `${d.online ? `<span class="up">Online now</span>` : "Last seen " + ago(d.last_seen)}. Joined ${when(d.created)}. Rank ${d.rank ? "#" + d.rank + " of " + d.total : "–"}.`;
   const st = d.stats || {};
   const kv = [["Account value", usd(d.equity)], ["Return", `<span class="${cls(d.return)}">${pct(d.return)}</span>`], ["Best value", usd(d.peak)], ["Closed PnL", `<span class="${cls(st.realized)}">${usd(st.realized || 0)}</span>`],
     ["Fees paid", usd(st.fees || 0)], ["Win rate", st.win_rate == null ? "–" : Math.round(st.win_rate * 100) + "%"], ["Trades", num(st.trades || 0)], ["Volume", usd0(st.volume || 0)],

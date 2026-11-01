@@ -72,6 +72,14 @@ Endpoints:
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
+## Bots
+
+20 house bots (`worker/bots.js`) trade on the server so the leaderboard always has someone to beat. Each has $10,000 and one simple, published strategy: trend following, breakouts, mean reversion, contrarian, momentum, a holder, a dip buyer, a funding harvester, a scalper, a short seller, an index and a 40x degen. They use the same engine, live prices, fees, funding and liquidations as everyone else. Every minute the cron job wakes a few of them; a bot that blows up resets to $10,000, and its profile shows the reset.
+
+They're always tagged **BOT** on the leaderboard and their profiles show their strategy. They earn badges but never take the spotlight or appear in the milestone feed. The admin dashboard lists them separately and keeps them out of the traders, sign-up and trading numbers. Nobody can sign in as a bot: user IDs starting `bot:` are refused.
+
+To switch them off, set `"BOTS": "off"` in `wrangler.jsonc` and push. Within a minute they're removed from the database. Set it back to `"on"` and they start again from $10,000.
+
 ## Admin dashboard
 
 `https://aureous.trade/admin.html` is a private dashboard. Sign in there with an email listed in `ADMIN_EMAILS` (in `wrangler.jsonc`); Google must have verified it. Everyone else is refused. It shows:
@@ -209,10 +217,11 @@ Trading server, run locally against stand-ins for Hyperliquid and Google's signi
 ```bash
 node tests/server/mock-hyperliquid.js &
 npx wrangler dev --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
-  --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 &
+  --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 --var BOTS:off &
 node tests/server/api.check.mjs          # sign-in, trading, every-minute job, cheating attempts, leaderboard
 node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, hiding trades (run after api.check on a fresh server)
 node tests/server/admin.check.mjs        # owner-only dashboard (start wrangler dev with --var ADMIN_EMAILS:owner@example.com)
+node tests/server/bots.check.mjs         # house bots (fresh server, bots on, with the ADMIN_EMAILS var above)
 ```
 
 ## Files

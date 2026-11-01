@@ -245,6 +245,7 @@ tr.me td{background:var(--accent-wash)}
 .trader-btn:hover .tname{text-decoration:underline;text-underline-offset:3px}
 .tname.gold{color:#E3B341}
 tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
+.bot-tag{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--muted);border:1px solid currentColor;opacity:.85;border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:1px;white-space:nowrap}
 .spot-tag{font-size:11px;color:#E3B341;border:1px solid rgba(227,179,65,.45);border-radius:3px;padding:0 5px;margin-left:4px;white-space:nowrap}
 .milestones{display:flex;gap:8px;flex-wrap:wrap;padding:4px 12px 8px}
 .ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:3px 10px 3px 4px;color:var(--muted)}
@@ -447,8 +448,8 @@ td.rank{color:var(--muted);width:56px}
       <label class="field" id="pxField" hidden><span>Limit price</span>
         <div class="inp"><input id="px" inputmode="decimal" placeholder="0.00"><button type="button" class="tiny" id="midBtn">Mid</button></div>
       </label>
-      <label class="field"><span>Size</span>
-        <div class="inp"><input id="size" inputmode="decimal" placeholder="0"><button type="button" class="tiny" id="unitBtn" title="Switch between dollars and coins">USD</button></div>
+      <label class="field"><span id="sizeLabel">Margin</span>
+        <div class="inp"><input id="size" inputmode="decimal" placeholder="0"><button type="button" class="tiny" id="unitBtn" title="Enter your margin, the position value, or the number of coins">Margin</button></div>
       </label>
       <div class="chips" id="chips">
         <button type="button" data-pct="0.1">10%</button><button type="button" data-pct="0.25">25%</button>
@@ -468,7 +469,7 @@ td.rank{color:var(--muted);width:56px}
         <label class="field"><span>Stop loss at</span><div class="inp"><input id="slIn" inputmode="decimal" placeholder="Price"></div></label>
       </div>
       <dl class="summary">
-        <dt>Order value</dt><dd id="sValue">–</dd>
+        <dt>Position value</dt><dd id="sValue">–</dd>
         <dt>Margin required</dt><dd id="sMargin">–</dd>
         <dt>Est. fee</dt><dd id="sFee">–</dd>
         <dt>Available</dt><dd id="sAvail">–</dd>
@@ -642,7 +643,7 @@ const store = {
 const INTERVAL_MS = {"1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
 const S = {
   coin: store.get("coin", "BTC"), interval: store.get("interval", "1h"), side: "buy", type: "market", favs: store.get("favs", []),
-  unit: "usd", tab: "positions", markets: [], mk: {}, acct: null, book: null,
+  unit: ["margin", "usd", "coin"].includes(store.get("unit2", "margin")) ? store.get("unit2", "margin") : "margin", tab: "positions", markets: [], mk: {}, acct: null, book: null,
   candles: [], olderLoading: false, noOlder: false, chartGen: 0, lastEvent: null, prevPrice: null,
 };
 
@@ -925,11 +926,14 @@ function syncLeverage(){
   $("#levOut").textContent = lev.value + "x";
 }
 function refPrice(){ const m = market(); if (!m) return NaN; if (S.type === "limit") { const p = num($("#px").value); return p > 0 ? p : m.mark; } return m.mark; }
-function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "usd" ? sz : sz * refPrice(); }
+// Size can be typed three ways: margin (your money; leverage multiplies it), position value in dollars, or coins
+function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "margin" ? sz * +$("#lev").value : S.unit === "usd" ? sz : sz * refPrice(); }
+function sizeFor(n){ const m = market(); return S.unit === "margin" ? (n / +$("#lev").value).toFixed(2) : S.unit === "usd" ? n.toFixed(2) : String(+(n / refPrice()).toFixed(m ? m.sz_dec : 4)); }
+const UNIT_LABEL = {margin: "Margin (your money)", usd: "Position value", coin: "Size in "};
 function renderSummary(){
   const m = market(), a = S.acct; if (!m) return;
   const n = notional(), lev = +$("#lev").value, fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
-  $("#sValue").textContent = n ? usd(n) + (S.unit === "usd" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${m.name})` : "") : "–";
+  $("#sValue").textContent = n ? usd(n) + (S.unit !== "coin" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${m.name})` : "") : "–";
   $("#sMargin").textContent = n ? usd(n / lev) : "–";
   $("#sFee").textContent = n ? usd(n * fee) : "–";
   $("#sAvail").textContent = a ? usd(a.available) : "–";
@@ -939,7 +943,8 @@ function renderSummary(){
     btn.className = "submit " + (S.side === "buy" ? "long" : "short");
     btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${m.name}${S.type === "limit" ? " at limit" : ""}`;
   }
-  $("#unitBtn").textContent = S.unit === "usd" ? "USD" : m.name;
+  $("#unitBtn").textContent = S.unit === "margin" ? "Margin" : S.unit === "usd" ? "Value" : m.name;
+  $("#sizeLabel").textContent = S.unit === "coin" ? UNIT_LABEL.coin + m.name : S.unit === "margin" ? `Margin (your money) × ${$("#lev").value}x` : UNIT_LABEL.usd;
 }
 function setSide(side){ S.side = side; document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.side === side)); renderSummary(); }
 function setType(type){
@@ -956,7 +961,8 @@ async function submitOrder(ev){
   const m = market(); if (!m) return;
   const size = num($("#size").value);
   if (!(size > 0)) { toast("Enter a size first.", "error"); $("#size").focus(); return; }
-  const body = {coin: m.name, side: S.side, type: S.type, size, unit: S.unit, leverage: +$("#lev").value, reduce_only: $("#ro").checked};
+  const body = {coin: m.name, side: S.side, type: S.type, size: S.unit === "margin" ? Math.round(notional() * 100) / 100 : size,
+                unit: S.unit === "margin" ? "usd" : S.unit, leverage: +$("#lev").value, reduce_only: $("#ro").checked};
   if (S.type === "limit") {
     body.price = num($("#px").value);
     if (!(body.price > 0)) { toast("Enter a limit price.", "error"); $("#px").focus(); return; }
@@ -1156,14 +1162,17 @@ document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click"
 document.querySelectorAll("[data-type]").forEach(b => b.addEventListener("click", () => setType(b.dataset.type)));
 $("#midBtn").addEventListener("click", () => { const m = market(); if (m) { $("#px").value = fpx(m.mid || m.mark).replace(/,/g, ""); renderSummary(); } });
 $("#unitBtn").addEventListener("click", () => {
-  const m = market(), sz = num($("#size").value), p = refPrice();
-  if (sz > 0 && m) $("#size").value = S.unit === "usd" ? +(sz / p).toFixed(m.sz_dec) : (sz * p).toFixed(2);
-  S.unit = S.unit === "usd" ? "coin" : "usd"; renderSummary();
+  const n = notional();
+  S.unit = {margin: "usd", usd: "coin", coin: "margin"}[S.unit]; store.set("unit2", S.unit);
+  if (n > 0 && market()) $("#size").value = sizeFor(n);
+  renderSummary();
 });
 $("#chips").addEventListener("click", e => {
   const b = e.target.closest("[data-pct]"); if (!b || !S.acct || !market()) return;
-  const n = Math.max(0, S.acct.available) * +$("#lev").value * +b.dataset.pct * .995;
-  $("#size").value = S.unit === "usd" ? n.toFixed(2) : +(n / refPrice()).toFixed(market().sz_dec);
+  // leave room for the fee (charged on the whole position) and a little slippage, so Max works at any leverage
+  const lev = +$("#lev").value, fee = S.acct.fees ? S.acct.fees.taker : .00045;
+  const n = Math.max(0, S.acct.available) * +b.dataset.pct / (1 / lev + fee + .0005);
+  $("#size").value = sizeFor(n);
   renderSummary();
 });
 ["#size", "#px", "#post"].forEach(s => $(s).addEventListener("input", renderSummary));
@@ -1351,13 +1360,14 @@ function left(until){ const m = Math.max(0, Math.round((until - Date.now()) / 60
 function traderName(r){
   const gold = r.badge && topIndex(r.badge) >= topIndex("aureus");
   return `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span></button>` +
+    (r.bot ? `<span class="bot-tag" title="An Aureous bot trading a simple strategy on real prices. Can you beat it?">BOT</span>` : "") +
     (r.spotlight_until ? `<span class="spot-tag" title="New milestone. Spotlight: ${left(r.spotlight_until)}">Spotlight</span>` : "");
 }
 function renderBoard(){
   const v = $("#bview"), b = S.board;
   if (!b) { v.innerHTML = `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
   const me = b.me;
-  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades.</span>` +
+  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades. <span class="bot-tag" style="margin-left:0">BOT</span> accounts are Aureous bots trading simple strategies. Beat them.</span>` +
     (me ? `<span>You're <b>#${me.rank}</b> of ${b.total}</span>` : S.user ? "" : `<span>Sign in to join</span>`) + `</div>`;
   const ms = (b.milestones || []).slice(0, 6).map(m => { const t = tierOf(m.tier);
     return `<span class="ms-chip">${badgeSvg(m.tier, 18)}<span><button data-pid="${esc(m.pid)}">${esc(m.name)}</button> reached ${t ? t.name : m.tier} ${ago(m.at)}</span></span>`; }).join("");
@@ -1542,8 +1552,8 @@ function renderTrader(){
   const d = S.trader && S.trader.data; if (!d) return;
   const top = (d.badges || []).map(b => b.tier).sort((a, b) => topIndex(a) - topIndex(b)).pop();
   $("#trName").innerHTML = `${top ? badgeSvg(top, 22) : ""}<span class="tname${top && topIndex(top) >= topIndex("aureus") ? " gold" : ""}">${esc(d.name)}</span>` +
-    (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
-  $("#trSub").textContent = `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
+    (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.bot ? `<span class="bot-tag">BOT</span>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
+  $("#trSub").textContent = d.bot ? `${d.rank ? `#${d.rank} of ${d.total}. ` : ""}Aureous bot. ${d.strategy || ""}` : `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
   $("#trActions").hidden = false;
   // live values from this page's prices where we have them
   const mk = c => S.mk[c] ? S.mk[c].mark : null;

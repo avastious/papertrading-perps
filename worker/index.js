@@ -41,6 +41,7 @@ export default {
       const auth = req.headers.get("Authorization") || "";
       if (auth.startsWith("Bearer ")) {
         user = await verifyIdToken(auth.slice(7), env.FIREBASE_PROJECT_ID, env.JWKS_URL || undefined);
+        if (user.uid.startsWith("bot:")) throw new AuthError("Invalid account.");   // reserved for the house bots
       }
       const ex = exchange(env);
 

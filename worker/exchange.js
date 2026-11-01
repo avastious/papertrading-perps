@@ -6,6 +6,7 @@
 // stops, take-profits, limits and liquidations for all open accounts.
 import {DurableObject} from "cloudflare:workers";
 import "../aureous/web/engine.js";
+import {BOTS, BOT_PREFIX, BOT_BY_UID, isBot, decide, describe} from "./bots.js";
 
 const {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, TIERS, SPOTLIGHT_MS} = globalThis.Aureous;
 
@@ -75,6 +76,7 @@ export class Exchange extends DurableObject {
     this.board = null;
     this.seen = new Map();       // uid -> last request time (who's online), saved to SQL at most every 5 minutes
     this.adminCache = null;
+    this.botCache = new Map();   // 15-minute candles for the bots, kept 10 minutes
   }
   touch(uid) {
     const now = Date.now(), prev = this.seen.get(uid);
@@ -129,7 +131,11 @@ export class Exchange extends DurableObject {
     if (!r) return;
     const badges = JSON.parse(r.badges || "[]"), have = new Set(badges.map(b => b.tier)), now = Date.now();
     const earned = TIERS.filter(t => eq >= t.at && !have.has(t.id));
-    if (earned.length) {
+    if (earned.length && isBot(uid)) {
+      for (const t of earned) badges.push({tier: t.id, at: now, equity: Math.round(eq * 100) / 100});
+      this.sql.exec("UPDATE accounts SET badges = ?, peak = MAX(peak, ?) WHERE uid = ?", JSON.stringify(badges), eq, uid);
+      this.board = null;
+    } else if (earned.length) {
       for (const t of earned) {
         badges.push({tier: t.id, at: now, equity: Math.round(eq * 100) / 100});
         this.sql.exec("INSERT INTO milestones (uid, tier, at, equity) VALUES (?, ?, ?, ?)", uid, t.id, now, eq);
@@ -272,14 +278,14 @@ export class Exchange extends DurableObject {
           }
           const badges = JSON.parse(r.badges || "[]");
           const top = TIERS.filter(t => badges.some(b => b.tier === t.id)).pop();
-          return {uid: r.uid, pid: r.pid, name: r.name, equity, positions: Object.keys(core.positions).length,
+          return {uid: r.uid, pid: r.pid, name: r.name, equity, positions: Object.keys(core.positions).length, bot: isBot(r.uid),
                   badge: top ? top.id : null, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0};
         }).sort((a, b) => b.equity - a.equity);
         rows.forEach((r, i) => { r.rank = i + 1; r.return = r.equity / START_BALANCE - 1; });
         this.board = {t: Date.now(), rows};
       }
       const pub = r => ({rank: r.rank, pid: r.pid, name: r.name, equity: r.equity, return: r.return, positions: r.positions,
-                         badge: r.badge, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0});
+                         badge: r.badge, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0, ...(r.bot ? {bot: true} : {})});
       const me = uid ? this.board.rows.find(r => r.uid === uid) : null;
       const milestones = this.sql.exec(`SELECT m.tier, m.at, a.name, a.pid FROM milestones m JOIN accounts a ON a.uid = m.uid
                                         WHERE m.at > ? ORDER BY m.at DESC LIMIT 10`, Date.now() - SPOTLIGHT_MS).toArray();
@@ -305,6 +311,7 @@ export class Exchange extends DurableObject {
         badges: JSON.parse(row.badges || "[]"), spotlight_until: row.spotlight_until > Date.now() ? row.spotlight_until : 0,
         private: !!row.private, stats: ex.stats(),
       };
+      if (isBot(row.uid)) { out.bot = true; const b = BOT_BY_UID.get(row.uid); if (b) out.strategy = describe(b); }
       delete out.stats.equity; delete out.stats.start;
       if (!row.private || self) {
         out.positions = Object.entries(st.positions).map(([coin, p]) => {
@@ -333,6 +340,16 @@ export class Exchange extends DurableObject {
       const users = [], markets = new Map(), signups = new Map(), badgeCount = {};
       let tradesToday = 0, trades7 = 0, volumeToday = 0, openPositions = 0, liquidationsToday = 0;
       for (const r of rows) {
+        if (isBot(r.uid)) {
+          const core = JSON.parse(r.core); let equity = core.balance;
+          for (const [coin, p] of Object.entries(core.positions)) { let mark = p.entry; try { mark = ex.market(coin).mark; } catch {} equity += p.size * (mark - p.entry); }
+          const trades = (JSON.parse(r.history).trades || []);
+          users.push({uid: r.uid, pid: r.pid, name: r.name, bot: true, created: r.created, last_seen: 0, online: false, equity, return: equity / START_BALANCE - 1,
+                      positions: Object.keys(core.positions).length, orders: core.orders.length, trades: trades.length,
+                      trades_today: trades.filter(t => t.ts >= today).length, volume: trades.reduce((s, t) => s + t.sz * t.px, 0),
+                      resets: r.resets, private: false, badges: JSON.parse(r.badges || "[]").map(b => b.tier), spotlight: false});
+          continue;
+        }
         const core = JSON.parse(r.core), hist = JSON.parse(r.history), trades = hist.trades || [];
         let equity = core.balance;
         for (const [coin, p] of Object.entries(core.positions)) {
@@ -362,15 +379,16 @@ export class Exchange extends DurableObject {
                     badges: badges.map(b => b.tier), spotlight: r.spotlight_until > now});
       }
       users.sort((a, b) => b.last_seen - a.last_seen);
+      const bots = users.filter(u => u.bot), people = users.filter(u => !u.bot);
       const days = [];
       for (let i = 29; i >= 0; i--) { const k = new Date(today - i * DAY).toISOString().slice(0, 10); days.push({day: k, signups: signups.get(k) || 0}); }
-      const count = ms => users.filter(u => u.last_seen >= now - ms).length;
+      const count = ms => people.filter(u => u.last_seen >= now - ms).length;
       const data = {
         ok: true, at: now,
-        totals: {traders: users.length, online: users.filter(u => u.online).length, active_1h: count(3600000), active_24h: count(DAY), active_7d: count(7 * DAY),
-                 new_today: users.filter(u => u.created >= today).length, new_7d: users.filter(u => u.created >= now - 7 * DAY).length,
+        totals: {traders: people.length, bots: bots.length, online: people.filter(u => u.online).length, active_1h: count(3600000), active_24h: count(DAY), active_7d: count(7 * DAY),
+                 new_today: people.filter(u => u.created >= today).length, new_7d: people.filter(u => u.created >= now - 7 * DAY).length,
                  trades_today: tradesToday, trades_7d: trades7, volume_today: volumeToday, open_positions: openPositions,
-                 liquidations_today: liquidationsToday, private_profiles: users.filter(u => u.private).length},
+                 liquidations_today: liquidationsToday, private_profiles: people.filter(u => u.private).length},
         signups: days, badges: badgeCount,
         markets: [...markets.values()].sort((a, b) => b.volume - a.volume || b.positions - a.positions).slice(0, 12),
         users,
@@ -391,6 +409,7 @@ export class Exchange extends DurableObject {
   async adminAction(action, uid, body = {}) {
     const row = this.row(uid);
     if (!row) return {ok: false, status: 404, error: "No such trader."};
+    if (isBot(uid) && action === "rename") return {ok: false, status: 400, error: "Bots keep their names."};
     this.adminCache = null;
     if (action === "rename") return this.setName(uid, body.name);
     if (action === "remove") return this.remove(uid);
@@ -420,12 +439,74 @@ export class Exchange extends DurableObject {
         if (!row || !row.active) return;
         try {
           const ex = this.exchangeFor(row, false);
-          this.addEvents(uid, await this.catchUp(ex));
+          const events = await this.catchUp(ex);
+          if (!isBot(uid)) this.addEvents(uid, events);
           this.persist(row, ex, false);
           processed++;
         } catch (e) { failed++; console.error("tick", uid, e.message); }
       });
     }
-    return {ok: true, active: rows.length, processed, failed};
+    let bots = null;
+    try { bots = await this.runBots(); } catch (e) { console.error("bots", e.message); }
+    return {ok: true, active: rows.length, processed, failed, bots};
+  }
+
+  // ------------------------------------------------------------------ bots (see bots.js)
+  async runBots() {
+    if (String(this.env.BOTS || "on").toLowerCase() === "off") {      // switched off: remove them
+      const gone = this.sql.exec(`SELECT uid FROM accounts WHERE uid LIKE '${BOT_PREFIX}%'`).toArray();
+      for (const {uid} of gone) await this.remove(uid);
+      return {off: true, removed: gone.length};
+    }
+    const have = new Set(this.sql.exec(`SELECT uid FROM accounts WHERE uid LIKE '${BOT_PREFIX}%'`).toArray().map(r => r.uid));
+    for (const b of BOTS) {
+      const uid = BOT_PREFIX + b.id;
+      if (have.has(uid)) continue;
+      this.create(uid, null);
+      this.sql.exec("UPDATE accounts SET name = ? WHERE uid = ?", b.name, uid);
+    }
+    const budget = {left: 4};                        // new candle downloads per minute (keeps well inside request limits)
+    let woke = 0, orders = 0, resets = 0;
+    for (const bot of BOTS) {
+      if (Math.random() > bot.wake) continue;
+      woke++;
+      const uid = BOT_PREFIX + bot.id;
+      await this.withLock(uid, async () => {
+        const row = this.row(uid);
+        if (!row) return;
+        try {
+          let ex = this.exchangeFor(row, false);
+          await ex.update();
+          if (!Object.keys(ex.state.positions).length && ex.equity() < 1000) {     // blown up: start again
+            ex = this.exchangeFor(row, true);
+            ex.reset(START_BALANCE);
+            this.persistState(row, ex, true);
+            this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid);
+            resets++;
+            return;
+          }
+          const app = new LocalApp(ex);
+          for (const a of await decide(bot, ex, coin => this.botCandles(coin, budget))) {
+            try { await app.handle(a.path, {}, a.body); orders++; }
+            catch (e) { if (!(e instanceof PaperError)) throw e; }
+          }
+          this.persist(row, ex, false);
+        } catch (e) { console.error("bot", bot.id, e.message); }
+      });
+    }
+    return {woke, orders, resets};
+  }
+  async botCandles(coin, budget) {
+    const hit = this.botCache.get(coin), now = Date.now();
+    if (hit && now - hit.t < 600000) return hit.data;
+    if (budget.left <= 0) return null;
+    budget.left--;
+    try {
+      const raw = await this.client.candles(coin, "15m", now - 100 * 900000, now);
+      const bars = raw.slice(0, -1);                 // completed candles; the live price is added by the bot
+      const data = {close: bars.map(k => +k.c), high: bars.map(k => +k.h), low: bars.map(k => +k.l)};
+      this.botCache.set(coin, {t: now, data});
+      return data;
+    } catch { return null; }
   }
 }
