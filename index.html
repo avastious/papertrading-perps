@@ -1,0 +1,2362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="aureous-mode" content="browser">
+<meta name="description" content="Paper-trade Hyperliquid perpetuals with live market data. No wallet, no real money.">
+<meta property="og:title" content="Aureous: paper-trade Hyperliquid perpetuals">
+<meta property="og:description" content="Live Hyperliquid markets, $10,000 of paper money and a fair leaderboard. No wallet, no real money.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Aureous">
+<meta property="og:url" content="https://aureous.trade/">
+<meta property="og:image" content="https://aureous.trade/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Aureous: paper-trade Hyperliquid perps with live prices">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@aureoustrade">
+<meta name="twitter:image" content="https://aureous.trade/og.png">
+<link rel="canonical" href="https://aureous.trade/">
+<title>Aureous</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E131B">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aureous">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<script src="theme.js?v=4f54f94"></script>
+<script src="lightweight-charts.js?v=4f54f94"></script>
+<script src="engine.js?v=4f54f94"></script>
+<script src="draw.js?v=4f54f94"></script>
+<script src="firebase-config.js?v=4f54f94"></script>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-sans-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:600 700;font-display:swap;src:url(fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Cinzel";font-weight:600;font-display:swap;src:url(fonts/cinzel-latin-600-normal.woff2) format("woff2")}
+:root{
+  --bg:#0E131B; --panel:#121924; --raise:#19222F; --line:#232E3D; --line-soft:#1B2431;
+  --text:#D5DCE5; --muted:#7F8B9B; --faint:#58647A;
+  --accent:#5B8DEF; --accent-wash:rgba(91,141,239,.12);
+  --long:#2FA57D; --long-wash:rgba(47,165,125,.13);
+  --short:#DB5A55; --short-wash:rgba(219,90,85,.13);
+  --font:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --brand:"Cinzel","Trajan Pro",Georgia,serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--text);font:13.5px/1.4 var(--font);font-variant-numeric:tabular-nums}
+*{scrollbar-color:var(--line) transparent;scrollbar-width:thin}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.up{color:var(--long)} .down{color:var(--short)} .muted{color:var(--muted)}
+
+/* ---------- layout ---------- */
+.app{display:grid;height:100vh;gap:1px;background:var(--line);
+  grid-template-columns:224px minmax(0,1fr) 244px 312px;
+  grid-template-rows:auto minmax(360px,1fr) minmax(220px,33vh)}
+.app>*{background:var(--panel);min-width:0;min-height:0}
+header{grid-column:1/-1}
+.markets{grid-column:1;grid-row:2/4}
+.chartbox{grid-column:2;grid-row:2}
+.book{grid-column:3;grid-row:2}
+.side{grid-column:4;grid-row:2/4;overflow:auto}
+.bottom{grid-column:2/4;grid-row:3}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:26px;padding:9px 18px;flex-wrap:wrap}
+.wordmark{font-family:var(--brand);font-weight:600;font-size:19px;letter-spacing:.09em;margin-right:8px;color:var(--text)}
+.coin-btn{display:flex;align-items:baseline;gap:9px;background:none;border:0;padding:4px 6px;border-radius:5px}
+.coin-btn:hover{background:var(--raise)}
+.coin-name{font-size:19px;font-weight:600}
+.lev-chip{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:1px 6px;border-radius:3px}
+.bigprice{font-size:24px;font-weight:500;line-height:1;transition:color .25s;min-width:7ch}
+.bigprice.tick-up{color:var(--long)} .bigprice.tick-down{color:var(--short)}
+.hstat{display:flex;flex-direction:column;gap:1px}
+.hstat span:first-child{font-size:11.5px;color:var(--muted)}
+.hstat span:last-child{font-weight:500}
+.conn{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--long)}
+.conn.bad .dot{background:var(--short)}
+
+/* ---------- markets ---------- */
+.markets{display:flex;flex-direction:column}
+.mk-tools{display:flex;gap:6px;padding:10px}
+.mk-tools input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 9px}
+.mk-tools select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px;font-size:12.5px}
+.mk-head,.mk-row{display:grid;grid-template-columns:1fr auto 60px;gap:8px;padding:5px 12px;align-items:center}
+.mk-head{font-size:11.5px;color:var(--faint)}
+.mk-list{overflow:auto;flex:1}
+.mk-row{width:100%;background:none;border:0;text-align:left;border-left:2px solid transparent}
+.mk-row:hover{background:var(--raise)}
+.mk-row.on{background:var(--accent-wash);border-left-color:var(--accent)}
+.mk-row b{font-weight:600}
+.mk-row .r{text-align:right}
+
+/* ---------- chart ---------- */
+.chartbox{display:flex;flex-direction:column}
+.chart-tools{display:flex;align-items:center;gap:2px;padding:7px 10px;border-bottom:1px solid var(--line-soft)}
+.chart-tools button,.tabs button{background:none;border:0;padding:4px 9px;border-radius:4px;color:var(--muted);font-size:12.5px}
+.chart-tools button:hover,.tabs button:hover{color:var(--text)}
+.chart-tools button.on,.tabs button.on{color:var(--text);background:var(--raise)}
+.chart-tools .sep{width:1px;height:16px;background:var(--line);margin:0 6px}
+.chart-tools .hint{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.chart-wrap{flex:1;position:relative;min-height:0}
+#chartEl{position:absolute;inset:0 0 0 38px}
+#chartEl.drawing{cursor:crosshair}
+.legend{position:absolute;top:8px;left:48px;z-index:3;font-size:12px;color:var(--muted);pointer-events:none;display:flex;gap:10px;flex-wrap:wrap}
+.legend b{color:var(--text);font-weight:600}
+.legend span i{font-style:normal;color:var(--text)}
+.draw-bar{position:absolute;left:0;top:0;bottom:0;width:38px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-right:1px solid var(--line-soft);overflow-y:auto;scrollbar-width:none;z-index:4}
+.draw-bar button{width:30px;height:30px;flex:none;display:grid;place-items:center;background:none;border:0;border-radius:5px;color:var(--muted);padding:0}
+.draw-bar button:hover{color:var(--text);background:var(--raise)}
+.draw-bar button.on{color:var(--accent,#5B8DEF);background:var(--raise)}
+.draw-sep{width:20px;height:1px;background:var(--line);margin:4px 0;flex:none}
+.draw-panel{position:absolute;top:34px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--panel);border:1px solid var(--line);border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.draw-panel .sw{width:18px;height:18px;border-radius:50%;border:2px solid transparent;background:var(--c);padding:0;outline:1px solid var(--line)}
+.draw-panel .sw.on{border-color:var(--panel);outline:2px solid var(--c)}
+.draw-panel button:not(.sw){background:none;border:1px solid var(--line);border-radius:4px;color:var(--muted);font:inherit;font-size:12px;padding:3px 8px;display:grid;place-items:center}
+.draw-panel button:not(.sw):hover{color:var(--text)}
+@media (max-width:899px){ #chartEl{left:34px} .draw-bar{width:34px} .draw-bar button{width:28px;height:28px} .legend{left:42px} }
+.chart-msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);z-index:2;pointer-events:none}
+
+/* ---------- book ---------- */
+.book{display:flex;flex-direction:column;font-size:12.5px}
+.panel-title{padding:10px 12px 6px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:baseline}
+.panel-title small{font-weight:400;color:var(--faint);font-size:11.5px}
+.bk-head,.bk-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:2px 12px}
+.bk-head{color:var(--faint);font-size:11.5px}
+.bk-row{position:relative;background:none;border:0;width:100%;text-align:right}
+.bk-row>span{position:relative;z-index:1}
+.bk-row>span:first-child{text-align:left}
+.bk-row:hover{background:var(--raise)}
+.bk-row i{position:absolute;right:0;top:1px;bottom:1px;z-index:0}
+.bk-ask i{background:var(--short-wash)} .bk-bid i{background:var(--long-wash)}
+.bk-ask span:first-child{color:var(--short)} .bk-bid span:first-child{color:var(--long)}
+.bk-side{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.bk-side.asks{justify-content:flex-end}
+.spread{display:flex;justify-content:space-between;padding:5px 12px;color:var(--muted);border-block:1px solid var(--line-soft);font-size:12px}
+.spread b{color:var(--text);font-weight:600;font-size:14px}
+
+/* ---------- ticket ---------- */
+.side{display:flex;flex-direction:column}
+.ticket{padding:14px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border-radius:5px;padding:3px}
+.seg button{border:0;background:none;padding:7px;border-radius:4px;font-weight:600;color:var(--muted)}
+.seg button.on[data-side=buy]{background:var(--long);color:#fff}
+.seg button.on[data-side=sell]{background:var(--short);color:#fff}
+.tabs{display:flex;gap:2px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>span,.lev-row span{font-size:12px;color:var(--muted)}
+.inp{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding-right:4px}
+.inp:focus-within{border-color:var(--accent)}
+.inp input{flex:1;min-width:0;background:none;border:0;padding:8px 10px;outline:none;font-size:14.5px}
+.tiny{border:1px solid var(--line);background:var(--raise);border-radius:3px;padding:3px 8px;font-size:12px;color:var(--muted)}
+.tiny:hover{color:var(--text)}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.chips button{background:var(--raise);border:1px solid var(--line-soft);border-radius:3px;padding:4px 0;font-size:12px;color:var(--muted)}
+.chips button:hover{color:var(--text);border-color:var(--line)}
+.lev-row{display:flex;justify-content:space-between;align-items:baseline}
+.lev-row output{font-weight:600;font-size:14px}
+.lev-chips{display:flex;gap:4px;margin-top:6px}
+.lev-chips button{flex:1;background:var(--raise);border:1px solid var(--line);border-radius:4px;color:var(--muted);font:inherit;font-size:11.5px;padding:3px 0}
+.lev-chips button:hover,.lev-chips button.on{color:var(--text);border-color:var(--muted)}
+.lev-warn{margin:6px 0 0;font-size:11.5px;line-height:1.4;color:#E3B341}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.checks{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.checks input{accent-color:var(--accent)}
+.tpsl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.tpsl>*{min-width:0}
+.summary{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:0;font-size:12.5px}
+.summary dt{color:var(--muted)} .summary dd{margin:0;text-align:right}
+.submit{border:0;border-radius:5px;padding:11px;font-weight:600;font-size:14.5px;color:#fff}
+.submit.long{background:var(--long)} .submit.short{background:var(--short)}
+.submit:hover{filter:brightness(1.08)}
+.submit:disabled{opacity:.55;cursor:wait}
+[hidden]{display:none!important}
+
+/* ---------- account ---------- */
+.acct{padding:14px;display:flex;flex-direction:column;gap:10px}
+.acct-top{display:flex;justify-content:space-between;align-items:baseline}
+.acct-top h2{margin:0;font-size:13px;font-weight:600}
+.equity{font-size:22px;font-weight:600;line-height:1.15}
+.meter{position:relative;height:6px;border-radius:3px;background:var(--raise);overflow:visible}
+.meter .fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent);transition:width .4s}
+.meter .mm{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--short)}
+.meter-legend{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:0;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right}
+.note{margin:0;font-size:12px;color:var(--faint);line-height:1.45}
+.note.warn{color:var(--short)}
+.link-btn{background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;text-underline-offset:3px;padding:0}
+.link-btn:hover{color:var(--text)}
+
+/* ---------- bottom tables ---------- */
+.bottom{display:flex;flex-direction:column}
+.bottom .tabs{padding:7px 10px;border-bottom:1px solid var(--line-soft);align-items:center;overflow-x:auto;white-space:nowrap}
+.bottom .tabs button{flex:none}
+.bottom .tabs .grow{flex:1}
+.tbl-wrap{overflow:auto;flex:1}
+table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);color:var(--faint);font-weight:500;text-align:right;padding:7px 8px;font-size:11.5px;z-index:1}
+td{text-align:right;padding:6px 8px;border-top:1px solid var(--line-soft)}
+th:first-child,td:first-child{text-align:left;padding-left:12px}
+td .coinlink{background:none;border:0;padding:0;font-weight:600}
+td .coinlink:hover{color:var(--accent)}
+.act{display:inline-flex;gap:4px}
+.act button{background:var(--raise);border:1px solid var(--line);border-radius:3px;padding:3px 8px;font-size:12px}
+.act button:hover{border-color:var(--muted)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:14px}
+.stats div span{display:block;font-size:11.5px;color:var(--muted)}
+.stats div b{font-size:16px;font-weight:600}
+#curve{width:100%;height:120px;display:block}
+
+/* ---------- toasts, dialogs, banner ---------- */
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:4px;padding:10px 12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:tin .18s ease-out}
+.toast.fill{border-left-color:var(--long)} .toast.error,.toast.liquidation{border-left-color:var(--short)}
+@keyframes tin{from{transform:translateY(6px);opacity:0}}
+.banner{position:fixed;top:0;left:50%;transform:translateX(-50%);background:var(--short);color:#fff;padding:6px 14px;border-radius:0 0 4px 4px;font-size:13px;font-weight:600;z-index:60}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:20px;width:min(360px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(5,8,12,.65)}
+dialog h3{margin:0 0 4px;font-size:16px;font-weight:600}
+dialog p{margin:0 0 14px;color:var(--muted);font-size:13px}
+dialog form{display:flex;flex-direction:column;gap:12px}
+.dlg-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.btn{border:1px solid var(--line);background:var(--raise);border-radius:4px;padding:7px 14px;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.danger{background:var(--short);color:#fff;border-color:var(--short)}
+
+.who{display:flex;align-items:center}
+.btn.sm{padding:5px 12px;font-size:13px}
+.user{position:relative}
+.user-btn{display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);border-radius:16px;padding:3px 12px 3px 3px;font-size:13px;max-width:220px}
+.user-btn:hover{border-color:var(--muted)}
+.user-btn #userName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;font-size:12px;overflow:hidden;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.user-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:45;background:var(--raise);border:1px solid var(--line);border-radius:6px;min-width:220px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.user-email{padding:6px 8px 8px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+.user-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 8px;border-radius:4px}
+.user-menu button:hover{background:var(--line-soft)}
+.user-menu .danger-item{color:var(--short)}
+.privacy{font-size:11.5px;color:var(--faint);line-height:1.45;border-top:1px solid var(--line-soft);padding-top:10px}
+.auth{position:relative;display:flex;flex-direction:column;gap:12px}
+.auth p{margin:0}
+.dlg-x{position:absolute;top:-8px;right:-6px;background:none;border:0;font-size:22px;color:var(--muted);padding:2px 6px}
+.dlg-x:hover{color:var(--text)}
+.auth-providers{display:flex;flex-direction:column;gap:8px}
+.auth-providers button{background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:9px;font-weight:500}
+.auth-providers button:hover{border-color:var(--muted)}
+.or{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:12px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+#authForm{display:flex;flex-direction:column;gap:12px}
+.auth-msg{font-size:13px;color:var(--short)}
+.auth-msg.ok{color:var(--long)}
+.auth-links{display:flex;justify-content:space-between}
+.board-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 12px 4px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.board-head b{color:var(--text);font-weight:600}
+tr.me td{background:var(--accent-wash)}
+.badge{display:inline-block;vertical-align:-3px;flex:none}
+.trader-btn{background:none;border:0;padding:0;display:inline-flex;align-items:center;gap:6px;font-weight:500;text-align:left}
+.trader-btn:hover .tname{text-decoration:underline;text-underline-offset:3px}
+.tname.gold{color:#E3B341}
+tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
+.bot-tag{font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--muted);border:1px solid currentColor;opacity:.85;border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:1px;white-space:nowrap}
+.clan-tag{background:none;border:0;padding:0 5px 0 0;color:var(--muted);font:inherit;font-size:.86em;font-weight:600;letter-spacing:.03em;cursor:pointer;white-space:nowrap}
+.clan-tag:hover{color:var(--text);text-decoration:underline}
+.board-switch{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:8px 12px 0}
+.board-switch button{background:none;border:0;padding:5px 14px;color:var(--muted);font:inherit;font-size:12.5px}
+.board-switch button.on{background:var(--raise);color:var(--text)}
+.invite-box{display:flex;gap:6px;align-items:center;padding:0 20px 14px;flex-wrap:wrap}
+.invite-box .inp{flex:1 1 260px}
+.invite-box input{font-size:12.5px;color:var(--muted)}
+#clanNewDlg{width:min(420px,calc(100vw - 32px))}
+.clan-or{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:12px;margin:4px 0}
+.clan-or::before,.clan-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.clan-preview{font-size:22px;font-weight:600;margin:6px 0 2px}
+.clan-preview span{color:var(--muted);font-weight:500;font-size:16px;margin-right:6px}
+.mk-label{display:block;font-weight:400;font-size:10.5px;color:var(--faint);line-height:1.1}
+.spot-tag{font-size:11px;color:#E3B341;border:1px solid rgba(227,179,65,.45);border-radius:3px;padding:0 5px;margin-left:4px;white-space:nowrap}
+.milestones{display:flex;gap:8px;flex-wrap:wrap;padding:4px 12px 8px}
+.ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:3px 10px 3px 4px;color:var(--muted)}
+.ms-chip button{background:none;border:0;padding:0;color:var(--text);font-weight:500}
+.ms-chip button:hover{text-decoration:underline}
+.toast.milestone{border-left-color:#E3B341}
+.progress{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.progress .bar{height:4px;border-radius:2px;background:var(--raise);overflow:hidden}
+.progress .bar i{display:block;height:100%;background:#E3B341;border-radius:2px;transition:width .4s}
+.progress .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.my-badges{display:inline-flex;gap:3px;margin-left:6px;vertical-align:-3px}
+#traderDlg,#clanDlg{width:min(880px,calc(100vw - 24px));max-height:calc(100vh - 40px);padding:0}
+#traderDlg .tr-wrap,#clanDlg .tr-wrap{display:flex;flex-direction:column;max-height:calc(100vh - 40px)}
+.tr-head{padding:18px 20px 12px;position:relative;border-bottom:1px solid var(--line-soft)}
+.tr-head h3{margin:0;font-size:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tr-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.tr-body{overflow:auto;padding:0 0 12px}
+.tr-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:14px 20px}
+.tr-stats span{display:block;font-size:11.5px;color:var(--muted)}
+.tr-stats b{font-size:16px;font-weight:600}
+.ladder{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 14px}
+.rung{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:6px;padding:6px 10px 6px 7px;font-size:12px}
+.rung b{display:block;font-weight:600;font-size:12.5px}
+.rung span{color:var(--muted)}
+.rung.locked{opacity:.45}
+.rung.locked .badge{filter:grayscale(1)}
+.tr-section{padding:4px 0 6px}
+.tr-section h4{margin:10px 20px 6px;font-size:13px;font-weight:600}
+.tr-section table th:first-child,.tr-section table td:first-child{padding-left:20px}
+.tr-section table th:last-child,.tr-section table td:last-child{padding-right:20px}
+.tr-private{margin:8px 20px 16px;padding:14px;border:1px dashed var(--line);border-radius:6px;color:var(--muted);font-size:13px}
+#shareDlg{width:min(680px,calc(100vw - 24px))}
+#shareCv{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;background:#0E131B;aspect-ratio:1200/675}
+.bg-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.bg-row .btn{font-size:12.5px;padding:5px 10px}
+.bg-row label{display:inline-flex;align-items:center;gap:6px}
+#shZoomWrap{margin-left:auto}
+#shareCv.movable{cursor:grab;touch-action:none} #shareCv.movable:active{cursor:grabbing}
+.bg-row input[type=range]{width:110px}
+.share-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.share-btns .btn{font-size:13px}
+.tr-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tr-actions .btn{padding:5px 12px;font-size:12.5px}
+.swatch.locked{opacity:.4;position:relative}
+.swatch.locked::after{content:"";position:absolute;inset:7px;border:2px solid var(--bg);border-radius:2px}
+td.rank{color:var(--muted);width:56px}
+.submit.locked{background:var(--accent);color:#fff}
+/* site links, settings */
+.site-nav{display:flex;gap:2px;margin-left:auto}
+.site-nav a{color:var(--muted);text-decoration:none;font-size:13px;padding:5px 9px;border-radius:4px}
+.site-nav a:hover{color:var(--text);background:var(--raise)}
+.conn{margin-left:0}
+.icon-btn{display:grid;place-items:center;width:32px;height:32px;border-radius:5px;background:none;border:1px solid transparent;color:var(--muted)}
+.icon-btn:hover{color:var(--text);border-color:var(--line)}
+.icon-btn svg{width:18px;height:18px}
+.side-foot{margin-top:auto;padding:12px 14px 14px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--faint);line-height:1.5}
+.side-foot nav{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:6px}
+.side-foot a{color:var(--muted);text-decoration:none}
+.side-foot a:hover{color:var(--text);text-decoration:underline}
+.mk-item{display:flex;align-items:center;border-left:2px solid transparent}
+.mk-item.on{background:var(--accent-wash);border-left-color:var(--accent)}
+.mk-item:hover{background:var(--raise)}
+.mk-item.on:hover{background:var(--accent-wash)}
+.mk-item .mk-row{flex:1;border-left:0;padding-left:2px}
+.mk-item .mk-row:hover,.mk-item .mk-row.on{background:none}
+.star{background:none;border:0;width:24px;padding:5px 0 5px 8px;color:var(--faint);font-size:13px;line-height:1}
+.star:hover{color:var(--text)}
+.star.fav{color:var(--accent)}
+#settingsDlg{width:min(440px,calc(100vw - 32px))}
+.set-group{display:flex;flex-direction:column;gap:12px;padding:14px 0;border-top:1px solid var(--line-soft)}
+.set-group h4{margin:0;font-size:12px;font-weight:600;color:var(--muted)}
+.set-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
+.choice{display:inline-flex;background:var(--bg);border-radius:5px;padding:2px;gap:2px;flex-wrap:wrap}
+.choice button{border:0;background:none;color:var(--muted);padding:5px 10px;border-radius:4px;font-size:12.5px}
+.choice button[aria-pressed=true]{background:var(--raise);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.swatches{display:flex;gap:8px}
+.swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;padding:0}
+.swatch[aria-pressed=true]{border-color:var(--text)}
+.price-demo{display:inline-flex;gap:3px;margin-right:6px;vertical-align:middle}
+.price-demo i{width:6px;height:12px;border-radius:1px;display:inline-block}
+.toggle{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggle input{accent-color:var(--accent);width:16px;height:16px}
+.confirm-sum{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0 0 6px;font-size:13px}
+.confirm-sum dt{color:var(--muted)} .confirm-sum dd{margin:0;text-align:right}
+
+/* density */
+[data-density=compact] body{font-size:12.5px}
+[data-density=compact] header{padding:6px 14px}
+[data-density=compact] .bigprice{font-size:21px}
+[data-density=compact] .mk-row{padding:3px 12px 3px 2px}
+[data-density=compact] .bk-row{padding:1px 12px}
+[data-density=compact] td{padding:4px 8px}
+[data-density=compact] .ticket,[data-density=compact] .acct{padding:11px;gap:9px}
+[data-density=compact] .inp input{padding:6px 9px;font-size:13.5px}
+[data-density=compact] .submit{padding:9px}
+
+/* order book hidden */
+[data-book=off] .book{display:none}
+[data-book=off] .app{grid-template-columns:224px minmax(0,1fr) 312px}
+[data-book=off] .side{grid-column:3}
+[data-book=off] .bottom{grid-column:2/3}
+.mk-close{display:none}
+@media (max-width:1279px){
+  .app{grid-template-columns:minmax(0,1fr) 232px 300px}
+  .markets{position:fixed;inset:0 auto 0 0;width:min(320px,88vw);z-index:40;box-shadow:0 0 0 100vmax rgba(5,8,12,.6);display:none}
+  .markets.open{display:flex}
+  .mk-close{display:block}
+  .chartbox{grid-column:1} .book{grid-column:2} .side{grid-column:3} .bottom{grid-column:1/3}
+  .chart-tools .hint{display:none}
+  [data-book=off] .app{grid-template-columns:minmax(0,1fr) 300px}
+  [data-book=off] .chartbox{grid-column:1} [data-book=off] .side{grid-column:2} [data-book=off] .bottom{grid-column:1/2}
+}
+@media (max-width:899px){
+  .app{display:flex;flex-direction:column;height:auto;min-height:100vh}
+  header{gap:14px 20px}
+  .who{margin-left:auto}
+  header{order:0} .chartbox{order:1;height:360px} .side{order:2} .book{order:3;height:auto} .bk-side{max-height:180px}
+  .bottom{order:4;height:420px}
+  .site-nav{order:10;margin-left:0;width:100%}
+}
+@media (display-mode:standalone){
+  header{padding-top:max(9px,env(safe-area-inset-top));padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right))}
+  .app{padding-bottom:env(safe-area-inset-bottom)}
+  a[data-install]{display:none!important}
+}
+@media (min-width:900px){ .site-nav a[data-install]{display:none!important} }
+@media (max-width:1499px) and (min-width:900px){ #hTag{display:none} }
+.install-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.install-steps b{color:var(--text)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="wordmark">Aureous</span>
+    <button class="coin-btn" id="coinBtn" title="Change market"><span class="coin-name" id="hCoin">–</span><span class="lev-chip" id="hMaxLev"></span><span class="lev-chip" id="hTag" hidden></span></button>
+    <div class="bigprice" id="hPrice">–</div>
+    <div class="hstat"><span>24h change</span><span id="hChange">–</span></div>
+    <div class="hstat"><span>Funding / hour</span><span id="hFunding">–</span></div>
+    <div class="hstat"><span>Next funding</span><span id="hCountdown">–</span></div>
+    <div class="hstat"><span>24h volume</span><span id="hVol">–</span></div>
+    <div class="hstat"><span>Open interest</span><span id="hOI">–</span></div>
+    <nav class="site-nav" aria-label="Site">
+      <a href="#leaderboard" id="navBoard" hidden>Leaderboard</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="about.html">About</a>
+      <a href="#" data-install hidden>Get the app</a>
+    </nav>
+    <div class="conn" id="conn"><span class="dot"></span><span id="connText">Live</span></div>
+    <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <div class="who" id="who" hidden>
+      <button class="btn primary sm" id="signInBtn" type="button">Sign in</button>
+      <div class="user" id="userBox" hidden>
+        <button class="user-btn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false"><span class="avatar" id="avatar"></span><span id="userName"></span></button>
+        <div class="user-menu" id="userMenu" role="menu" hidden>
+          <div class="user-email" id="userEmail"></div>
+          <button type="button" role="menuitem" id="myProfileBtn">My public profile</button>
+          <button type="button" role="menuitem" id="clanBtn">Clans</button>
+          <button type="button" role="menuitem" id="nameBtn">Leaderboard name</button>
+          <button type="button" role="menuitem" id="privacyBtn">Hide my trades</button>
+          <button type="button" role="menuitem" id="signOutBtn">Sign out</button>
+          <button type="button" role="menuitem" id="deleteAcctBtn" class="danger-item">Delete account</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <aside class="markets" id="markets" aria-label="Markets">
+    <div class="mk-tools">
+      <input id="mkSearch" placeholder="Search markets" aria-label="Search markets" autocomplete="off">
+      <select id="mkSort" aria-label="Sort markets">
+        <option value="volume">Volume</option><option value="change">Movers</option>
+        <option value="funding">Funding</option><option value="oi">Open int.</option><option value="name">A–Z</option>
+      </select>
+      <button class="tiny mk-close" id="mkClose" aria-label="Close markets">Close</button>
+    </div>
+    <div class="mk-head"><span>Market</span><span>Price</span><span style="text-align:right">24h</span></div>
+    <div class="mk-list" id="mkList"></div>
+  </aside>
+
+  <section class="chartbox" aria-label="Price chart">
+    <div class="chart-tools" id="intervals">
+      <button data-i="1m">1m</button><button data-i="5m">5m</button><button data-i="15m">15m</button>
+      <button data-i="1h" class="on">1h</button><button data-i="4h">4h</button><button data-i="1d">1d</button>
+      <span class="sep"></span>
+      <button id="resetView" title="Back to the latest candles at the default zoom">Reset view</button>
+      <span class="hint">Drag to move, scroll to zoom. Drawing tools on the left</span>
+    </div>
+    <div class="chart-wrap">
+      <div class="legend" id="legend"></div>
+      <div class="chart-msg" id="chartMsg">Loading chart</div>
+      <div class="draw-bar" id="drawBar" role="toolbar" aria-label="Drawing tools"></div>
+      <div class="draw-panel" id="drawPanel" hidden></div>
+      <div id="chartEl"></div>
+    </div>
+  </section>
+
+  <section class="book" aria-label="Order book">
+    <div class="panel-title">Order book <small>click a price to use it</small></div>
+    <div class="bk-head"><span>Price</span><span style="text-align:right">Size</span><span style="text-align:right">Total</span></div>
+    <div class="bk-side asks" id="asks"></div>
+    <div class="spread"><b id="bkMid">–</b><span id="bkSpread"></span></div>
+    <div class="bk-side" id="bids"></div>
+  </section>
+
+  <div class="side">
+    <form class="ticket" id="ticket" autocomplete="off">
+      <div class="seg" role="group" aria-label="Direction">
+        <button type="button" data-side="buy" class="on">Long</button>
+        <button type="button" data-side="sell">Short</button>
+      </div>
+      <div class="tabs" role="group" aria-label="Order type">
+        <button type="button" data-type="market" class="on">Market</button>
+        <button type="button" data-type="limit">Limit</button>
+      </div>
+      <label class="field" id="pxField" hidden><span>Limit price</span>
+        <div class="inp"><input id="px" inputmode="decimal" placeholder="0.00"><button type="button" class="tiny" id="midBtn">Mid</button></div>
+      </label>
+      <label class="field"><span id="sizeLabel">Margin</span>
+        <div class="inp"><input id="size" inputmode="decimal" placeholder="0"><button type="button" class="tiny" id="unitBtn" title="Enter your margin, the position value, or the number of coins">Margin</button></div>
+      </label>
+      <div class="chips" id="chips">
+        <button type="button" data-pct="0.1">10%</button><button type="button" data-pct="0.25">25%</button>
+        <button type="button" data-pct="0.5">50%</button><button type="button" data-pct="1">Max</button>
+      </div>
+      <div class="field">
+        <div class="lev-row"><span>Leverage</span><output id="levOut">10x</output></div>
+        <input type="range" id="lev" min="0" max="40" step="1" value="9" aria-label="Leverage">
+        <div class="lev-chips" id="levChips"><button type="button" data-lev="5">5x</button><button type="button" data-lev="10">10x</button><button type="button" data-lev="25">25x</button><button type="button" data-lev="50">50x</button><button type="button" data-lev="100">100x</button><button type="button" data-lev="1000">1000x</button></div>
+        <p class="lev-warn" id="levWarn" hidden></p>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="ro"> Reduce only</label>
+        <label id="postWrap" hidden><input type="checkbox" id="post"> Post only</label>
+        <label id="tpslWrap"><input type="checkbox" id="tpslOn"> Take profit / stop loss</label>
+      </div>
+      <div class="tpsl" id="tpslFields" hidden>
+        <label class="field"><span>Take profit at</span><div class="inp"><input id="tpIn" inputmode="decimal" placeholder="Price"></div></label>
+        <label class="field"><span>Stop loss at</span><div class="inp"><input id="slIn" inputmode="decimal" placeholder="Price"></div></label>
+      </div>
+      <dl class="summary">
+        <dt>Position value</dt><dd id="sValue">–</dd>
+        <dt>Margin required</dt><dd id="sMargin">–</dd>
+        <dt>Est. fee</dt><dd id="sFee">–</dd>
+        <dt>Available</dt><dd id="sAvail">–</dd>
+      </dl>
+      <button type="submit" class="submit long" id="submit">Long</button>
+    </form>
+
+    <section class="acct" aria-label="Account">
+      <div class="acct-top"><h2>Account</h2><button class="link-btn" id="resetBtn" type="button">Reset account</button></div>
+      <div><div class="equity" id="aEquity">–</div><div id="aReturn" style="font-size:12.5px"></div></div>
+      <div class="progress" id="msProgress" hidden><div class="row"><span id="msText"></span><span id="msBadges" class="my-badges"></span></div><div class="bar"><i id="msBar" style="width:0"></i></div></div>
+      <div class="meter" title="Margin in use, as a share of equity. The red mark is maintenance margin: fall below it and you're liquidated.">
+        <div class="fill" id="meterFill" style="width:0"></div><div class="mm" id="meterMM" style="left:0"></div>
+      </div>
+      <div class="meter-legend"><span id="meterPct">0% margin in use</span><span>red mark = liquidation line</span></div>
+      <dl class="kv">
+        <dt>Balance</dt><dd id="aBal">–</dd>
+        <dt>Unrealized PnL</dt><dd id="aUpnl">–</dd>
+        <dt>Margin used</dt><dd id="aMargin">–</dd>
+        <dt>Available</dt><dd id="aAvail">–</dd>
+        <dt>Maintenance</dt><dd id="aMaint">–</dd>
+      </dl>
+      <p class="note" id="saveNote" hidden></p>
+    </section>
+    <footer class="side-foot">
+      <nav aria-label="Site"><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="https://x.com/aureoustrade" rel="me">X @aureoustrade</a><a href="#" data-install hidden>Get the app</a></nav>
+      Paper trading only. Not financial advice. Not affiliated with Hyperliquid.
+    </footer>
+  </div>
+
+  <section class="bottom" aria-label="Positions and history">
+    <div class="tabs" id="btabs">
+      <button data-t="positions" class="on">Positions</button><button data-t="orders">Open orders</button>
+      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button>
+      <span class="grow"></span>
+      <button id="bulkBtn" class="tiny" hidden></button>
+    </div>
+    <div class="tbl-wrap" id="bview"></div>
+  </section>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+<div class="banner" id="banner" hidden></div>
+
+<dialog id="tpslDlg">
+  <form method="dialog" id="tpslForm">
+    <h3 id="tpslTitle">Take profit / stop loss</h3>
+    <p id="tpslSub"></p>
+    <label class="field"><span>Take profit at</span><div class="inp"><input id="dTp" inputmode="decimal" placeholder="None"></div></label>
+    <label class="field"><span>Stop loss at</span><div class="inp"><input id="dSl" inputmode="decimal" placeholder="None"></div></label>
+    <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="authDlg" aria-labelledby="authTitle">
+  <div class="auth">
+    <button class="dlg-x" id="authClose" type="button" aria-label="Close">&times;</button>
+    <h3 id="authTitle">Sign in to Aureous</h3>
+    <p id="authSub">Keep your paper account and pick it up on any device.</p>
+    <div class="auth-providers" id="authProviders"></div>
+    <div class="or" id="authOr"><span>or use email</span></div>
+    <form id="authForm" novalidate>
+      <label class="field" id="authNameField" hidden><span>Name</span><div class="inp"><input id="authName" autocomplete="name"></div></label>
+      <label class="field"><span>Email</span><div class="inp"><input id="authEmail" type="email" autocomplete="email"></div></label>
+      <label class="field" id="authPwField"><span>Password</span><div class="inp"><input id="authPw" type="password" autocomplete="current-password"></div></label>
+      <p class="auth-msg" id="authMsg" hidden></p>
+      <button class="btn primary" id="authSubmit" type="submit">Sign in</button>
+      <div class="auth-links"><button type="button" class="link-btn" id="authForgot">Forgot password?</button><button type="button" class="link-btn" id="authSwitch">Create an account</button></div>
+    </form>
+    <p class="privacy">Signing in uses Google Firebase. Aureous keeps only your paper account and the leaderboard name you choose. Your email is never shown, and you can delete everything from the account menu.</p>
+  </div>
+</dialog>
+
+<dialog id="deleteDlg">
+  <form method="dialog">
+    <h3>Delete your account?</h3>
+    <p>This permanently deletes your login and your paper account (positions, orders and history) from Aureous. It can't be undone.</p>
+    <label class="field" id="delPwField" hidden><span>Enter your password to confirm</span><div class="inp"><input id="delPw" type="password" autocomplete="current-password"></div></label>
+    <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Keep account</button><button class="btn danger" value="ok">Delete account</button></div>
+  </form>
+</dialog>
+
+<dialog id="shareDlg" aria-labelledby="shTitle">
+  <div class="auth">
+    <button class="dlg-x" id="shClose" type="button" aria-label="Close">&times;</button>
+    <h3 id="shTitle">Share</h3>
+    <canvas id="shareCv" width="1200" height="675" role="img"></canvas>
+    <div class="bg-row">
+      <span>Background</span>
+      <button class="btn" type="button" id="shBgPick">Use my image or video…</button>
+      <button class="btn" type="button" id="shBgClear" hidden>Back to default</button>
+      <button class="btn" type="button" id="shSound" hidden aria-pressed="true">Sound on</button>
+      <label id="shZoomWrap" hidden title="From the whole picture to filling the card">Zoom <input type="range" id="shZoom" min="0" max="100" step="1" aria-label="Zoom the background"></label>
+      <label id="shDimWrap" hidden>Darken <input type="range" id="shDim" min="0" max="90" step="5" aria-label="Darken the background"></label>
+      <input type="file" id="shBgFile" accept="image/*,video/*" hidden>
+    </div>
+    <div class="share-btns">
+      <button class="btn primary" type="button" id="shNative" hidden>Share…</button>
+      <button class="btn" type="button" id="shX">Post on X</button>
+      <button class="btn" type="button" id="shCopyImg" hidden>Copy image</button>
+      <button class="btn primary" type="button" id="shVideo" hidden>Download video</button>
+      <button class="btn" type="button" id="shDownload">Download image</button>
+      <button class="btn" type="button" id="shCopyLink">Copy link</button>
+    </div>
+    <p class="note" id="shNote">On X, attach the downloaded or copied image to your post.</p>
+  </div>
+</dialog>
+
+<dialog id="traderDlg" aria-labelledby="trName">
+  <div class="tr-wrap">
+    <div class="tr-head"><button class="dlg-x" id="trClose" type="button" aria-label="Close" style="top:10px;right:12px">&times;</button>
+      <h3 id="trName">Trader</h3><p id="trSub"></p>
+      <div class="tr-actions" id="trActions" hidden><button class="btn" type="button" id="trShare">Share profile</button><button class="btn" type="button" id="trLink">Copy link</button></div></div>
+    <div class="tr-body" id="trBody"><div class="empty">Loading…</div></div>
+  </div>
+</dialog>
+
+<dialog id="settingsDlg" aria-labelledby="setTitle">
+  <div class="auth">
+    <button class="dlg-x" id="setClose" type="button" aria-label="Close">&times;</button>
+    <h3 id="setTitle">Settings</h3>
+    <p>Saved in this browser.</p>
+    <div class="set-group">
+      <h4>Appearance</h4>
+      <div class="set-row"><span>Theme</span><div class="choice" data-set="theme"><button data-v="dark">Dark</button><button data-v="light">Light</button><button data-v="system">Match device</button></div></div>
+      <div class="set-row"><span>Accent colour</span><div class="swatches" data-set="accent"></div></div>
+      <div class="set-row"><span>Price colours</span><div class="choice" data-set="prices">
+        <button data-v="classic" title="Green up, red down">Green up</button><button data-v="inverted" title="Red up, green down">Red up</button><button data-v="colorblind" title="Blue up, orange down">Colour-blind</button></div></div>
+      <div class="set-row"><span>Layout</span><div class="choice" data-set="density"><button data-v="comfortable">Comfortable</button><button data-v="compact">Compact</button></div></div>
+    </div>
+    <div class="set-group">
+      <h4>Trading</h4>
+      <label class="toggle"><input type="checkbox" id="setConfirm"> Ask me to confirm before placing orders</label>
+      <label class="toggle"><input type="checkbox" id="setBook"> Show the order book</label>
+      <p class="note">Star a market in the list to keep it at the top.</p>
+    </div>
+    <div class="dlg-btns"><button class="btn" type="button" id="setReset">Reset to defaults</button><button class="btn primary" type="button" id="setDone">Done</button></div>
+  </div>
+</dialog>
+
+<dialog id="confirmDlg">
+  <form method="dialog">
+    <h3 id="cfTitle">Confirm order</h3>
+    <dl class="confirm-sum" id="cfSum"></dl>
+    <label class="toggle"><input type="checkbox" id="cfNoAsk"> Don't ask again</label>
+    <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" id="cfOk">Place order</button></div>
+  </form>
+</dialog>
+
+<dialog id="clanDlg" aria-labelledby="clName">
+  <div class="tr-wrap">
+    <div class="tr-head"><button class="dlg-x" id="clClose" type="button" aria-label="Close" style="top:10px;right:12px">&times;</button>
+      <h3 id="clName">Clan</h3><p id="clSub"></p>
+      <div class="tr-actions" id="clActions"></div></div>
+    <div class="tr-body" id="clBody"><div class="empty">Loading…</div></div>
+  </div>
+</dialog>
+
+<dialog id="clanNewDlg">
+  <div class="auth">
+    <button class="dlg-x" id="cnClose" type="button" aria-label="Close">&times;</button>
+    <h3>Clans</h3>
+    <p style="margin:0">Trade against your friends. Start a clan, send your friends the invite link, and see who's best inside the clan and how your clan ranks against the others.</p>
+    <form id="cnCreate" class="auth">
+      <label class="field"><span>Clan name</span><div class="inp"><input id="cnName" maxlength="24" placeholder="e.g. Night Shift Traders" autocomplete="off"></div></label>
+      <label class="field"><span>Tag (2–5 letters or numbers, shown next to members' names)</span><div class="inp"><input id="cnTag" maxlength="5" placeholder="e.g. NIGHT" autocomplete="off" style="text-transform:uppercase"></div></label>
+      <button class="btn primary" type="submit">Start a clan</button>
+    </form>
+    <div class="clan-or">or join one</div>
+    <form id="cnJoin" class="auth">
+      <label class="field"><span>Invite link or code</span><div class="inp"><input id="cnCode" placeholder="Paste the link a friend sent you" autocomplete="off"></div></label>
+      <button class="btn" type="submit">Join clan</button>
+    </form>
+    <p class="auth-msg" id="cnMsg" hidden></p>
+  </div>
+</dialog>
+
+<dialog id="joinDlg">
+  <div class="auth">
+    <button class="dlg-x" id="jnClose" type="button" aria-label="Close">&times;</button>
+    <h3>You're invited to a clan</h3>
+    <div class="clan-preview" id="jnName"></div>
+    <p id="jnSub" style="margin:0"></p>
+    <p class="auth-msg" id="jnMsg" hidden></p>
+    <div class="dlg-btns"><button class="btn" type="button" id="jnCancel">Not now</button><button class="btn primary" type="button" id="jnOk">Join clan</button></div>
+  </div>
+</dialog>
+
+<dialog id="installDlg">
+  <div class="auth">
+    <button class="dlg-x" id="inClose" type="button" aria-label="Close">&times;</button>
+    <h3>Get the Aureous app</h3>
+    <p style="margin:0">Install Aureous on your home screen. It opens full screen like any other app, with your account and trades just as they are here.</p>
+    <ol class="install-steps" id="inSteps"></ol>
+    <div class="dlg-btns"><button class="btn primary" type="button" id="inOk">Got it</button></div>
+  </div>
+</dialog>
+
+<dialog id="nameDlg">
+  <form id="nameForm">
+    <h3>Leaderboard name</h3>
+    <p>This is the name everyone sees on the leaderboard. Your email is never shown.</p>
+    <label class="field"><span>Name</span><div class="inp"><input id="nameIn" maxlength="24" autocomplete="nickname"></div></label>
+    <p class="auth-msg" id="nameMsg" hidden></p>
+    <div class="dlg-btns"><button class="btn" type="button" id="nameCancel">Cancel</button><button class="btn primary" type="submit">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="resetDlg">
+  <form method="dialog" id="resetForm">
+    <h3>Reset account</h3>
+    <p id="resetText">Closes everything and erases your history. This can't be undone.</p>
+    <label class="field" id="resetBalField"><span>Starting balance (USD)</span><div class="inp"><input id="dBal" inputmode="decimal" value="10000"></div></label>
+    <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Keep account</button><button class="btn danger" value="ok">Reset</button></div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let SET = window.AureousSettings ? AureousSettings.load() : {};
+let C = window.AureousSettings ? AureousSettings.apply(SET)
+  : {long: "#2FA57D", short: "#DB5A55", accent: "#5B8DEF", muted: "#7F8B9B", faint: "#58647A", line: "#232E3D", lineSoft: "#1B2431",
+     panel: "#121924", text: "#D5DCE5", crossLabel: "#2A3647", longWash: "rgba(47,165,125,.35)", shortWash: "rgba(219,90,85,.35)"};
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("aureous." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem("aureous." + k, JSON.stringify(v)); } catch {} }
+};
+const INTERVAL_MS = {"1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5, "4h": 144e5, "1d": 864e5};
+const S = {
+  coin: store.get("coin", "BTC"), interval: store.get("interval", "1h"), side: "buy", type: "market", favs: store.get("favs", []),
+  unit: ["margin", "usd", "coin"].includes(store.get("unit2", "margin")) ? store.get("unit2", "margin") : "margin", tab: "positions", markets: [], mk: {}, acct: null, book: null,
+  candles: [], olderLoading: false, noOlder: false, chartGen: 0, lastEvent: null, prevPrice: null,
+};
+
+// ---------- formatting ----------
+function decs(x){ const a = Math.abs(x); if (!a) return 2; if (a >= 1) return Math.max(0, 5 - (Math.floor(Math.log10(a)) + 1)); return Math.min(8, 4 - Math.floor(Math.log10(a))); }
+function fpx(x, d){ if (x == null || !isFinite(x)) return "–"; d = d ?? decs(x); return x.toLocaleString("en-US", {minimumFractionDigits: d, maximumFractionDigits: d}); }
+function usd(x){ if (x == null || !isFinite(x)) return "–"; return (x < 0 ? "-$" : "$") + Math.abs(x).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function sgnUsd(x){ return (x > 0 ? "+" : "") + usd(x); }
+function pct(x, d = 2){ const v = (x * 100).toFixed(d); return +v === 0 ? (0).toFixed(d) + "%" : (x > 0 ? "+" : "") + v + "%"; }
+function big(x){ for (const [u, n] of [["B", 1e9], ["M", 1e6], ["K", 1e3]]) if (Math.abs(x) >= n) return (x / n).toFixed(2) + u; return x.toFixed(0); }
+function cls(x){ return x > 0 ? "up" : x < 0 ? "down" : ""; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function num(v){ const n = parseFloat(String(v).replace(/[,$\s]/g, "")); return isFinite(n) ? n : NaN; }
+function tstr(ms){ const d = new Date(ms); return d.toLocaleDateString(undefined, {month: "short", day: "numeric"}) + " " + d.toLocaleTimeString(undefined, {hour: "2-digit", minute: "2-digit", second: "2-digit"}); }
+
+// ---------- api ----------
+// "browser" mode (the public website): the engine runs in this page and the account lives in this browser.
+// "server" mode (python -m aureous web): the local Python server does the trading.
+const MODE = document.querySelector('meta[name="aureous-mode"]')?.content || "browser";
+// With sign-in and the trading server configured, accounts live on the server: this page shows
+// live prices and your account, and every trade is made (and checked) by the server.
+const FB = window.AUREOUS_FIREBASE || {};
+const SERVER_ACCOUNTS = MODE === "browser" && !!(FB.config && FB.apiUrl);
+let LOCAL = null;
+if (MODE === "browser" && window.Aureous) {
+  let storage = null;
+  if (!SERVER_ACCOUNTS) try { localStorage.setItem("aureous.test", "1"); localStorage.removeItem("aureous.test"); storage = localStorage; } catch {}
+  const A = window.Aureous;
+  LOCAL = new A.LocalApp(new A.PaperExchange(new A.HyperliquidClient(), {storage}), {passive: SERVER_ACCOUNTS});
+  LOCAL.start(2000);
+}
+const locked = () => SERVER_ACCOUNTS && !(S.acct && S.acct.signed_in);
+async function api(path, body){
+  if (LOCAL) {
+    const [p, qs] = path.split("?");
+    const q = Object.fromEntries(new URLSearchParams(qs || ""));
+    try {
+      const out = await LOCAL.handle(p, q, body || {});
+      return Array.isArray(out) ? {ok: true, data: out} : {ok: true, ...out};
+    } catch (e) {
+      throw new Error(e instanceof window.Aureous.APIError ? "Couldn't reach Hyperliquid: " + e.message : e.message);
+    }
+  }
+  const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : undefined);
+  let j; try { j = await r.json(); } catch { j = {ok: false, error: `Server error (${r.status})`}; }
+  if (!r.ok || j.ok === false) throw new Error(j.error || `Server error (${r.status})`);
+  return j;
+}
+const cname = c => (window.Aureous && Aureous.displayName ? Aureous.displayName(c) : String(c));
+const mlabel = c => ((window.Aureous && Aureous.MARKET_LABELS) || {})[c] || "";
+function toast(msg, kind = "event"){
+  const el = document.createElement("div");
+  el.className = "toast " + kind; el.textContent = String(msg).replace(/\b[a-z][a-z0-9]*:([A-Z0-9]+)\b/g, "$1");
+  $("#toasts").appendChild(el);
+  setTimeout(() => el.remove(), kind === "error" ? 7000 : 5000);
+}
+async function act(path, body){
+  try {
+    const r = await api(path, body);
+    (r.warnings || []).forEach(w => toast(w, "error"));
+    if (path === "/api/order") r.messages.forEach(m => toast(m, "fill"));
+    await refreshState();
+    return r;
+  } catch (e) { toast(e.message, "error"); throw e; }
+}
+
+// ---------- markets ----------
+function market(){ return S.mk[S.coin]; }
+async function refreshMarkets(){
+  if (S.trader && S.trader.data && $("#traderDlg").open) setTimeout(renderTrader, 0);
+  const r = await api("/api/markets");
+  S.markets = r.data; S.mk = {};
+  for (const m of S.markets) S.mk[m.name] = m;
+  if (!S.mk[S.coin]) S.coin = S.mk.BTC ? "BTC" : S.markets[0]?.name;
+  renderMarkets(); renderHeader(); tickLastCandle(); renderSummary();
+}
+function renderMarkets(){
+  const q = $("#mkSearch").value.trim().toLowerCase(), sort = $("#mkSort").value;
+  const key = {volume: m => -m.volume, change: m => -Math.abs(m.change), funding: m => -Math.abs(m.funding), oi: m => -m.oi, name: m => m.name.toLowerCase()}[sort];
+  const list = S.markets.filter(m => !q || m.name.toLowerCase().includes(q) || mlabel(m.name).toLowerCase().includes(q))
+    .sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
+  const favs = new Set(S.favs);
+  list.sort((a, b) => (favs.has(b.name) ? 1 : 0) - (favs.has(a.name) ? 1 : 0));   // favourites first, order kept otherwise
+  $("#mkList").innerHTML = list.map(m => { const f = favs.has(m.name);
+    return `<div class="mk-item${m.name === S.coin ? " on" : ""}"><button class="star${f ? " fav" : ""}" data-fav="${esc(m.name)}" aria-pressed="${f}" aria-label="${f ? "Remove" : "Add"} ${esc(m.name)} ${f ? "from" : "to"} favourites">${f ? "★" : "☆"}</button>` +
+      `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"${mlabel(m.name) ? ` title="${esc(mlabel(m.name))}"` : ""}><b>${esc(cname(m.name))}${mlabel(m.name) ? `<small class="mk-label">${esc(mlabel(m.name))}</small>` : ""}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span></button></div>`;
+  }).join("") || `<div class="empty">No market matches “${esc(q)}”</div>`;
+}
+function renderHeader(){
+  const m = market(); if (!m) return;
+  $("#hCoin").textContent = cname(m.name);
+  $("#hTag").hidden = !mlabel(m.name); $("#hTag").textContent = mlabel(m.name); $("#coinBtn").title = mlabel(m.name) ? `${mlabel(m.name)}. Change market` : "Change market";
+  $("#hMaxLev").textContent = `up to ${levCap(m)}x`;
+  $("#hMaxLev").title = S.overCap ? `Hyperliquid allows up to ${m.max_lev}x on ${cname(m.name)}. With paper money, Aureous goes up to ${MAX_LEV}x.` : `Hyperliquid's limit for ${cname(m.name)}.`;
+  const p = $("#hPrice");
+  if (S.prevPrice !== null && S.prevCoin === m.name && m.mark !== S.prevPrice) {
+    p.classList.remove("tick-up", "tick-down"); void p.offsetWidth;
+    p.classList.add(m.mark > S.prevPrice ? "tick-up" : "tick-down");
+    clearTimeout(S.tickT); S.tickT = setTimeout(() => p.classList.remove("tick-up", "tick-down"), 700);
+  }
+  S.prevPrice = m.mark; S.prevCoin = m.name;
+  p.textContent = fpx(m.mark);
+  $("#hChange").innerHTML = `<span class="${cls(m.change)}">${pct(m.change)}</span>`;
+  $("#hFunding").innerHTML = `<span class="${cls(-m.funding)}">${pct(m.funding, 4)}</span>`;
+  $("#hFunding").title = `${pct(m.funding * 24 * 365, 1)} a year. Positive: longs pay shorts.`;
+  $("#hVol").textContent = "$" + big(m.volume);
+  $("#hOI").textContent = "$" + big(m.oi);
+  document.title = `${fpx(m.mark)} ${cname(m.name)} | Aureous`;
+}
+function countdown(){
+  const now = new Date(), left = 3600 - (now.getMinutes() * 60 + now.getSeconds());
+  $("#hCountdown").textContent = `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`;
+}
+function selectCoin(name){
+  if (!S.mk[name]) return;
+  S.coin = name; store.set("coin", name);
+  if (DRAW) DRAW.setCoin(name);
+  S.book = null; S.prevPrice = null;
+  $("#px").value = ""; $("#tpIn").value = ""; $("#slIn").value = "";
+  $("#markets").classList.remove("open");
+  syncLeverage(); renderMarkets(); renderHeader(); renderSummary(); renderBook();
+  loadCandles(); refreshBook();
+}
+
+// ---------- chart (TradingView Lightweight Charts) ----------
+const LC = window.LightweightCharts;
+let chart, candleSeries, volSeries, priceLines = [], DRAW = null;
+const SCROLL_OPTS = {mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true};
+const SCALE_OPTS = {mouseWheel: true, pinch: true, axisPressedMouseMove: {time: true, price: true}, axisDoubleClickReset: {time: true, price: true}};
+// Lightweight Charts plots UTC; shift so the axis shows the viewer's local time.
+const toChartTime = ms => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
+function initChart(){
+  if (!LC) { $("#chartMsg").textContent = "Chart library failed to load"; return; }
+  chart = LC.createChart($("#chartEl"), {
+    autoSize: true,
+    layout: {background: {type: "solid", color: C.panel}, textColor: C.muted, fontFamily: cssVar("--font"), fontSize: 11, attributionLogo: true},
+    grid: {vertLines: {color: C.lineSoft}, horzLines: {color: C.lineSoft}},
+    crosshair: {mode: LC.CrosshairMode.Normal,
+      vertLine: {color: C.faint, labelBackgroundColor: C.crossLabel}, horzLine: {color: C.faint, labelBackgroundColor: C.crossLabel}},
+    rightPriceScale: {borderColor: C.line, scaleMargins: {top: .1, bottom: .22}},
+    timeScale: {borderColor: C.line, timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 7, minBarSpacing: .5},
+    handleScroll: SCROLL_OPTS,
+    handleScale: SCALE_OPTS,
+    kineticScroll: {mouse: true, touch: true},
+  });
+  candleSeries = chart.addSeries(LC.CandlestickSeries, {
+    upColor: C.long, downColor: C.short, wickUpColor: C.long, wickDownColor: C.short, borderVisible: false,
+    priceLineColor: C.muted, priceLineStyle: LC.LineStyle.Dotted,
+  });
+  volSeries = chart.addSeries(LC.HistogramSeries, {priceScaleId: "vol", priceFormat: {type: "volume"}, lastValueVisible: false, priceLineVisible: false});
+  chart.priceScale("vol").applyOptions({scaleMargins: {top: .86, bottom: 0}});
+  chart.subscribeCrosshairMove(p => renderLegend(p && p.time !== undefined ? p.seriesData.get(candleSeries) : null));
+  chart.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r && r.from < 20) loadOlder(); });
+  $("#chartEl").addEventListener("dblclick", resetView);
+  if (window.AureousDraw) {
+    try {
+      DRAW = AureousDraw.create({chart, series: candleSeries, wrap: $(".chart-wrap"), chartEl: $("#chartEl"), bar: $("#drawBar"), panel: $("#drawPanel"),
+        candles: () => S.candles, intervalMs: () => INTERVAL_MS[S.interval], fmt: fpx, store, scrollOpts: SCROLL_OPTS, scaleOpts: SCALE_OPTS});
+      DRAW.setCoin(S.coin);
+    } catch (e) { console.error("drawing tools", e); $("#drawBar").hidden = true; }
+  } else $("#drawBar").hidden = true;
+}
+function resetView(){
+  if (!chart) return;
+  chart.priceScale("right").applyOptions({autoScale: true});
+  chart.timeScale().applyOptions({barSpacing: 7, rightOffset: 8});
+  chart.timeScale().scrollToRealTime();
+}
+function barOf(k){ return {time: toChartTime(k[0]), open: k[1], high: k[2], low: k[3], close: k[4]}; }
+function volOf(k){ return {time: toChartTime(k[0]), value: k[5], color: k[4] >= k[1] ? C.longWash : C.shortWash}; }
+// re-colour the chart after a settings change
+function applyChartTheme(){
+  if (!chart) return;
+  chart.applyOptions({layout: {background: {type: "solid", color: C.panel}, textColor: C.muted},
+    grid: {vertLines: {color: C.lineSoft}, horzLines: {color: C.lineSoft}},
+    crosshair: {vertLine: {color: C.faint, labelBackgroundColor: C.crossLabel}, horzLine: {color: C.faint, labelBackgroundColor: C.crossLabel}},
+    rightPriceScale: {borderColor: C.line}, timeScale: {borderColor: C.line}});
+  candleSeries.applyOptions({upColor: C.long, downColor: C.short, wickUpColor: C.long, wickDownColor: C.short, priceLineColor: C.muted});
+  volSeries.setData(S.candles.map(volOf));
+  drawPriceLines();
+}
+function setPriceFormat(){
+  const m = market(); if (!m || !candleSeries) return;
+  const d = decs(m.mark);
+  candleSeries.applyOptions({priceFormat: {type: "price", precision: d, minMove: Math.pow(10, -d)}});
+  chart.applyOptions({localization: {priceFormatter: p => fpx(p, d)}});
+}
+async function loadCandles(){
+  if (!chart) return;
+  const gen = ++S.chartGen, coin = S.coin, interval = S.interval;
+  S.candles = []; S.noOlder = false;
+  candleSeries.setData([]); volSeries.setData([]);
+  $("#chartMsg").hidden = false; $("#chartMsg").textContent = "Loading chart";
+  setPriceFormat();
+  try {
+    const r = await api(`/api/candles?coin=${encodeURIComponent(coin)}&interval=${interval}&n=300`);
+    if (gen !== S.chartGen) return;
+    S.candles = r.data;
+    candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
+    $("#chartMsg").hidden = !!S.candles.length;
+    if (!S.candles.length) $("#chartMsg").textContent = "No price history for this market yet";
+    resetView(); tickLastCandle(); drawPriceLines(); renderLegend(null); if (DRAW) DRAW.refresh();
+  } catch (e) { if (gen === S.chartGen) $("#chartMsg").textContent = "Couldn't load the chart. Retrying shortly."; }
+}
+async function loadOlder(){
+  if (S.olderLoading || S.noOlder || !S.candles.length) return;
+  S.olderLoading = true;
+  const gen = S.chartGen, oldest = S.candles[0][0];
+  try {
+    const r = await api(`/api/candles?coin=${encodeURIComponent(S.coin)}&interval=${S.interval}&n=300&end=${oldest - 1}`);
+    if (gen !== S.chartGen) return;
+    const older = r.data.filter(k => k[0] < oldest);
+    if (!older.length) { S.noOlder = true; return; }
+    const range = chart.timeScale().getVisibleLogicalRange();
+    S.candles = older.concat(S.candles);
+    candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
+    if (range) chart.timeScale().setVisibleLogicalRange({from: range.from + older.length, to: range.to + older.length});
+  } catch {} finally { S.olderLoading = false; }
+}
+// keep the newest candle moving with the live mark price
+function tickLastCandle(){
+  const m = market(), k = S.candles[S.candles.length - 1];
+  if (!m || !k || !candleSeries) return;
+  const step = INTERVAL_MS[S.interval], now = Date.now();
+  if (now >= k[0] + step) {                      // a new candle has started
+    const t = k[0] + Math.floor((now - k[0]) / step) * step;
+    S.candles.push([t, k[4], Math.max(k[4], m.mark), Math.min(k[4], m.mark), m.mark, 0]);
+  } else { k[4] = m.mark; k[2] = Math.max(k[2], m.mark); k[3] = Math.min(k[3], m.mark); }
+  const last = S.candles[S.candles.length - 1];
+  candleSeries.update(barOf(last)); volSeries.update(volOf(last));
+  if (!S.hovering) renderLegend(null);
+}
+async function refreshRecentCandles(){
+  if (!S.candles.length) return;
+  const gen = S.chartGen;
+  const r = await api(`/api/candles?coin=${encodeURIComponent(S.coin)}&interval=${S.interval}&n=3`);
+  if (gen !== S.chartGen) return;
+  for (const k of r.data) {
+    const i = S.candles.findIndex(x => x[0] === k[0]);
+    if (i >= 0) S.candles[i] = k; else if (k[0] > S.candles[S.candles.length - 1][0]) S.candles.push(k); else continue;
+    candleSeries.update(barOf(k)); volSeries.update(volOf(k));
+  }
+}
+function renderLegend(bar){
+  S.hovering = !!bar;
+  if (!bar) { const k = S.candles[S.candles.length - 1]; if (!k) { $("#legend").innerHTML = ""; return; } bar = barOf(k); }
+  const chg = bar.close / bar.open - 1;
+  $("#legend").innerHTML = `<b>${esc(cname(S.coin))} ${S.interval}</b><span>O <i>${fpx(bar.open)}</i></span><span>H <i>${fpx(bar.high)}</i></span><span>L <i>${fpx(bar.low)}</i></span><span>C <i>${fpx(bar.close)}</i></span><span class="${cls(chg)}">${pct(chg)}</span>`;
+}
+function drawPriceLines(){
+  if (!candleSeries) return;
+  priceLines.forEach(l => candleSeries.removePriceLine(l)); priceLines = [];
+  const add = (price, color, title, style = LC.LineStyle.Dashed) =>
+    priceLines.push(candleSeries.createPriceLine({price, color, title, lineWidth: 1, lineStyle: style, axisLabelVisible: true}));
+  const p = S.acct?.positions.find(x => x.coin === S.coin);
+  if (p) {
+    add(p.entry, C.accent, `Entry ${p.size > 0 ? "long" : "short"}`, LC.LineStyle.Solid);
+    if (p.liq) add(p.liq, C.short, "Liquidation");
+  }
+  for (const o of S.acct?.orders || []) {
+    if (o.coin !== S.coin) continue;
+    if (o.type === "limit") add(o.px, C.muted, `${o.side === "buy" ? "Buy" : "Sell"} limit`);
+    else add(o.trigger_px, o.type === "tp" ? C.long : C.short, o.type === "tp" ? "Take profit" : "Stop loss");
+  }
+}
+
+// ---------- order book ----------
+async function refreshBook(){
+  const coin = S.coin;
+  try { const r = await api(`/api/book?coin=${encodeURIComponent(coin)}`); if (coin === S.coin) { S.book = r; renderBook(); } } catch {}
+}
+function fmtSz(s){ return s >= 1000 ? big(s) : s.toLocaleString("en-US", {maximumFractionDigits: s >= 10 ? 2 : 4}); }
+function renderBook(){
+  const b = S.book, small = matchMedia("(max-width:899px)").matches;
+  const n = small ? 8 : Math.max(3, Math.min(14, Math.floor(($("#bids").clientHeight || 200) / 21.5)));
+  if (!b) { $("#asks").innerHTML = $("#bids").innerHTML = ""; $("#bkMid").textContent = "–"; $("#bkSpread").textContent = ""; return; }
+  const asks = b.asks.slice(0, n), bids = b.bids.slice(0, n);
+  const cum = arr => { let t = 0; return arr.map(([p, s]) => [p, s, t += s]); };
+  const ca = cum(asks), cb = cum(bids), max = Math.max(ca.at(-1)?.[2] || 0, cb.at(-1)?.[2] || 0) || 1;
+  const row = (kind, [p, s, t]) => `<button class="bk-row bk-${kind}" data-px="${p}"><i style="width:${(t / max * 100).toFixed(1)}%"></i><span>${fpx(p)}</span><span>${fmtSz(s)}</span><span>${fmtSz(t)}</span></button>`;
+  $("#asks").innerHTML = ca.slice().reverse().map(r => row("ask", r)).join("");
+  $("#bids").innerHTML = cb.map(r => row("bid", r)).join("");
+  if (asks[0] && bids[0]) {
+    const mid = (asks[0][0] + bids[0][0]) / 2, sp = asks[0][0] - bids[0][0];
+    $("#bkMid").textContent = fpx(mid);
+    $("#bkSpread").textContent = `spread ${fpx(sp)} (${(sp / mid * 1e4).toFixed(1)} bps)`;
+  }
+}
+
+// ---------- ticket ----------
+// Leverage slider: 1x to 1000x in steps, so low values stay easy to pick
+const MAX_LEV = (window.Aureous && Aureous.MAX_LEVERAGE) || 1000;
+const LEV_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100, 125, 150, 175, 200,
+                   250, 300, 350, 400, 450, 500, 600, 700, 750, 800, 900, 1000].filter(x => x <= MAX_LEV);
+let levExact = null;                                  // a stored leverage that isn't one of the steps (e.g. 33x)
+S.overCap = true;                                     // the site owner's switch: leverage past Hyperliquid's caps (from the server)
+const levCap = m => S.overCap ? MAX_LEV : (m ? m.max_lev : MAX_LEV);
+function levSteps(){ const cap = levCap(market()); const st = LEV_STEPS.filter(x => x <= cap); if (st[st.length - 1] !== cap) st.push(cap); return st; }
+function getLev(){ const st = levSteps(); return levExact || st[+$("#lev").value] || 1; }
+function setLevSlider(v){
+  const st = levSteps(); v = Math.min(v, st[st.length - 1]);
+  let i = 0; st.forEach((x, j) => { if (Math.abs(x - v) < Math.abs(st[i] - v)) i = j; });
+  $("#lev").max = st.length - 1; $("#lev").value = i; levExact = st[i] === v ? null : v;
+}
+function setConfig(c){
+  if (!c || typeof c.over_cap !== "boolean" || c.over_cap === S.overCap) return;
+  S.overCap = c.over_cap; syncLeverage(); renderHeader(); renderSummary();
+}
+function renderLev(){
+  const m = market(), L = getLev();
+  $("#levOut").textContent = L + "x";
+  document.querySelectorAll("#levChips [data-lev]").forEach(b => { b.classList.toggle("on", +b.dataset.lev === L); b.hidden = +b.dataset.lev > levCap(m); });
+  const w = $("#levWarn");
+  if (!m || L <= m.max_lev) { w.hidden = true; return; }
+  const fee = (S.acct && S.acct.fees ? S.acct.fees.taker : .00045) * L, move = 1 / (2 * L);
+  const p = x => (x * 100).toFixed(x < .001 ? 3 : x < .01 ? 2 : 1).replace(/\.?0+$/, "") + "%";
+  w.hidden = false;
+  w.textContent = `Above ${m.max_lev}x, Hyperliquid's limit for ${cname(m.name)}. At ${L}x a ${p(move)} move against you liquidates the position, and the opening fee takes ${p(fee)} of your margin.`;
+}
+function syncLeverage(){
+  const m = market(); if (!m) return;
+  setLevSlider(Math.min(m.lev, levCap(m)));
+  renderLev();
+}
+function refPrice(){ const m = market(); if (!m) return NaN; if (S.type === "limit") { const p = num($("#px").value); return p > 0 ? p : m.mark; } return m.mark; }
+// Size can be typed three ways: margin (your money; leverage multiplies it), position value in dollars, or coins
+function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "margin" ? sz * getLev() : S.unit === "usd" ? sz : sz * refPrice(); }
+function sizeFor(n){ const m = market(); return S.unit === "margin" ? (n / getLev()).toFixed(2) : S.unit === "usd" ? n.toFixed(2) : String(+(n / refPrice()).toFixed(m ? m.sz_dec : 4)); }
+const UNIT_LABEL = {margin: "Margin (your money)", usd: "Position value", coin: "Size in "};
+function renderSummary(){
+  const m = market(), a = S.acct; if (!m) return;
+  const n = notional(), lev = getLev(), fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
+  $("#sValue").textContent = n ? usd(n) + (S.unit !== "coin" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${cname(m.name)})` : "") : "–";
+  $("#sMargin").textContent = n ? usd(n / lev) : "–";
+  $("#sFee").textContent = n ? usd(n * fee) : "–";
+  $("#sAvail").textContent = a ? usd(a.available) : "–";
+  const btn = $("#submit");
+  if (locked()) { btn.className = "submit locked"; btn.textContent = AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
+  else {
+    btn.className = "submit " + (S.side === "buy" ? "long" : "short");
+    btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${S.type === "limit" ? " at limit" : ""}`;
+  }
+  $("#unitBtn").textContent = S.unit === "margin" ? "Margin" : S.unit === "usd" ? "Value" : m.name;
+  $("#sizeLabel").textContent = S.unit === "coin" ? UNIT_LABEL.coin + m.name : S.unit === "margin" ? `Margin (your money) × ${getLev()}x` : UNIT_LABEL.usd;
+}
+function setSide(side){ S.side = side; document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.side === side)); renderSummary(); }
+function setType(type){
+  S.type = type;
+  document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === type));
+  $("#pxField").hidden = type !== "limit"; $("#postWrap").hidden = type !== "limit";
+  $("#tpslWrap").hidden = type === "limit"; if (type === "limit") { $("#tpslOn").checked = false; $("#tpslFields").hidden = true; }
+  if (type === "limit" && !$("#px").value && market()) $("#px").value = fpx(market().mid || market().mark).replace(/,/g, "");
+  renderSummary();
+}
+async function submitOrder(ev){
+  ev.preventDefault();
+  if (locked()) { if (AUTH) openAuth(); return; }
+  const m = market(); if (!m) return;
+  const size = num($("#size").value);
+  if (!(size > 0)) { toast("Enter a size first.", "error"); $("#size").focus(); return; }
+  const body = {coin: m.name, side: S.side, type: S.type, size: S.unit === "margin" ? Math.round(notional() * 100) / 100 : size,
+                unit: S.unit === "margin" ? "usd" : S.unit, leverage: getLev(), reduce_only: $("#ro").checked};
+  if (S.type === "limit") {
+    body.price = num($("#px").value);
+    if (!(body.price > 0)) { toast("Enter a limit price.", "error"); $("#px").focus(); return; }
+    if ($("#post").checked) body.tif = "Alo";
+  }
+  if ($("#tpslOn").checked) { const tp = num($("#tpIn").value), sl = num($("#slIn").value); if (tp > 0) body.tp = tp; if (sl > 0) body.sl = sl; }
+  if (SET.confirm && !(await confirmOrder(body, m))) return;
+  const btn = $("#submit"); btn.disabled = true;
+  try { await act("/api/order", body); $("#size").value = ""; $("#tpIn").value = ""; $("#slIn").value = ""; renderSummary(); } catch {}
+  finally { btn.disabled = false; }
+}
+
+function confirmOrder(body, m){
+  return new Promise(resolve => {
+    const n = notional(), lev = getLev();
+    const rows = [["Market", m.name], ["Side", body.side === "buy" ? "Long" : "Short"], ["Type", body.type === "limit" ? `Limit at ${fpx(body.price)}` : "Market"],
+      ["Size", usd(n) + ` (${fpx(n / refPrice(), m.sz_dec)} ${cname(m.name)})`], ["Leverage", lev + "x"], ["Margin", usd(n / lev)]];
+    if (body.tp) rows.push(["Take profit", fpx(body.tp)]);
+    if (body.sl) rows.push(["Stop loss", fpx(body.sl)]);
+    if (body.reduce_only) rows.push(["Reduce only", "Yes"]);
+    $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${cname(m.name)}?`;
+    $("#cfSum").innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+    $("#cfOk").className = "btn " + (body.side === "buy" ? "primary" : "danger");
+    $("#cfNoAsk").checked = false;
+    const dlg = $("#confirmDlg");
+    dlg.addEventListener("close", () => {
+      if (dlg.returnValue === "ok" && $("#cfNoAsk").checked) saveSettings({...SET, confirm: false});
+      resolve(dlg.returnValue === "ok");
+    }, {once: true});
+    dlg.returnValue = ""; dlg.showModal();
+  });
+}
+
+// ---------- settings ----------
+function saveSettings(next){
+  SET = next; if (window.AureousSettings) { AureousSettings.save(SET); C = AureousSettings.apply(SET); }
+  applyChartTheme(); renderSettings(); renderBook();
+  if (S.tab === "perf") drawCurve();
+}
+function renderSettings(){
+  document.querySelectorAll("#settingsDlg .choice").forEach(g => g.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(SET[g.dataset.set] === b.dataset.v))));
+  const acc = window.AureousSettings ? AureousSettings.ACCENTS : {};
+  const earnedBy = (window.AureousSettings && AureousSettings.EARNED) || {}, badges = (S.acct && S.acct.profile && S.acct.profile.badges) || [];
+  $("#settingsDlg .swatches").innerHTML = Object.entries(acc).map(([k, v]) => {
+    const need = earnedBy[k], open = !need || hasTier(badges, need) || SET.accent === k;
+    const label = k === "gold" ? "Aureus gold" : k[0].toUpperCase() + k.slice(1);
+    const tip = open ? label : `${label}: reach ${usd(tierOf(need).at).replace(".00", "")} account value to unlock`;
+    return `<button class="swatch${open ? "" : " locked"}" data-v="${k}" data-need="${open ? "" : need}" style="background:${v}" aria-pressed="${SET.accent === k}" aria-label="${tip}" title="${tip}"></button>`;
+  }).join("");
+  $("#setConfirm").checked = !!SET.confirm; $("#setBook").checked = SET.book !== false;
+}
+$("#settingsBtn").addEventListener("click", () => { renderSettings(); $("#settingsDlg").showModal(); });
+$("#setClose").addEventListener("click", () => $("#settingsDlg").close());
+$("#setDone").addEventListener("click", () => $("#settingsDlg").close());
+$("#setReset").addEventListener("click", () => saveSettings({...AureousSettings.DEFAULTS}));
+$("#settingsDlg").addEventListener("click", e => {
+  const b = e.target.closest(".choice button, .swatch"); if (!b) return;
+  if (b.dataset.need) { toast(`Reach ${usd(tierOf(b.dataset.need).at).replace(".00", "")} account value to unlock Aureus gold.`); return; }
+  const key = b.classList.contains("swatch") ? "accent" : b.parentElement.dataset.set;
+  saveSettings({...SET, [key]: b.dataset.v});
+});
+$("#setConfirm").addEventListener("change", e => saveSettings({...SET, confirm: e.target.checked}));
+$("#setBook").addEventListener("change", e => saveSettings({...SET, book: e.target.checked}));
+window.addEventListener("aureous-settings", () => { C = AureousSettings.apply(SET); applyChartTheme(); });
+
+// ---------- account + tables ----------
+async function refreshState(){
+  const r = await api(`/api/state?since=${S.lastEvent ?? 0}`);
+  if (S.lastEvent !== null) r.events.forEach(e => { if (e.kind !== "fill") toast(e.msg, e.kind); if (e.kind === "milestone") loadBoard(true); });
+  S.lastEvent = r.last_event;
+  const linesChanged = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]) !== S.linesKey;
+  S.linesKey = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]);
+  S.acct = r;
+  renderAccount(); renderBottom(); renderSummary();
+  if (linesChanged) drawPriceLines();
+  const ban = $("#banner");
+  ban.hidden = !r.error; if (r.error) ban.textContent = "Can't reach Hyperliquid right now. Showing the last prices received.";
+  $("#conn").classList.toggle("bad", !!r.error); $("#connText").textContent = r.error ? "Reconnecting" : "Live";
+}
+function renderAccount(){
+  const a = S.acct, ret = a.equity / a.start - 1;
+  $("#aEquity").textContent = usd(a.equity);
+  $("#aReturn").innerHTML = `<span class="${cls(ret)}">${pct(ret)}</span> <span class="muted">since you started with ${usd(a.start)}</span>`;
+  const used = a.equity > 0 ? Math.min(1, (a.margin_used + a.order_margin) / a.equity) : 1;
+  $("#meterFill").style.width = (used * 100).toFixed(1) + "%";
+  $("#meterMM").style.left = (a.equity > 0 ? Math.min(1, a.maintenance / a.equity) * 100 : 100).toFixed(1) + "%";
+  $("#meterPct").textContent = `${(used * 100).toFixed(0)}% margin in use`;
+  $("#aBal").textContent = usd(a.balance);
+  $("#aUpnl").innerHTML = `<span class="${cls(a.upnl)}">${sgnUsd(a.upnl)}</span>`;
+  $("#aMargin").textContent = usd(a.margin_used);
+  $("#aAvail").textContent = usd(a.available);
+  $("#aMaint").textContent = usd(a.maintenance);
+  if (MODE === "browser") renderSaveNote();
+  renderMilestones(); renderClanBtn();
+  const prof = a.profile;
+  $("#privacyBtn").textContent = prof && prof.private ? "Show my trades" : "Hide my trades";
+  $("#myProfileBtn").hidden = $("#privacyBtn").hidden = !SERVER_ACCOUNTS;
+  const np = a.positions.length, no = a.orders.length;
+  $('[data-t="positions"]').textContent = np ? `Positions (${np})` : "Positions";
+  $('[data-t="orders"]').textContent = no ? `Open orders (${no})` : "Open orders";
+}
+const coinBtn = c => `<button class="coinlink" data-act="select" data-coin="${esc(c)}">${esc(cname(c))}</button>`;
+function renderBottom(){
+  const a = S.acct, v = $("#bview"), bulk = $("#bulkBtn");
+  if (!a) return;
+  bulk.hidden = true;
+  if (S.tab === "board") { renderBoard(); return; }
+  if (S.tab === "positions") {
+    if (locked()) { v.innerHTML = `<div class="empty">Sign in to start trading. Everyone gets $10,000 of paper money, and the leaderboard ranks accounts by value.</div>`; return; }
+    if (!a.positions.length) { v.innerHTML = `<div class="empty">No open positions. Pick a market, enter a size and press Long or Short.</div>`; return; }
+    bulk.hidden = a.positions.length < 2; bulk.textContent = "Close all"; bulk.dataset.act = "closeall";
+    v.innerHTML = `<table><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Value</th><th>Entry</th><th>Mark</th><th>PnL (ROE)</th><th>Liq. price</th><th>Funding</th><th>TP / SL</th><th></th></tr></thead><tbody>` +
+      a.positions.map(p => {
+        const tp = p.tp.map(o => fpx(o.trigger_px)).join(", ") || "–", sl = p.sl.map(o => fpx(o.trigger_px)).join(", ") || "–";
+        return `<tr><td>${coinBtn(p.coin)}</td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td>
+          <td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${fpx(p.entry)}</td><td>${fpx(p.mark)}</td>
+          <td class="${cls(p.upnl)}">${sgnUsd(p.upnl)} (${pct(p.roe, 1)})</td>
+          <td title="${p.liq ? "" : "Your whole balance backs this position (cross margin), so it can't be liquidated at any positive price."}">${p.liq ? fpx(p.liq) : "None"}</td>
+          <td class="${cls(p.funding)}">${sgnUsd(p.funding)}</td>
+          <td><span class="up">${tp}</span> / <span class="down">${sl}</span></td>
+          <td><span class="act"><button data-act="share-pos" data-coin="${esc(p.coin)}" title="Share this position as an image">Share</button><button data-act="tpsl" data-coin="${esc(p.coin)}">TP/SL</button><button data-act="half" data-coin="${esc(p.coin)}" title="Close half at market">50%</button><button data-act="close" data-coin="${esc(p.coin)}" title="Close all at market">Close</button></span></td></tr>`;
+      }).join("") + `</tbody></table>`;
+  } else if (S.tab === "orders") {
+    if (!a.orders.length) { v.innerHTML = `<div class="empty">No open orders. Limit orders and TP/SL triggers show up here.</div>`; return; }
+    bulk.hidden = false; bulk.textContent = "Cancel all"; bulk.dataset.act = "cancelall";
+    const label = {limit: "Limit", tp: "Take profit", sl: "Stop loss"};
+    v.innerHTML = `<table><thead><tr><th>Market</th><th>Type</th><th>Side</th><th>Size</th><th>Price</th><th>Options</th><th>Placed</th><th></th></tr></thead><tbody>` +
+      a.orders.map(o => `<tr><td>${coinBtn(o.coin)}</td><td>${label[o.type]}</td><td class="${o.side === "buy" ? "up" : "down"}">${o.side === "buy" ? "Buy" : "Sell"}</td>
+        <td>${o.sz == null ? "Whole position" : o.sz}</td><td>${o.type === "limit" ? fpx(o.px) : "Mark hits " + fpx(o.trigger_px)}</td>
+        <td>${[o.tif === "Alo" ? "Post only" : "", o.reduce_only ? "Reduce only" : ""].filter(Boolean).join(", ") || "–"}</td>
+        <td>${tstr(o.ts)}</td><td><span class="act"><button data-act="cancel" data-id="${o.id}">Cancel</button></span></td></tr>`).join("") + `</tbody></table>`;
+  } else if (S.tab === "trades") {
+    if (!a.trades.length) { v.innerHTML = `<div class="empty">No trades yet.</div>`; return; }
+    const kind = {market: "Market", limit: "Limit", close: "Close", tp: "Take profit", sl: "Stop loss", liquidation: "Liquidation"};
+    v.innerHTML = `<table><thead><tr><th>Time</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Value</th><th>Fee</th><th>Closed PnL</th><th>Type</th><th></th></tr></thead><tbody>` +
+      a.trades.map((t, i) => `<tr><td>${tstr(t.ts)}</td><td>${coinBtn(t.coin)}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td>
+        <td>${t.sz}</td><td>${fpx(t.px)}</td><td>${usd(t.sz * t.px)}</td><td>${usd(t.fee)}</td>
+        <td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || t.kind}</td>
+        <td>${Math.abs(t.realized) > 1e-9 ? `<span class="act"><button data-act="share-trade" data-i="${i}" title="Share this trade as an image">Share</button></span>` : ""}</td></tr>`).join("") + `</tbody></table>`;
+  } else if (S.tab === "funding") {
+    if (!a.funding.length) { v.innerHTML = `<div class="empty">No funding yet. It's settled on the hour for every open position.</div>`; return; }
+    v.innerHTML = `<table><thead><tr><th>Time</th><th>Market</th><th>Position</th><th>Rate</th><th>Payment</th></tr></thead><tbody>` +
+      a.funding.map(f => `<tr><td>${tstr(f.ts)}</td><td>${coinBtn(f.coin)}</td><td class="${f.size > 0 ? "up" : "down"}">${f.size > 0 ? "Long" : "Short"} ${Math.abs(f.size)}</td>
+        <td>${pct(f.rate, 4)}</td><td class="${cls(f.payment)}">${sgnUsd(f.payment)}</td></tr>`).join("") + `</tbody></table>`;
+  } else {
+    const s = a.stats;
+    v.innerHTML = `<div class="stats">
+      <div><span>Return</span><b class="${cls(s.return)}">${pct(s.return)}</b></div>
+      <div><span>Closed PnL</span><b class="${cls(s.realized)}">${sgnUsd(s.realized)}</b></div>
+      <div><span>Fees paid</span><b>${usd(s.fees)}</b></div>
+      <div><span>Funding</span><b class="${cls(s.funding)}">${sgnUsd(s.funding)}</b></div>
+      <div><span>Win rate</span><b>${s.win_rate == null ? "–" : (s.win_rate * 100).toFixed(0) + "%"}</b></div>
+      <div><span>Best trade</span><b class="${cls(s.best)}">${s.closing_trades ? sgnUsd(s.best) : "–"}</b></div>
+      <div><span>Worst trade</span><b class="${cls(s.worst)}">${s.closing_trades ? sgnUsd(s.worst) : "–"}</b></div>
+      <div><span>Volume traded</span><b>${usd(s.volume)}</b></div>
+    </div><canvas id="curve" aria-label="Equity over time"></canvas>`;
+    drawCurve();
+  }
+}
+function drawCurve(){
+  const cv = $("#curve"); if (!cv) return;
+  const pts = S.acct.curve, W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.font = "12px " + cssVar("--font");
+  if (pts.length < 2) { g.fillStyle = C.muted; g.fillText("Your equity curve appears here after a few minutes of trading.", 14, 20); return; }
+  const vals = pts.map(p => p[1]), lo = Math.min(...vals, S.acct.start), hi = Math.max(...vals, S.acct.start), r = hi - lo || 1;
+  const x = i => 14 + i / (pts.length - 1) * (W - 28), y = v => 10 + (hi - v) / r * (H - 20);
+  g.strokeStyle = C.line; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(14, y(S.acct.start)); g.lineTo(W - 14, y(S.acct.start)); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = C.accent; g.lineWidth = 1.6; g.beginPath();
+  vals.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v))); g.stroke();
+}
+
+// ---------- events ----------
+$("#mkList").addEventListener("click", e => {
+  const f = e.target.closest("[data-fav]");
+  if (f) { const n = f.dataset.fav; S.favs = S.favs.includes(n) ? S.favs.filter(x => x !== n) : S.favs.concat(n); store.set("favs", S.favs); renderMarkets(); return; }
+  const b = e.target.closest("[data-coin]"); if (b) selectCoin(b.dataset.coin);
+});
+$("#mkSearch").addEventListener("input", renderMarkets);
+$("#mkSort").addEventListener("change", renderMarkets);
+$("#coinBtn").addEventListener("click", () => { $("#markets").classList.add("open"); $("#mkSearch").focus(); });
+$("#mkClose").addEventListener("click", () => $("#markets").classList.remove("open"));
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#markets").classList.remove("open"); });
+$("#intervals").addEventListener("click", e => {
+  const b = e.target.closest("[data-i]"); if (!b) return;
+  S.interval = b.dataset.i; store.set("interval", S.interval);
+  document.querySelectorAll("#intervals [data-i]").forEach(x => x.classList.toggle("on", x === b));
+  loadCandles();
+});
+$("#resetView").addEventListener("click", resetView);
+document.querySelector(".book").addEventListener("click", e => {
+  const b = e.target.closest("[data-px]"); if (!b) return;
+  setType("limit"); $("#px").value = fpx(+b.dataset.px).replace(/,/g, ""); renderSummary(); $("#size").focus();
+});
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => setSide(b.dataset.side)));
+document.querySelectorAll("[data-type]").forEach(b => b.addEventListener("click", () => setType(b.dataset.type)));
+$("#midBtn").addEventListener("click", () => { const m = market(); if (m) { $("#px").value = fpx(m.mid || m.mark).replace(/,/g, ""); renderSummary(); } });
+$("#unitBtn").addEventListener("click", () => {
+  const n = notional();
+  S.unit = {margin: "usd", usd: "coin", coin: "margin"}[S.unit]; store.set("unit2", S.unit);
+  if (n > 0 && market()) $("#size").value = sizeFor(n);
+  renderSummary();
+});
+$("#chips").addEventListener("click", e => {
+  const b = e.target.closest("[data-pct]"); if (!b || !S.acct || !market()) return;
+  // Leave room for the fee (charged on the whole position) and, for market orders, the price impact of
+  // eating into the visible order book, which matters a lot at high leverage. Never more than the book shows.
+  const m = market(), lev = getLev(), fee = S.acct.fees ? S.acct.fees.taker : .00045;
+  const budget = Math.max(0, S.acct.available) * +b.dataset.pct;
+  let n = budget / (1 / lev + fee + .0005);
+  const levels = S.book && S.type === "market" ? (S.side === "buy" ? S.book.asks : S.book.bids) : null;
+  if (levels && levels.length && m) {
+    const depth = levels.reduce((s, [px, sz]) => s + px * sz, 0);
+    const impact = N => { let left = N, cost = 0;           // $ lost against the mark when filling N dollars
+      for (const [px, sz] of levels) { const take = Math.min(left, px * sz); cost += take * Math.abs(px / m.mark - 1); left -= take; if (left <= 0) break; }
+      return cost; };
+    const fits = N => N / lev + N * (fee + .0002) + impact(N) <= budget;
+    let lo = 0, hi = Math.min(n, depth * .98);
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+    n = lo;
+  }
+  $("#size").value = sizeFor(n);
+  renderSummary();
+});
+["#size", "#px", "#post"].forEach(s => $(s).addEventListener("input", renderSummary));
+$("#lev").addEventListener("input", () => { levExact = null; renderLev(); renderSummary(); });
+$("#levChips").addEventListener("click", e => {
+  const b = e.target.closest("[data-lev]"); if (!b) return;
+  setLevSlider(+b.dataset.lev); renderLev(); renderSummary(); $("#lev").dispatchEvent(new Event("change"));
+});
+$("#lev").addEventListener("change", async () => {
+  const m = market(), v = getLev();
+  if (locked()) return;
+  try { await act("/api/leverage", {coin: m.name, leverage: v}); m.lev = v; }
+  catch { syncLeverage(); renderSummary(); }
+});
+$("#tpslOn").addEventListener("change", () => { $("#tpslFields").hidden = !$("#tpslOn").checked; });
+$("#ticket").addEventListener("submit", submitOrder);
+
+document.querySelectorAll("#btabs [data-t]").forEach(b => b.addEventListener("click", () => {
+  S.tab = b.dataset.t; document.querySelectorAll("#btabs [data-t]").forEach(x => x.classList.toggle("on", x === b)); renderBottom();
+}));
+$("#bulkBtn").addEventListener("click", () => {
+  if ($("#bulkBtn").dataset.act === "closeall") act("/api/close", {coin: "all"}).then(r => r.messages.forEach(m => toast(m, "fill"))).catch(() => {});
+  else act("/api/cancel", {target: "all"}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
+});
+$("#bview").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const coin = b.dataset.coin;
+  if (b.dataset.act === "select") selectCoin(coin);
+  else if (b.dataset.act === "close" || b.dataset.act === "half")
+    act("/api/close", {coin, fraction: b.dataset.act === "half" ? .5 : 1}).then(r => r.messages.forEach(m => toast(m, "fill"))).catch(() => {});
+  else if (b.dataset.act === "cancel") act("/api/cancel", {target: b.dataset.id}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
+  else if (b.dataset.act === "tpsl") openTpsl(coin);
+  else if (b.dataset.act === "share-pos") sharePosition(coin);
+  else if (b.dataset.act === "share-trade") shareTrade(S.acct.trades[+b.dataset.i]);
+});
+function openTpsl(coin){
+  const p = S.acct.positions.find(x => x.coin === coin); if (!p) return;
+  $("#tpslTitle").textContent = `${coin} take profit / stop loss`;
+  $("#tpslSub").textContent = `${p.size > 0 ? "Long" : "Short"} ${Math.abs(p.size)} from ${fpx(p.entry)}. Mark is ${fpx(p.mark)}. Leave a box empty to remove it.`;
+  $("#dTp").value = p.tp[0] ? p.tp[0].trigger_px : ""; $("#dSl").value = p.sl[0] ? p.sl[0].trigger_px : "";
+  $("#tpslDlg").dataset.coin = coin; $("#tpslDlg").showModal();
+}
+$("#tpslDlg").addEventListener("close", () => {
+  if ($("#tpslDlg").returnValue !== "ok") return;
+  act("/api/tpsl", {coin: $("#tpslDlg").dataset.coin, tp: $("#dTp").value.trim(), sl: $("#dSl").value.trim()})
+    .then(r => r.messages.forEach(m => toast(m))).catch(() => {});
+});
+$("#resetBtn").addEventListener("click", () => {
+  if (locked()) { if (AUTH) openAuth(); return; }
+  $("#dBal").value = S.acct ? S.acct.start : 10000;
+  $("#resetBalField").hidden = SERVER_ACCOUNTS;
+  $("#resetText").textContent = SERVER_ACCOUNTS
+    ? "Closes everything, erases your history and puts your account back to $10,000. Your leaderboard position starts over. This can't be undone."
+    : "Closes everything and erases your history. This can't be undone.";
+  $("#resetDlg").showModal();
+});
+$("#resetDlg").addEventListener("close", () => {
+  if ($("#resetDlg").returnValue !== "ok") return;
+  act("/api/reset", {balance: num($("#dBal").value)}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
+});
+
+// ---------- accounts (driven by auth.js) ----------
+const ACCOUNT_KEY = "aureous.account";
+let AUTH = null;
+S.user = null; S.authPhase = null; S.saveStatus = "saved"; S.authMode = "signin";
+function renderSaveNote(){
+  const n = $("#saveNote"), a = S.acct; if (!a) return;
+  n.hidden = false;
+  let text, warn = false;
+  if (SERVER_ACCOUNTS) {
+    if (S.user && S.authPhase === "loading") text = "Loading your account…";
+    else if (S.user && S.authPhase === "error") { text = "Couldn't load your account. Refresh the page to try again."; warn = true; }
+    else if (S.user && S.syncError) { text = "Can't reach the Aureous server right now. Retrying…"; warn = true; }
+    else if (S.user) text = "Paper money only. Your account lives on the Aureous server, so stops, limits and funding keep running even with this page closed.";
+    else if (AUTH) text = "Sign in to trade. Everyone starts with $10,000 of paper money and competes on the leaderboard.";
+    else text = "Sign-in is unavailable right now, so trading is paused.";
+    n.textContent = text; n.classList.toggle("warn", warn); return;
+  }
+  if (S.user && S.authPhase === "loading") text = "Loading your account…";
+  else if (S.user && S.authPhase === "error") { text = "Couldn't load your account, so you're trading as a guest in this browser."; warn = true; }
+  else if (S.user && S.saveStatus === "error") { text = "Couldn't save to your account. Retrying…"; warn = true; }
+  else if (S.user) text = `Saved to your account${S.user.email ? " (" + S.user.email + ")" : ""}. Orders, stops and funding run while this page is open.`;
+  else if (a.saved === false) { text = "This browser isn't letting the page save, so your account resets when you close the tab."; warn = true; }
+  else if (AUTH) text = "Trading as a guest, saved in this browser. Sign in to keep your account on any device.";
+  else text = "Paper money only. Your account is saved in this browser, and orders, stops and funding run while this page is open.";
+  n.textContent = text; n.classList.toggle("warn", warn);
+}
+function renderUser(){
+  $("#who").hidden = !AUTH;
+  const u = S.user;
+  $("#signInBtn").hidden = !!u; $("#userBox").hidden = !u;
+  if (!u) { $("#userMenu").hidden = true; return; }
+  const label = u.name || (u.email ? u.email.split("@")[0] : "Account");
+  $("#userName").textContent = label;
+  $("#userEmail").textContent = u.email || label;
+  const av = $("#avatar"); av.textContent = label.charAt(0).toUpperCase();
+  if (u.photo) { const img = new Image(); img.alt = ""; img.referrerPolicy = "no-referrer"; img.onload = () => { av.textContent = ""; av.appendChild(img); }; img.src = u.photo; }
+}
+const PROVIDER_NAMES = {google: "Google", github: "GitHub", microsoft: "Microsoft"};
+function setAuthMode(mode){
+  S.authMode = mode;
+  const up = mode === "signup", reset = mode === "reset";
+  $("#authTitle").textContent = up ? "Create your Aureous account" : reset ? "Reset your password" : "Sign in to Aureous";
+  $("#authSub").textContent = reset ? "We'll email you a link to choose a new password."
+    : SERVER_ACCOUNTS ? "Get $10,000 of paper money, trade live Hyperliquid markets and climb the leaderboard." : "Keep your paper account and pick it up on any device.";
+  $("#authNameField").hidden = !up; $("#authPwField").hidden = reset;
+  $("#authPw").autocomplete = up ? "new-password" : "current-password";
+  $("#authSubmit").textContent = up ? "Create account" : reset ? "Send reset link" : "Sign in";
+  $("#authSwitch").textContent = up || reset ? "I already have an account" : "Create an account";
+  $("#authForgot").hidden = up || reset;
+  $("#authProviders").hidden = $("#authOr").hidden = reset || !AUTH.providers.some(p => p !== "email");
+  if (!AUTH.providers.includes("email")) $("#authOr").hidden = true;
+  authMsg("");
+}
+function authMsg(text, ok = false){ const m = $("#authMsg"); m.hidden = !text; m.textContent = text; m.classList.toggle("ok", ok); }
+function openAuth(){
+  const social = AUTH.providers.filter(p => p !== "email");
+  $("#authProviders").innerHTML = social.map(p => `<button type="button" data-provider="${p}">Continue with ${PROVIDER_NAMES[p] || p}</button>`).join("");
+  $("#authForm").hidden = !AUTH.providers.includes("email");
+  setAuthMode("signin");
+  $("#authDlg").showModal();
+}
+async function authBusy(fn){
+  const btns = document.querySelectorAll("#authDlg button"); btns.forEach(b => b.disabled = true);
+  try { await fn(); } catch (e) { authMsg(e.message); } finally { btns.forEach(b => b.disabled = false); }
+}
+$("#signInBtn").addEventListener("click", openAuth);
+$("#authClose").addEventListener("click", () => $("#authDlg").close());
+$("#authProviders").addEventListener("click", e => {
+  const b = e.target.closest("[data-provider]"); if (!b) return;
+  authBusy(async () => { if (await AUTH.signInWith(b.dataset.provider)) $("#authDlg").close(); });
+});
+$("#authSwitch").addEventListener("click", () => setAuthMode(S.authMode === "signin" ? "signup" : "signin"));
+$("#authForgot").addEventListener("click", () => setAuthMode("reset"));
+$("#authForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const email = $("#authEmail").value.trim(), pw = $("#authPw").value, name = $("#authName").value.trim();
+  if (!email) { authMsg("Enter your email."); return; }
+  authBusy(async () => {
+    if (S.authMode === "reset") { await AUTH.resetPassword(email); authMsg("Check your inbox for a reset link.", true); return; }
+    if (!pw) { authMsg("Enter your password."); return; }
+    if (S.authMode === "signup") await AUTH.signUpEmail(email, pw, name); else await AUTH.signInEmail(email, pw);
+    $("#authPw").value = ""; $("#authDlg").close();
+  });
+});
+$("#userBtn").addEventListener("click", e => {
+  e.stopPropagation(); const m = $("#userMenu"); m.hidden = !m.hidden; $("#userBtn").setAttribute("aria-expanded", String(!m.hidden));
+});
+document.addEventListener("click", e => { if (!e.target.closest("#userBox")) { $("#userMenu").hidden = true; $("#userBtn").setAttribute("aria-expanded", "false"); } });
+$("#signOutBtn").addEventListener("click", async () => {
+  $("#userMenu").hidden = true;
+  try { await AUTH.signOut(); toast(SERVER_ACCOUNTS ? "Signed out." : "Signed out. You're trading as a guest in this browser."); } catch (e) { toast(e.message, "error"); }
+});
+$("#deleteAcctBtn").addEventListener("click", () => {
+  $("#userMenu").hidden = true;
+  $("#delPwField").hidden = !(S.user && S.user.provider === "password"); $("#delPw").value = "";
+  $("#deleteDlg").showModal();
+});
+$("#deleteDlg").addEventListener("close", async () => {
+  if ($("#deleteDlg").returnValue !== "ok") return;
+  try { await AUTH.deleteAccount($("#delPw").value); $("#delPw").value = ""; toast("Your account and its data were deleted."); }
+  catch (e) { $("#delPw").value = ""; toast(e.message, "error"); }
+});
+async function reloadAccountView(){
+  S.lastEvent = null; S.linesKey = null;
+  await refreshMarkets().catch(() => {}); syncLeverage();
+  await refreshState().catch(() => {});
+}
+// leaderboard + name (server accounts)
+S.board = null; S.boardAt = 0;
+async function loadBoard(force){
+  if (!AUTH || !AUTH.leaderboard || (!force && Date.now() - S.boardAt < 20000)) return;
+  S.boardAt = Date.now();
+  try { S.board = await AUTH.leaderboard(); S.boardErr = null; } catch (e) { S.boardErr = e.message; }
+  if (S.tab === "board") renderBottom();
+}
+const TIERS = (window.Aureous && Aureous.TIERS) || [];
+const tierOf = id => TIERS.find(t => t.id === id);
+function badgeSvg(id, size = 16){
+  const t = tierOf(id); if (!t) return "";
+  return `<svg class="badge" width="${size}" height="${size}" viewBox="0 0 20 20" role="img" aria-label="${t.name} badge"><title>${t.name}: reached $${t.at.toLocaleString("en-US")}</title>` +
+    `<circle cx="10" cy="10" r="9.2" fill="${t.color}"/><circle cx="10" cy="10" r="6.8" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="1"/>` +
+    `<text x="10" y="13.6" text-anchor="middle" font-family="Cinzel,Georgia,serif" font-weight="600" font-size="9" fill="rgba(0,0,0,.62)">${t.letter}</text></svg>`;
+}
+const hasTier = (badges, id) => (badges || []).some(b => b.tier === id);
+const topIndex = id => TIERS.findIndex(t => t.id === id);
+function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; }
+function left(until){ const m = Math.max(0, Math.round((until - Date.now()) / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}d ${Math.floor(m % 1440 / 60)}h left` : m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m left` : `${m}m left`; }
+function clanTag(tag){ return tag ? `<button class="clan-tag" data-clan="${esc(tag)}" title="Open the clan ${esc(tag)}">[${esc(tag)}]</button>` : ""; }
+function traderName(r){
+  const gold = r.badge && topIndex(r.badge) >= topIndex("aureus");
+  return clanTag(r.clan) + `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span></button>` +
+    (r.bot ? `<span class="bot-tag" title="An Aureous bot trading a simple strategy on real prices. Can you beat it?">BOT</span>` : "") +
+    (r.spotlight_until ? `<span class="spot-tag" title="New milestone. Spotlight: ${left(r.spotlight_until)}">Spotlight</span>` : "");
+}
+S.boardView = "traders"; S.clans = null; S.clansAt = 0;
+const boardSwitch = () => `<div class="board-switch" role="tablist"><button data-view="traders" class="${S.boardView === "traders" ? "on" : ""}">Traders</button><button data-view="clans" class="${S.boardView === "clans" ? "on" : ""}">Clans</button></div>`;
+async function loadClans(force){
+  if (!AUTH || !AUTH.clans || (!force && Date.now() - S.clansAt < 20000)) return;
+  S.clansAt = Date.now();
+  try { S.clans = await AUTH.clans(); S.clansErr = null; } catch (e) { S.clansErr = e.message; }
+  if (S.tab === "board" && S.boardView === "clans") renderBottom();
+}
+function renderClans(){
+  const v = $("#bview"), c = S.clans, mine = S.acct && S.acct.profile && S.acct.profile.clan;
+  if (!c) { v.innerHTML = boardSwitch() + `<div class="empty">${S.clansErr ? esc("Couldn't load clans: " + S.clansErr) : "Loading clans…"}</div>`; return; }
+  const head = `<div class="board-head"><span>Clans are ranked by their members' average account value. A clan needs ${c.min_members} members to be ranked. Click a clan to see who's winning inside it.</span>` +
+    (mine ? `<span>Your clan: <button class="clan-tag" data-clan="${esc(mine.tag)}" style="padding:0">[${esc(mine.tag)}] ${esc(mine.name)}</button></span>` : S.user ? `<span><button class="btn sm" type="button" data-clan-new>Start or join a clan</button></span>` : `<span>Sign in to start a clan</span>`) + `</div>`;
+  if (!c.rows.length) { v.innerHTML = boardSwitch() + head + `<div class="empty">No clans yet. Start one and invite your friends.</div>`; return; }
+  const row = r => `<tr class="${mine && r.tag === mine.tag ? "me" : ""}"><td class="rank">${r.rank ? "#" + r.rank : "–"}</td>
+    <td style="text-align:left"><button class="trader-btn" data-clan="${esc(r.tag)}"><span class="clan-tag" style="padding-right:6px">[${esc(r.tag)}]</span><span class="tname">${esc(r.name)}</span></button></td>
+    <td>${r.members}</td><td>${usd(r.average)}</td><td class="${cls(r.return)}">${pct(r.return)}</td>
+    <td style="text-align:left">${r.top ? `<button class="trader-btn" data-pid="${esc(r.top.pid)}"><span class="tname">${esc(r.top.name)}</span></button> <span class="${cls(r.top.return)}">${pct(r.top.return)}</span>` : "–"}</td></tr>`;
+  v.innerHTML = boardSwitch() + head + `<table><thead><tr><th>Rank</th><th style="text-align:left">Clan</th><th>Members</th><th>Average value</th><th>Average return</th><th style="text-align:left">Top trader</th></tr></thead><tbody>${c.rows.map(row).join("")}</tbody></table>`;
+}
+function renderBoard(){
+  if (S.boardView === "clans") return renderClans();
+  const v = $("#bview"), b = S.board;
+  if (!b) { v.innerHTML = boardSwitch() + `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
+  const me = b.me;
+  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades. <span class="bot-tag" style="margin-left:0">BOT</span> accounts are Aureous bots trading simple strategies. Beat them.</span>` +
+    (me ? `<span>You're <b>#${me.rank}</b> of ${b.total}</span>` : S.user ? "" : `<span>Sign in to join</span>`) + `</div>`;
+  const ms = (b.milestones || []).slice(0, 6).map(m => { const t = tierOf(m.tier);
+    return `<span class="ms-chip">${badgeSvg(m.tier, 18)}<span><button data-pid="${esc(m.pid)}">${esc(m.name)}</button> reached ${t ? t.name : m.tier} ${ago(m.at)}</span></span>`; }).join("");
+  const strip = ms ? `<div class="milestones" aria-label="Recent milestones">${ms}</div>` : "";
+  if (!b.rows.length) { v.innerHTML = boardSwitch() + head + `<div class="empty">No traders yet. Be the first.</div>`; return; }
+  const row = r => `<tr class="${me && r.pid === me.pid ? "me" : ""}${r.spotlight_until ? " spot" : ""}"><td class="rank">#${r.rank}</td><td style="text-align:left">${traderName(r)}</td>
+    <td>${usd(r.equity)}</td><td class="${cls(r.return)}">${pct(r.return)}</td><td>${r.positions}</td></tr>`;
+  let rows = b.rows.map(row).join("");
+  if (me && me.rank > b.rows.length) rows += `<tr><td colspan="5" style="text-align:center;color:var(--faint)">…</td></tr>` + row(me);
+  v.innerHTML = boardSwitch() + head + strip + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+$("#bview").addEventListener("click", e => {
+  const sw = e.target.closest("[data-view]"); if (sw) { S.boardView = sw.dataset.view; renderBoard(); if (S.boardView === "clans") loadClans(true); else loadBoard(true); return; }
+  if (e.target.closest("[data-clan-new]")) { openClanNew(); return; }
+  const c = e.target.closest("[data-clan]"); if (c) { openClan(c.dataset.clan); return; }
+  const t = e.target.closest("[data-pid]"); if (t) openTrader(t.dataset.pid);
+});
+
+// ---------- share cards ----------
+const SITE_URL = (document.querySelector('meta[property="og:url"]') || {}).content || location.origin + location.pathname;
+const CARD = {bg: "#0B1018", panel: "#111823", line: "#222D3C", text: "#E6EBF1", muted: "#8592A3", faint: "#55627A", gold: "#E3B341"};
+function cardPalette(custom){                      // brighter small text over a photo or video
+  Object.assign(CARD, custom ? {line: "rgba(255,255,255,.32)", text: "#FFFFFF", muted: "#D3DAE4", faint: "#B9C3D0"}
+                             : {line: "#222D3C", text: "#E6EBF1", muted: "#8592A3", faint: "#55627A"});
+}
+const profileLink = pid => SITE_URL.replace(/#.*$/, "") + "#trader-" + pid;
+async function cardFonts(){
+  try { await Promise.all(['600 120px "IBM Plex Sans"', '500 30px "IBM Plex Sans"', '400 26px "IBM Plex Sans"', '600 34px "Cinzel"'].map(f => document.fonts.load(f))); } catch {}
+}
+// A card is two layers: the background (ours, or the trader's own image or video) and the text,
+// drawn once on a transparent canvas and laid over the background for every frame.
+function cardBg(g, W, H){
+  g.fillStyle = CARD.bg; g.fillRect(0, 0, W, H);
+  const grad = g.createRadialGradient(W * .85, -H * .2, 10, W * .85, -H * .2, W * .9);
+  grad.addColorStop(0, "rgba(227,179,65,.10)"); grad.addColorStop(1, "rgba(227,179,65,0)");
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  g.strokeStyle = "rgba(255,255,255,.035)"; g.lineWidth = 1;
+  for (let x = 0; x < W; x += 60) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
+  for (let y = 0; y < H; y += 60) { g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
+}
+function cardBase(g, W, H){
+  g.fillStyle = CARD.text; g.font = '600 34px "Cinzel", Georgia, serif'; g.textBaseline = "alphabetic";
+  if ("letterSpacing" in g) g.letterSpacing = "4px";
+  g.fillText("AUREOUS", 64, 92);
+  if ("letterSpacing" in g) g.letterSpacing = "0px";
+  g.fillStyle = CARD.muted; g.font = '400 22px "IBM Plex Sans", sans-serif'; g.textAlign = "right";
+  g.fillText("Paper trading on live Hyperliquid prices", W - 64, 90); g.textAlign = "left";
+}
+function cardCoin(g, x, y, r, tierId){
+  const t = tierOf(tierId); if (!t) return;
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = t.color; g.fill();
+  g.beginPath(); g.arc(x, y, r * .74, 0, Math.PI * 2); g.strokeStyle = "rgba(0,0,0,.28)"; g.lineWidth = Math.max(1, r / 9); g.stroke();
+  g.fillStyle = "rgba(0,0,0,.62)"; g.font = `600 ${Math.round(r)}px "Cinzel", Georgia, serif`; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(t.letter, x, y + r * .06); g.textAlign = "left"; g.textBaseline = "alphabetic";
+}
+function cardFooter(g, W, H, name, badges){
+  g.fillStyle = CARD.line; g.fillRect(64, H - 112, W - 128, 1);
+  let x = 64;
+  const top = (badges || []).map(b => b.tier).sort((a, b) => topIndex(a) - topIndex(b)).pop();
+  if (top) { cardCoin(g, x + 18, H - 62, 18, top); x += 50; }
+  g.fillStyle = top && topIndex(top) >= topIndex("aureus") ? CARD.gold : CARD.text; g.font = '500 28px "IBM Plex Sans", sans-serif';
+  g.fillText(name || "Aureous trader", x, H - 52);
+  g.fillStyle = CARD.muted; g.font = '400 24px "IBM Plex Sans", sans-serif'; g.textAlign = "right";
+  g.fillText(SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, ""), W - 64, H - 52); g.textAlign = "left";
+}
+function cardSparkline(g, x, y, w, h, closes, color){
+  if (!closes || closes.length < 2) return;
+  const lo = Math.min(...closes), hi = Math.max(...closes), r = hi - lo || 1;
+  const px = i => x + i / (closes.length - 1) * w, py = v => y + h - (v - lo) / r * h;
+  g.beginPath(); closes.forEach((v, i) => i ? g.lineTo(px(i), py(v)) : g.moveTo(px(i), py(v)));
+  g.strokeStyle = color; g.lineWidth = 3; g.globalAlpha = .9; g.stroke();
+  g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.closePath();
+  const fill = g.createLinearGradient(0, y, 0, y + h); fill.addColorStop(0, color + "33"); fill.addColorStop(1, color + "00");
+  g.fillStyle = fill; g.globalAlpha = 1; g.fill();
+}
+const CARD_UP = () => "#2FA57D", CARD_DOWN = () => "#DB5A55";
+function pctBig(x){ return (x > 0 ? "+" : "") + (x * 100).toFixed(Math.abs(x) >= 10 ? 0 : 2) + "%"; }
+async function drawTradeCard(d){
+  await cardFonts();
+  const W = 1200, H = 675, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); cardBase(g, W, H);
+  const up = d.pnl >= 0, col = up ? CARD_UP() : CARD_DOWN(), long = d.size > 0;
+  // market + side
+  const coinName = cname(d.coin);
+  g.fillStyle = CARD.text; g.font = '600 46px "IBM Plex Sans", sans-serif'; g.fillText(coinName, 64, 186);
+  const cw = g.measureText(coinName).width, chip = `${long ? "LONG" : "SHORT"} ${d.lev}x`;
+  g.font = '600 22px "IBM Plex Sans", sans-serif'; const tw = g.measureText(chip).width;
+  g.fillStyle = long ? "rgba(47,165,125,.16)" : "rgba(219,90,85,.16)"; g.beginPath(); g.roundRect(64 + cw + 20, 154, tw + 28, 40, 6); g.fill();
+  g.fillStyle = long ? CARD_UP() : CARD_DOWN(); g.fillText(chip, 64 + cw + 34, 182);
+  g.fillStyle = CARD.muted; g.font = '400 22px "IBM Plex Sans", sans-serif'; g.fillText(d.closed ? "Closed trade" : "Open position", 64, 226);
+  // big return
+  let fs = 150; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`;
+  while (g.measureText(pctBig(d.roe)).width > 630 && fs > 70) { fs -= 6; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`; }
+  g.fillStyle = col; g.fillText(pctBig(d.roe), 56, 382);
+  g.font = '500 40px "IBM Plex Sans", sans-serif'; g.fillText(`${up ? "+" : "-"}$${Math.abs(d.pnl).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 64, 440);
+  // stats
+  const stats = [["Entry", fpx(d.entry)], [d.closed ? "Exit" : "Mark", fpx(d.exit)], ["Size", "$" + Math.round(d.value).toLocaleString("en-US")]];
+  stats.forEach(([k, v], i) => { const x = 64 + i * 210;
+    g.fillStyle = CARD.faint; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.fillText(k, x, 498);
+    g.fillStyle = CARD.text; g.font = '500 30px "IBM Plex Sans", sans-serif'; g.fillText(v, x, 536); });
+  cardSparkline(g, 720, 150, 416, 330, d.closes, col);
+  g.fillStyle = CARD.faint; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.textAlign = "right";
+  g.fillText(new Date(d.ts || Date.now()).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"}), W - 64, 536); g.textAlign = "left";
+  cardFooter(g, W, H, d.name, d.badges);
+  return cv;
+}
+async function drawProfileCard(d){
+  await cardFonts();
+  const W = 1200, H = 675, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); cardBase(g, W, H);
+  const up = d.return >= 0, col = up ? CARD_UP() : CARD_DOWN();
+  g.fillStyle = CARD.muted; g.font = '400 24px "IBM Plex Sans", sans-serif';
+  g.fillText(d.rank ? `#${d.rank} of ${d.total} on the leaderboard` : "On the Aureous leaderboard", 64, 186);
+  let fs = 110; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`;
+  const big$ = "$" + Math.round(d.equity).toLocaleString("en-US");
+  while (g.measureText(big$).width > 660 && fs > 60) { fs -= 6; g.font = `600 ${fs}px "IBM Plex Sans", sans-serif`; }
+  g.fillStyle = CARD.text; g.fillText(big$, 56, 316);
+  g.fillStyle = col; g.font = '600 52px "IBM Plex Sans", sans-serif'; g.fillText(pctBig(d.return), 64, 386);
+  const rw = g.measureText(pctBig(d.return)).width;
+  g.fillStyle = CARD.muted; g.font = '400 24px "IBM Plex Sans", sans-serif'; g.fillText("from a $10,000 start", 64 + rw + 20, 384);
+  const st = d.stats || {}, stats = [["Best value", "$" + Math.round(d.peak).toLocaleString("en-US")], ["Win rate", st.win_rate == null ? "–" : Math.round(st.win_rate * 100) + "%"], ["Trades", String(st.trades || 0)]];
+  stats.forEach(([k, v], i) => { const x = 64 + i * 230;
+    g.fillStyle = CARD.faint; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.fillText(k, x, 470);
+    g.fillStyle = CARD.text; g.font = '500 30px "IBM Plex Sans", sans-serif'; g.fillText(v, x, 508); });
+  // badge ladder
+  TIERS.forEach((t, i) => { const got = (d.badges || []).some(b => b.tier === t.id), x = 820 + i * 66;
+    g.globalAlpha = got ? 1 : .18; cardCoin(g, x, 300, 26, t.id); g.globalAlpha = 1; });
+  const earned = (d.badges || []).length;
+  g.fillStyle = CARD.muted; g.font = '400 20px "IBM Plex Sans", sans-serif'; g.textAlign = "center";
+  g.fillText(earned ? `${earned} of ${TIERS.length} badges` : "No badges yet", 820 + 2 * 66, 360); g.textAlign = "left";
+  cardSparkline(g, 760, 400, 376, 110, (d.curve || []).map(p => p[1]), col);
+  cardFooter(g, W, H, d.name, d.badges);
+  return cv;
+}
+// ---- your own background (image or video). It stays on this device: kept in the browser's
+// storage so it's there next time, never uploaded anywhere.
+const BG = {media: null, kind: null, url: null, dim: store.get("cardDim", 55), sound: store.get("cardSound", true), loaded: false,
+            zoom: store.get("cardZoom", 0), pan: store.get("cardPan", [0, 0])};   // zoom 0 = whole picture, 100 = fills the card
+const blurCv = document.createElement("canvas"); blurCv.width = 64; blurCv.height = 36;
+// where the picture sits on the 1200x675 card for the current zoom and drag position
+function bgPlace(sw, sh, W = 1200, H = 675){
+  const fit = Math.min(W / sw, H / sh), fill = Math.max(W / sw, H / sh);
+  const k = fit * Math.pow(fill / fit, BG.zoom / 100), dw = sw * k, dh = sh * k;
+  const x = (W - dw) / 2 + (dw > W ? BG.pan[0] * (dw - W) / 2 : 0), y = (H - dh) / 2 + (dh > H ? BG.pan[1] * (dh - H) / 2 : 0);
+  return {x, y, dw, dh};
+}
+// The video's sound goes through Web Audio: one branch to the speakers (the preview, switchable)
+// and one into the recording, so the downloaded video keeps its sound.
+const AUD = {ctx: null, el: null, src: null, out: null, dest: null};
+function audioFor(v){
+  try {
+    if (!AUD.ctx) AUD.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (AUD.el !== v) {
+      AUD.src = AUD.ctx.createMediaElementSource(v);
+      AUD.out = AUD.ctx.createGain(); AUD.dest = AUD.ctx.createMediaStreamDestination();
+      AUD.src.connect(AUD.out); AUD.out.connect(AUD.ctx.destination); AUD.src.connect(AUD.dest);
+      AUD.el = v;
+    }
+    return AUD;
+  } catch { return null; }
+}
+async function videoSound(on){                     // call from a click so the browser lets sound play
+  const v = BG.media; if (!v || BG.kind !== "video") return false;
+  const a = on ? audioFor(v) : AUD.el === v ? AUD : null;
+  if (a) { try { await a.ctx.resume(); } catch {} a.out.gain.value = on ? 1 : 0; }
+  v.muted = !on || !a;
+  try { await v.play(); return !v.muted; }
+  catch { v.muted = true; v.play().catch(() => {}); return false; }
+}
+const BG_MAX = {image: 30e6, video: 300e6}, BG_KEEP = 100e6, VIDEO_MAX_S = 15;
+const bgDB = {
+  open(){ return new Promise((res, rej) => { const r = indexedDB.open("aureous", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async run(mode, fn){ const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction("kv", mode), q = fn(tx.objectStore("kv")); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); }); },
+  get(){ return this.run("readonly", st => st.get("cardBg")).catch(() => null); },
+  set(v){ return this.run("readwrite", st => st.put(v, "cardBg")).catch(() => {}); },
+  clear(){ return this.run("readwrite", st => st.delete("cardBg")).catch(() => {}); },
+};
+async function setBg(blob, kind){
+  if (BG.media && BG.kind === "video") BG.media.pause();
+  if (BG.url) URL.revokeObjectURL(BG.url);
+  BG.media = null; BG.kind = null; BG.url = null;
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  if (kind === "image") {
+    const img = new Image(); img.src = url;
+    await img.decode();
+    BG.media = img;
+  } else {
+    const v = document.createElement("video");
+    v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error("unsupported")); setTimeout(() => rej(new Error("timeout")), 15000); });
+    v.play().catch(() => {});
+    BG.media = v;
+  }
+  BG.kind = kind; BG.url = url;
+}
+async function loadSavedBg(){
+  if (BG.loaded) return; BG.loaded = true;
+  const saved = await bgDB.get();
+  if (saved && saved.blob) { try { await setBg(saved.blob, saved.kind); } catch { bgDB.clear(); } }
+}
+function composeCard(g, fg){
+  const W = 1200, H = 675, m = BG.media;
+  g.save();
+  if (m && (BG.kind === "image" || m.readyState >= 2)) {
+    const sw = BG.kind === "video" ? m.videoWidth : m.naturalWidth, sh = BG.kind === "video" ? m.videoHeight : m.naturalHeight;
+    const {x, y, dw, dh} = bgPlace(sw, sh);
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    if (dw < W - 1 || dh < H - 1) {               // fill the edges with a soft, dark blur of the same picture
+      const k2 = Math.max(64 / sw, 36 / sh), b = blurCv.getContext("2d");
+      b.drawImage(m, (64 - sw * k2) / 2, (36 - sh * k2) / 2, sw * k2, sh * k2);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+      g.drawImage(blurCv, -40, -24, W + 80, H + 48);
+      g.fillStyle = "rgba(8,11,17,.45)"; g.fillRect(0, 0, W, H);
+    }
+    g.drawImage(m, x, y, dw, dh);
+    const d = BG.dim / 100;                        // darken overall, more on the left where the numbers are
+    g.fillStyle = `rgba(8,11,17,${(d * .6).toFixed(3)})`; g.fillRect(0, 0, W, H);
+    const lg = g.createLinearGradient(0, 0, W * .75, 0); lg.addColorStop(0, `rgba(8,11,17,${(d * .6).toFixed(3)})`); lg.addColorStop(1, "rgba(8,11,17,0)");
+    g.fillStyle = lg; g.fillRect(0, 0, W, H);
+    const bg2 = g.createLinearGradient(0, H - 170, 0, H); bg2.addColorStop(0, "rgba(8,11,17,0)"); bg2.addColorStop(1, `rgba(8,11,17,${(d * .7).toFixed(3)})`);
+    g.fillStyle = bg2; g.fillRect(0, H - 170, W, 170);
+    g.shadowColor = "rgba(0,0,0,.6)"; g.shadowBlur = 14;    // keeps text readable on busy pictures
+  } else cardBg(g, W, H);
+  g.drawImage(fg, 0, 0);
+  g.restore();
+}
+S.share = null;
+function renderShareBg(){
+  const custom = !!BG.media, video = BG.kind === "video";
+  $("#shBgPick").textContent = custom ? "Change image or video…" : "Use my image or video…";
+  $("#shBgClear").hidden = !custom; $("#shDimWrap").hidden = !custom; $("#shDim").value = BG.dim;
+  $("#shZoomWrap").hidden = !custom; $("#shZoom").value = BG.zoom; $("#shareCv").classList.toggle("movable", custom);
+  $("#shareCv").title = custom ? "Drag to move the picture" : "";
+  $("#shVideo").hidden = !video; $("#shSound").hidden = !video;
+  $("#shSound").textContent = BG.sound ? "Sound on" : "Sound off"; $("#shSound").setAttribute("aria-pressed", String(BG.sound));
+  $("#shDownload").textContent = video ? "Download still" : "Download image";
+  $("#shDownload").classList.toggle("primary", !video);
+  $("#shNote").textContent = video ? `The video is up to ${VIDEO_MAX_S} seconds long${BG.sound ? ", with its sound" : ", without sound"}. Attach the downloaded file to your post on X.` : "On X, attach the downloaded or copied image to your post.";
+}
+async function refreshShareImage(){                // the PNG used by Download, Copy and Share
+  if (!S.share) return;
+  const cv = document.createElement("canvas"); cv.width = 1200; cv.height = 675;
+  composeCard(cv.getContext("2d"), S.share.fg);
+  const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+  if (S.share.url) URL.revokeObjectURL(S.share.url);
+  S.share.blob = blob; S.share.file = new File([blob], "aureous.png", {type: "image/png"}); S.share.url = URL.createObjectURL(blob);
+}
+let previewRaf = 0;
+function drawSharePreview(){
+  cancelAnimationFrame(previewRaf);
+  if (!S.share || !$("#shareDlg").open) return;
+  composeCard($("#shareCv").getContext("2d"), S.share.fg);
+  if (BG.kind === "video") previewRaf = requestAnimationFrame(drawSharePreview);
+}
+async function openShare(title, draw, text, link){
+  await loadSavedBg();
+  cardPalette(!!BG.media);
+  S.share = {draw, fg: await draw(), text, link, blob: null, file: null, url: null, video: null};
+  $("#shTitle").textContent = title; $("#shareCv").setAttribute("aria-label", text);
+  $("#shCopyImg").hidden = !(navigator.clipboard && window.ClipboardItem);
+  renderShareBg();
+  $("#shareDlg").showModal();
+  if (BG.kind === "video") videoSound(BG.sound);
+  drawSharePreview();
+  await refreshShareImage();
+  $("#shNative").hidden = !(navigator.canShare && navigator.canShare({files: [S.share.file]}));
+}
+async function bgChanged(){
+  cardPalette(!!BG.media); S.share.fg = await S.share.draw();
+  S.share.video = null; renderShareBg(); drawSharePreview(); await refreshShareImage();
+}
+$("#shBgPick").addEventListener("click", () => $("#shBgFile").click());
+$("#shBgFile").addEventListener("change", async () => {
+  const f = $("#shBgFile").files[0]; $("#shBgFile").value = "";
+  if (!f) return;
+  const kind = f.type.startsWith("video/") ? "video" : f.type.startsWith("image/") ? "image" : null;
+  if (!kind) { toast("Choose an image or a video file.", "error"); return; }
+  if (f.size > BG_MAX[kind]) { toast(`That ${kind} is too big (over ${BG_MAX[kind] / 1e6} MB).`, "error"); return; }
+  try { await setBg(f, kind); }
+  catch { toast(kind === "video" ? "Your browser can't play that video. Try an MP4." : "Couldn't open that image.", "error"); await setBg(null); }
+  BG.pan = [0, 0]; store.set("cardPan", BG.pan);
+  if (BG.kind === "video") videoSound(BG.sound);
+  if (BG.media) {
+    if (f.size <= BG_KEEP) bgDB.set({blob: f, kind, name: f.name});
+    else { bgDB.clear(); toast("Using it for now. It's too big to keep for next time."); }
+  }
+  await bgChanged();
+});
+$("#shSound").addEventListener("click", async () => {
+  BG.sound = !BG.sound; store.set("cardSound", BG.sound); S.share.video = null;
+  const playing = await videoSound(BG.sound);
+  if (BG.sound && !playing) toast("Your browser blocked the sound in the preview. It will still be in the downloaded video.");
+  renderShareBg();
+});
+$("#shBgClear").addEventListener("click", async () => { await setBg(null); bgDB.clear(); await bgChanged(); });
+$("#shDim").addEventListener("input", () => { BG.dim = +$("#shDim").value; store.set("cardDim", BG.dim); if (BG.kind !== "video") drawSharePreview(); });
+$("#shDim").addEventListener("change", () => { S.share.video = null; refreshShareImage(); });
+$("#shZoom").addEventListener("input", () => { BG.zoom = +$("#shZoom").value; store.set("cardZoom", BG.zoom); if (BG.kind !== "video") drawSharePreview(); });
+$("#shZoom").addEventListener("change", () => { S.share.video = null; refreshShareImage(); });
+// drag the picture to choose which part shows
+(() => {
+  const cv = $("#shareCv"); let drag = null;
+  cv.addEventListener("pointerdown", e => {
+    if (!BG.media) return;
+    const m = BG.media, sw = BG.kind === "video" ? m.videoWidth : m.naturalWidth, sh = BG.kind === "video" ? m.videoHeight : m.naturalHeight;
+    drag = {x: e.clientX, y: e.clientY, pan: BG.pan.slice(), sw, sh, scale: 1200 / cv.getBoundingClientRect().width};
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const {dw, dh} = bgPlace(drag.sw, drag.sh), clamp = v => Math.max(-1, Math.min(1, v));
+    BG.pan = [dw > 1200 ? clamp(drag.pan[0] + 2 * (e.clientX - drag.x) * drag.scale / (dw - 1200)) : 0,
+              dh > 675 ? clamp(drag.pan[1] + 2 * (e.clientY - drag.y) * drag.scale / (dh - 675)) : 0];
+    if (BG.kind !== "video") drawSharePreview();
+  });
+  const end = () => { if (!drag) return; drag = null; store.set("cardPan", BG.pan); S.share.video = null; refreshShareImage(); };
+  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+})();
+$("#shareDlg").addEventListener("close", () => { if (BG.kind === "video" && !S.recording) BG.media.pause(); });
+
+// ---- video: play the background from the start and record the card over it
+// Formats to try, best first. X wants H.264 video with AAC sound in an MP4. Browsers can claim
+// support for a format and still fail to record it (AAC needs an encoder from the computer), so each
+// attempt is checked within a few seconds and the next format is tried if nothing comes out.
+const supported = t => { try { return MediaRecorder.isTypeSupported(t); } catch { return false; } };
+function videoAttempts(sound){
+  if (!window.MediaRecorder) return [];
+  const pick = list => list.find(supported);
+  const aac = pick(["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1.4D401F,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2"]);
+  const opus = pick(["video/mp4;codecs=avc1.42E01E,opus", "video/mp4;codecs=avc1,opus"]);
+  const mp4 = pick(["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1.4D401F", "video/mp4;codecs=avc1"]);
+  const webmSound = pick(["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]);
+  const webm = pick(["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]);
+  const out = [];
+  if (sound) { if (aac) out.push([aac, true]); if (opus) out.push([opus, true]); if (!mp4 && webmSound) out.push([webmSound, true]); }
+  if (mp4) out.push([mp4, false]); else if (webm) out.push([webm, false]);
+  return out;
+}
+class NoVideoData extends Error {}
+async function recordCardVideo(){
+  const v = BG.media, btn = $("#shVideo");
+  const a = BG.sound ? audioFor(v) : null;
+  if (a) { a.ctx.resume().catch(() => {}); a.out.gain.value = 1; }     // still inside the click, so sound is allowed
+  const bad = store.get("videoBad", []);
+  const attempts = videoAttempts(!!a).filter(([t]) => !bad.includes(t));
+  if (!attempts.length) throw new Error("Your browser can't make videos. Try Chrome, Edge or Safari.");
+  let lastErr = null;
+  for (let i = 0; i < attempts.length; i++) {
+    const [type, withSound] = attempts[i];
+    if (i) btn.textContent = "Trying another format…";
+    try {
+      const r = await recordOnce(type, withSound ? a : null);
+      r.noSound = !!a && !withSound;
+      return r;
+    } catch (e) {
+      if (!(e instanceof NoVideoData)) throw e;
+      lastErr = e; console.warn("card video: no data from", type, e.message);
+      store.set("videoBad", [...new Set([...store.get("videoBad", []), type])].slice(-8));   // skip it next time
+    }
+  }
+  throw new Error("Your browser couldn't make the video. Try again with this tab in front, or use Download still.");
+}
+async function recordOnce(type, a){
+  const v = BG.media, btn = $("#shVideo");
+  const cv = document.createElement("canvas"); cv.width = 1280; cv.height = 720;     // 16:9 with even sides, as video needs
+  const g = cv.getContext("2d"), canvasStream = cv.captureStream(30);
+  g.scale(1280 / 1200, 720 / 675);
+  if (a) { try { await a.ctx.resume(); } catch {} }
+  v.muted = !a;
+  const stream = new MediaStream([...canvasStream.getVideoTracks(), ...(a ? a.dest.stream.getAudioTracks() : [])]);
+  let rec;
+  try { rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: 8e6, ...(a ? {audioBitsPerSecond: 160000} : {})}); }
+  catch (e) { canvasStream.getTracks().forEach(t => t.stop()); throw new NoVideoData(e.message); }
+  const chunks = []; let recError = null;
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onerror = e => { recError = (e && e.error && e.error.message) || "recording error"; };
+  const secs = Math.min(isFinite(v.duration) && v.duration > 0 ? v.duration : VIDEO_MAX_S, VIDEO_MAX_S);
+  S.recording = true; v.loop = false; v.pause(); v.currentTime = 0;
+  await new Promise(r => { v.onseeked = r; setTimeout(r, 1500); });
+  composeCard(g, S.share.fg);
+  const cleanup = () => { canvasStream.getTracks().forEach(t => t.stop()); S.recording = false; v.loop = true; v.muted = !(BG.sound && AUD.el === v); v.play().catch(() => {}); drawSharePreview(); };
+  const stopRec = () => new Promise(r => {          // wait for the recorder, but never forever
+    let over = false; const end = () => { if (!over) { over = true; r(); } };
+    rec.onstop = end;
+    try { if (rec.state === "recording") rec.requestData(); } catch {}
+    try { if (rec.state !== "inactive") rec.stop(); else end(); } catch { end(); }
+    setTimeout(end, 5000);
+  });
+  try { rec.start(250); } catch (e) { cleanup(); throw new NoVideoData(e.message); }
+  v.play().catch(() => {});
+  const t0 = performance.now();
+  // Draw on every animation frame, with a timer as backup: browsers pause animation frames when the
+  // tab is hidden or the window is covered. The recording ends on a clock, never on drawing.
+  const ok = await new Promise(done => {
+    let finished = false, last = 0;
+    const draw = () => {
+      if (finished) return;
+      last = performance.now();
+      const el = (last - t0) / 1000;
+      composeCard(g, S.share.fg);
+      btn.textContent = `Recording… ${Math.min(Math.ceil(el), Math.ceil(secs))} / ${Math.ceil(secs)}s`;
+    };
+    const frame = () => { draw(); if (!finished) requestAnimationFrame(frame); };
+    const backup = setInterval(() => { if (performance.now() - last > 120) draw(); }, 100);
+    const finish = result => { if (finished) return; finished = true; clearInterval(backup); clearTimeout(timer); clearTimeout(probe); clearTimeout(probeCheck); v.onended = null; done(result); };
+    const timer = setTimeout(() => finish(true), secs * 1000 + 50);
+    // After ~1.5 s ask the recorder for what it has so far; if a second later there's still nothing
+    // (or an error), this format doesn't work in this browser and the next one is tried.
+    const probe = setTimeout(() => {
+      try { if (rec.state === "recording") rec.requestData(); } catch {}
+      probeCheck = setTimeout(() => { if (!chunks.length || recError) finish(false); }, 1200);
+    }, Math.min(1500, Math.max(300, secs * 1000 - 1500)));
+    let probeCheck = null;
+    v.onended = () => finish(true);
+    requestAnimationFrame(frame);
+  });
+  btn.textContent = ok ? "Saving video…" : "Trying another format…";
+  await stopRec();
+  cleanup();
+  if (!ok || !chunks.length || (recError && !chunks.length)) throw new NoVideoData(recError || "no data");
+  const mime = type.split(";")[0], ext = mime === "video/mp4" ? "mp4" : "webm";
+  const blob = new Blob(chunks, {type: mime});
+  return {blob, ext, opusInMp4: ext === "mp4" && /opus/.test(type), file: new File([blob], "aureous." + ext, {type: mime}), url: URL.createObjectURL(blob)};
+}
+function saveFile(url, name){ const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+$("#shVideo").addEventListener("click", async () => {
+  const btn = $("#shVideo");
+  if (S.share.video) { saveFile(S.share.video.url, "aureous." + S.share.video.ext); return; }
+  btn.disabled = true;
+  try {
+    S.share.video = await recordCardVideo();
+    btn.textContent = "Download video";
+    saveFile(S.share.video.url, "aureous." + S.share.video.ext);
+    toast("Video ready. If it didn't download, press Download video again.");
+    if (S.share.video.noSound) toast("Your browser couldn't record the sound, so this video is silent. The picture is fine.");
+    else if (S.share.video.ext === "webm") toast("Saved as WebM, which X doesn't accept. Chrome, Edge or Safari save MP4.", "error");
+    else if (S.share.video.opusInMp4) toast("Your browser saved the sound in a format X may refuse. If the upload fails, turn Sound off and download again.");
+    if (navigator.canShare && navigator.canShare({files: [S.share.video.file]})) $("#shNative").hidden = false;
+  } catch (e) { S.recording = false; if (BG.media) { BG.media.loop = true; BG.media.play().catch(() => {}); } toast(e.message, "error"); }
+  finally { btn.disabled = false; if (/Recording|Saving/.test(btn.textContent)) btn.textContent = "Download video"; }
+});
+function myName(){ return (S.acct && S.acct.profile && S.acct.profile.name) || (S.user && S.user.name) || "Aureous trader"; }
+function myBadges(){ return (S.acct && S.acct.profile && S.acct.profile.badges) || []; }
+function closesFor(coin){ return coin === S.coin && S.candles.length ? S.candles.slice(-80).map(k => k[4]) : null; }
+async function sharePosition(coin){
+  const p = S.acct.positions.find(x => x.coin === coin); if (!p) return;
+  const card = {coin, size: p.size, lev: p.lev, entry: p.entry, exit: p.mark, pnl: p.upnl, roe: p.roe, value: p.value,
+    closes: closesFor(coin), name: myName(), badges: myBadges(), ts: Date.now()};
+  const dir = p.size > 0 ? "long" : "short";
+  const text = `${p.upnl >= 0 ? "Up" : "Down"} ${pct(Math.abs(p.roe), 1).replace("+", "")} on a ${p.lev}x ${cname(coin)} ${dir}, paper trading live Hyperliquid prices on Aureous.`;
+  openShare(`Share your ${cname(coin)} ${dir}`, () => drawTradeCard(card), text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
+}
+async function shareTrade(t){
+  if (!t) return;
+  // the closing fill tells us the exit; the realised PnL gives the entry
+  const wasLong = t.side === "sell", entry = wasLong ? t.px - t.realized / t.sz : t.px + t.realized / t.sz;
+  const lev = t.lev || 1, value = t.sz * entry, roe = t.realized / (value / lev);
+  const card = {coin: t.coin, size: wasLong ? t.sz : -t.sz, lev, entry, exit: t.px, pnl: t.realized, roe, value,
+    closes: closesFor(t.coin), name: myName(), badges: myBadges(), ts: t.ts, closed: true};
+  const text = `Closed a ${lev}x ${cname(t.coin)} ${wasLong ? "long" : "short"} ${t.realized >= 0 ? "up" : "down"} ${pct(Math.abs(roe), 1).replace("+", "")}, paper trading live Hyperliquid prices on Aureous.`;
+  openShare(`Share your ${cname(t.coin)} trade`, () => drawTradeCard(card), text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
+}
+async function shareProfile(d){
+  const text = d.self ? `My Aureous account: ${usd(d.equity).replace(".00", "")} (${pct(d.return, 1)}) from a $10,000 start. Paper trading live Hyperliquid prices.`
+                      : `${d.name} is at ${usd(d.equity).replace(".00", "")} (${pct(d.return, 1)}) on Aureous, paper trading live Hyperliquid prices.`;
+  openShare(d.self ? "Share your profile" : `Share ${d.name}'s profile`, () => drawProfileCard(d), text, profileLink(d.pid));
+}
+async function copyText(t, msg){ try { await navigator.clipboard.writeText(t); toast(msg); } catch { prompt("Copy this link:", t); } }
+$("#shClose").addEventListener("click", () => $("#shareDlg").close());
+$("#shDownload").addEventListener("click", async () => { if (BG.kind === "video") await refreshShareImage(); if (S.share.url) saveFile(S.share.url, "aureous.png"); });
+$("#shCopyImg").addEventListener("click", async () => {
+  try { await navigator.clipboard.write([new ClipboardItem({"image/png": BG.kind === "video" ? refreshShareImage().then(() => S.share.blob) : S.share.blob})]); toast("Image copied. Paste it into your post."); }
+  catch { toast("Your browser didn't allow copying the image. Use Download instead.", "error"); }
+});
+$("#shNative").addEventListener("click", async () => { try { await navigator.share({files: [S.share.video ? S.share.video.file : S.share.file], text: S.share.text + " " + S.share.link}); } catch {} });
+$("#shX").addEventListener("click", () => window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(S.share.text)}&url=${encodeURIComponent(S.share.link)}`, "_blank", "noopener"));
+$("#shCopyLink").addEventListener("click", () => copyText(S.share.link, "Link copied."));
+
+// ---------- trader profiles ----------
+S.trader = null;
+async function openTrader(pid){
+  if (!AUTH || !AUTH.trader) return;
+  S.trader = {pid, data: null};
+  $("#trName").textContent = "Trader"; $("#trSub").textContent = ""; $("#trActions").hidden = true; $("#trBody").innerHTML = `<div class="empty">Loading…</div>`;
+  if (location.hash !== "#trader-" + pid) history.replaceState(null, "", "#trader-" + pid);
+  if (!$("#traderDlg").open) $("#traderDlg").showModal();
+  try { const d = await AUTH.trader(pid); if (S.trader && S.trader.pid === pid) { S.trader.data = d; renderTrader(); } }
+  catch (e) { $("#trBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderTrader(){
+  const d = S.trader && S.trader.data; if (!d) return;
+  const top = (d.badges || []).map(b => b.tier).sort((a, b) => topIndex(a) - topIndex(b)).pop();
+  $("#trName").innerHTML = `${top ? badgeSvg(top, 22) : ""}<span class="tname${top && topIndex(top) >= topIndex("aureus") ? " gold" : ""}">${esc(d.name)}</span>` +
+    (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.bot ? `<span class="bot-tag">BOT</span>` : "") + (d.clan ? ` <button class="clan-tag" data-clan="${esc(d.clan.tag)}" title="${esc(d.clan.name)}" style="font-size:15px">[${esc(d.clan.tag)}] ${esc(d.clan.name)}</button>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
+  $("#trSub").textContent = d.bot ? `${d.rank ? `#${d.rank} of ${d.total}. ` : ""}Aureous bot. ${d.strategy || ""}` : `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
+  $("#trActions").hidden = false;
+  // live values from this page's prices where we have them
+  const mk = c => S.mk[c] ? S.mk[c].mark : null;
+  const pos = (d.positions || []).map(p => { const m = mk(p.coin) ?? p.mark; return {...p, mark: m, upnl: p.size * (m - p.entry), value: Math.abs(p.size) * m}; });
+  const st = d.stats || {}, wr = st.win_rate == null ? "–" : (st.win_rate * 100).toFixed(0) + "%";
+  const stats = [["Account value", usd(d.equity), ""], ["Return", pct(d.return), cls(d.return)], ["Best value", usd(d.peak), ""],
+    ["Closed PnL", sgnUsd(st.realized || 0), cls(st.realized)], ["Win rate", wr, ""], ["Trades", String(st.trades || 0), ""], ["Resets", String(d.resets || 0), ""]];
+  const ladder = TIERS.map(t => { const got = (d.badges || []).find(b => b.tier === t.id);
+    return `<div class="rung${got ? "" : " locked"}">${badgeSvg(t.id, 22)}<div><b>${t.name}</b><span>${got ? "Earned " + new Date(got.at).toLocaleDateString(undefined, {day: "numeric", month: "short"}) : "$" + t.at.toLocaleString("en-US")}</span></div></div>`; }).join("");
+  let html = `<div class="tr-stats">${stats.map(([k, v, c]) => `<div><span>${k}</span><b class="${c}">${v}</b></div>`).join("")}</div><div class="ladder">${ladder}</div>`;
+  if (d.private && !d.self) {
+    html += `<div class="tr-private">${esc(d.name)} keeps their positions and trades private.</div>`;
+  } else {
+    if (d.private && d.self) html += `<div class="tr-private">Your trades are hidden from other traders. Only you can see the sections below.</div>`;
+    html += `<div class="tr-section"><h4>Open positions</h4>` + (pos.length ? `<div class="tbl-wrap"><table><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Value</th><th>Entry</th><th>Mark</th><th>PnL</th><th>Opened</th></tr></thead><tbody>` +
+      pos.map(p => `<tr><td><b>${esc(cname(p.coin))}</b></td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td><td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${fpx(p.entry)}</td><td>${fpx(p.mark)}</td><td class="${cls(p.upnl)}">${sgnUsd(p.upnl)}</td><td>${ago(p.opened)}</td></tr>`).join("") +
+      `</tbody></table></div>` : `<div class="empty" style="padding:14px">No open positions.</div>`) + `</div>`;
+    const kind = {market: "Market", limit: "Limit", close: "Close", tp: "Take profit", sl: "Stop loss", liquidation: "Liquidation"};
+    html += `<div class="tr-section"><h4>Recent trades</h4>` + ((d.trades || []).length ? `<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Closed PnL</th><th>Type</th></tr></thead><tbody>` +
+      d.trades.map(t => `<tr><td>${tstr(t.ts)}</td><td>${esc(cname(t.coin))}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td><td>${t.sz}</td><td>${fpx(t.px)}</td><td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || esc(t.kind)}</td></tr>`).join("") +
+      `</tbody></table></div>` : `<div class="empty" style="padding:14px">No trades yet.</div>`) + `</div>`;
+  }
+  $("#trBody").innerHTML = html;
+}
+$("#trClose").addEventListener("click", () => $("#traderDlg").close());
+$("#trName").addEventListener("click", e => { const c = e.target.closest("[data-clan]"); if (c) { $("#traderDlg").close(); openClan(c.dataset.clan); } });
+$("#traderDlg").addEventListener("close", () => { S.trader = null; if (location.hash.startsWith("#trader-")) history.replaceState(null, "", location.pathname + location.search); });
+$("#trShare").addEventListener("click", () => { if (S.trader && S.trader.data) shareProfile(S.trader.data); });
+$("#trLink").addEventListener("click", () => { if (S.trader) copyText(profileLink(S.trader.pid), "Profile link copied."); });
+const hashTrader = () => { const m = /^#trader-([0-9a-f]{12})$/.exec(location.hash); return m && m[1]; };
+window.addEventListener("hashchange", () => { const pid = hashTrader(); if (pid && AUTH && AUTH.trader && !(S.trader && S.trader.pid === pid)) openTrader(pid); });
+$("#traderDlg").addEventListener("click", e => { if (e.target === $("#traderDlg")) $("#traderDlg").close(); });
+
+// ---------- clans ----------
+const siteBase = () => SITE_URL.replace(/#.*$/, "");
+const inviteLink = code => siteBase() + "#join-" + code;
+const clanLink = tag => siteBase() + "#clan-" + tag;
+const myClan = () => (S.acct && S.acct.profile && S.acct.profile.clan) || null;
+S.clan = null; S.pendingJoin = null;
+async function openClan(tag){
+  if (!AUTH || !AUTH.clan) { staleCode(); return; }
+  tag = String(tag).toUpperCase();
+  S.clan = {tag, data: null};
+  $("#clName").textContent = "[" + tag + "]"; $("#clSub").textContent = ""; $("#clActions").innerHTML = ""; $("#clBody").innerHTML = `<div class="empty">Loading…</div>`;
+  if (location.hash !== "#clan-" + tag) history.replaceState(null, "", "#clan-" + tag);
+  if (!$("#clanDlg").open) $("#clanDlg").showModal();
+  try { const d = await AUTH.clan(tag); if (S.clan && S.clan.tag === tag) { S.clan.data = d; renderClan(); } }
+  catch (e) { $("#clBody").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderClan(){
+  const d = S.clan && S.clan.data; if (!d) return;
+  const me = d.me || null, n = d.members.length;
+  $("#clName").innerHTML = `<span class="clan-tag" style="font-size:20px;cursor:default;padding-right:2px">[${esc(d.tag)}]</span><span>${esc(d.name)}</span>` + (me ? ` <span class="lev-chip">${me.leader ? "Your clan, you lead it" : "Your clan"}</span>` : "");
+  $("#clSub").textContent = `${d.rank ? `#${d.rank} of ${d.ranked_total} ranked clans` : `Not ranked yet: needs ${d.min_members} members`}. ${n} of ${d.max} member${d.max === 1 ? "" : "s"}. Started ${new Date(d.created).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
+  const acts = [];
+  if (me) {
+    acts.push(`<button class="btn primary" type="button" data-ca="copy">Copy invite link</button>`, `<button class="btn" type="button" data-ca="x">Invite on X</button>`);
+    if (me.leader) acts.push(`<button class="btn" type="button" data-ca="invite" title="Make a new link; the old one stops working">New invite link</button>`, `<button class="btn" type="button" data-ca="rename">Rename</button>`);
+    acts.push(`<button class="btn" type="button" data-ca="leave">Leave clan</button>`);
+  } else acts.push(`<button class="btn" type="button" data-ca="link">Copy clan link</button>`);
+  $("#clActions").innerHTML = acts.join(""); $("#clActions").hidden = false;
+  const stats = [["Average value", usd(d.average), ""], ["Average return", pct(d.return), cls(d.return)], ["Combined value", usd(d.total), ""],
+    ["Members", String(n), ""], ["Best return", n ? pct(d.best) : "–", cls(d.best)]];
+  let html = `<div class="tr-stats">${stats.map(([k, v, c]) => `<div><span>${k}</span><b class="${c}">${v}</b></div>`).join("")}</div>`;
+  if (me) html += `<div class="invite-box"><div class="inp"><input readonly value="${esc(inviteLink(me.invite))}" aria-label="Invite link" onfocus="this.select()"></div><span class="note" style="color:var(--muted);font-size:12px">Anyone with this link can join.</span></div>`;
+  else if (S.user && !myClan()) html += `<div class="tr-private" style="margin-top:0">To join ${esc(d.name)}, ask a member for their invite link.</div>`;
+  html += `<div class="tr-section"><h4>Members</h4>` + (n ? `<div class="tbl-wrap"><table><thead><tr><th>#</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th><th>Overall rank</th>${me && me.leader ? "<th></th>" : ""}</tr></thead><tbody>` +
+    d.members.map(m => `<tr class="${S.acct && S.acct.profile && m.pid === S.acct.profile.pid ? "me" : ""}"><td class="rank">${m.pos}</td>
+      <td style="text-align:left">${traderName({pid: m.pid, name: m.name, badge: m.badge})}${m.leader ? `<span class="bot-tag" title="Clan leader">LEADER</span>` : ""}</td>
+      <td>${usd(m.equity)}</td><td class="${cls(m.return)}">${pct(m.return)}</td><td>${m.positions}</td><td>#${m.rank}</td>
+      ${me && me.leader ? `<td>${m.leader ? "" : `<span class="act"><button type="button" data-kick="${esc(m.pid)}" data-name="${esc(m.name)}">Remove</button></span>`}</td>` : ""}</tr>`).join("") +
+    `</tbody></table></div>` : `<div class="empty" style="padding:14px">No members.</div>`) + `</div>`;
+  $("#clBody").innerHTML = html;
+}
+async function clanDo(action, body = {}){
+  try {
+    const r = await AUTH.clanAction(action, body);
+    if (r.messages && r.messages[0]) toast(r.messages[0]);
+    S.clansAt = 0; loadClans(true); loadBoard(true);
+    return r;
+  } catch (e) { toast(e.message, "error"); throw e; }
+}
+$("#clActions").addEventListener("click", async e => {
+  const b = e.target.closest("[data-ca]"); if (!b || !S.clan || !S.clan.data) return;
+  const d = S.clan.data, a = b.dataset.ca;
+  if (a === "copy") return copyText(inviteLink(d.me.invite), "Invite link copied. Send it to your friends.");
+  if (a === "link") return copyText(clanLink(d.tag), "Clan link copied.");
+  if (a === "x") {
+    const text = `Join my clan [${d.tag}] ${d.name} on Aureous and let's see who's the better trader. $10k of paper money on live Hyperliquid prices.`;
+    return window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(inviteLink(d.me.invite))}`, "_blank", "noopener");
+  }
+  try {
+    if (a === "invite") { if (!confirm("Make a new invite link? The current link will stop working.")) return; await clanDo("invite"); }
+    if (a === "rename") { const n = prompt("New clan name (3–24 characters):", d.name); if (!n || n.trim() === d.name) return; await clanDo("rename", {name: n}); }
+    if (a === "leave") {
+      const alone = d.members.length <= 1;
+      if (!confirm(alone ? `Leave ${d.name}? You're the only member, so the clan will close.` : `Leave ${d.name}?${d.me.leader ? " The longest-standing member becomes leader." : ""}`)) return;
+      await clanDo("leave"); $("#clanDlg").close(); return;
+    }
+    openClan(d.tag);
+  } catch {}
+});
+$("#clBody").addEventListener("click", async e => {
+  const k = e.target.closest("[data-kick]");
+  if (k) { if (confirm(`Remove ${k.dataset.name} from the clan?`)) { try { await clanDo("kick", {pid: k.dataset.kick}); openClan(S.clan.tag); } catch {} } return; }
+  const t = e.target.closest("[data-pid]"); if (t) { $("#clanDlg").close(); openTrader(t.dataset.pid); }
+});
+$("#clClose").addEventListener("click", () => $("#clanDlg").close());
+$("#clanDlg").addEventListener("click", e => { if (e.target === $("#clanDlg")) $("#clanDlg").close(); });
+$("#clanDlg").addEventListener("close", () => { S.clan = null; if (location.hash.startsWith("#clan-")) history.replaceState(null, "", location.pathname + location.search); });
+
+function staleCode(){
+  if (AUTH && typeof AUTH.clanAction === "function") return false;
+  toast("Aureous was just updated. Refresh the page (Ctrl+Shift+R) to use clans.", "error"); return true;
+}
+function openClanNew(){
+  if (staleCode()) return;
+  if (!S.user) { toast("Sign in to start or join a clan."); openAuth(); return; }
+  const mine = myClan(); if (mine) { openClan(mine.tag); return; }
+  $("#cnMsg").hidden = true; $("#cnName").value = ""; $("#cnTag").value = ""; $("#cnCode").value = "";
+  $("#clanNewDlg").showModal(); $("#cnName").focus();
+}
+const cnErr = m => { $("#cnMsg").hidden = false; $("#cnMsg").textContent = m; };
+$("#cnClose").addEventListener("click", () => $("#clanNewDlg").close());
+$("#cnTag").addEventListener("input", () => { const el = $("#cnTag"); el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+$("#cnName").addEventListener("input", () => {     // suggest a tag from the name until the person types their own
+  const el = $("#cnTag"); if (el.dataset.touched) return;
+  const w = $("#cnName").value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+  el.value = (w.length > 1 ? w.map(x => x[0]).join("") : (w[0] || "")).slice(0, 5);
+});
+$("#cnTag").addEventListener("keydown", () => { $("#cnTag").dataset.touched = "1"; });
+$("#cnCreate").addEventListener("submit", async e => {
+  e.preventDefault();
+  try { const r = await AUTH.clanAction("create", {name: $("#cnName").value, tag: $("#cnTag").value}); toast(r.messages[0]); $("#clanNewDlg").close(); S.clansAt = 0; loadBoard(true); openClan(r.clan); }
+  catch (err) { cnErr(err.message); }
+});
+$("#cnJoin").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = $("#cnCode").value.trim(), m = /(?:#join-)?([A-Za-z0-9]{6,16})\s*$/.exec(v);
+  if (!m) { cnErr("Paste the invite link a friend sent you."); return; }
+  try { const r = await AUTH.clanAction("join", {code: m[1]}); toast(r.messages[0]); $("#clanNewDlg").close(); S.clansAt = 0; loadBoard(true); openClan(r.clan); }
+  catch (err) { cnErr(err.message); }
+});
+
+// invite links: aureous.trade/#join-<code>
+const hashJoin = () => { const m = /^#join-([A-Za-z0-9]{6,16})$/.exec(location.hash); return m && m[1]; };
+const hashClan = () => { const m = /^#clan-([A-Za-z0-9]{2,5})$/.exec(location.hash); return m && m[1].toUpperCase(); };
+async function openJoin(code){
+  if (!AUTH || !AUTH.invitePreview) return;
+  S.pendingJoin = null;
+  $("#jnMsg").hidden = true; $("#jnName").textContent = "Loading…"; $("#jnSub").textContent = ""; $("#jnOk").disabled = true;
+  if (!$("#joinDlg").open) $("#joinDlg").showModal();
+  try {
+    const p = await AUTH.invitePreview(code);
+    $("#jnName").innerHTML = `<span>[${esc(p.tag)}]</span>${esc(p.name)}`;
+    $("#jnSub").textContent = `${p.members} member${p.members === 1 ? "" : "s"}${p.leader ? `, led by ${p.leader.replace(/\.$/, "")}` : ""}. Everyone trades their own $10,000; the clan page ranks you against each other, and the clan against other clans.`;
+    const mine = myClan();
+    if (mine && mine.tag === p.tag) { $("#jnSub").textContent = "You're already in this clan."; $("#jnOk").textContent = "Open clan"; $("#jnOk").dataset.open = p.tag; }
+    else { $("#jnOk").textContent = S.user ? "Join clan" : "Sign in to join"; delete $("#jnOk").dataset.open; }
+    if (mine && mine.tag !== p.tag) { $("#jnMsg").hidden = false; $("#jnMsg").textContent = `You're in ${mine.name}. Joining ${p.name} means leaving it first (from your clan page).`; }
+    $("#jnOk").dataset.code = code; $("#jnOk").disabled = !!(mine && mine.tag !== p.tag);
+  } catch (e) { $("#jnName").textContent = "Invite not found"; $("#jnSub").textContent = e.message; }
+}
+async function doJoin(code){
+  try {
+    const r = await AUTH.clanAction("join", {code});
+    toast(r.messages[0]); if ($("#joinDlg").open) $("#joinDlg").close();
+    S.clansAt = 0; loadBoard(true); openBoard(); openClan(r.clan);
+  } catch (e) { if ($("#joinDlg").open) { $("#jnMsg").hidden = false; $("#jnMsg").textContent = e.message; } else toast(e.message, "error"); }
+}
+$("#jnOk").addEventListener("click", () => {
+  const b = $("#jnOk");
+  if (b.dataset.open) { $("#joinDlg").close(); openClan(b.dataset.open); return; }
+  if (!S.user) { S.pendingJoin = b.dataset.code; $("#joinDlg").close(); openAuth(); return; }
+  doJoin(b.dataset.code);
+});
+$("#jnCancel").addEventListener("click", () => $("#joinDlg").close());
+$("#jnClose").addEventListener("click", () => $("#joinDlg").close());
+$("#joinDlg").addEventListener("close", () => { if (location.hash.startsWith("#join-")) history.replaceState(null, "", location.pathname + location.search); });
+window.addEventListener("hashchange", () => { const j = hashJoin(), c = hashClan(); if (j) openJoin(j); else if (c && !(S.clan && S.clan.tag === c)) openClan(c); });
+$("#clanBtn").addEventListener("click", () => { $("#userMenu").hidden = true; openClanNew(); });
+function renderClanBtn(){ const c = myClan(); $("#clanBtn").hidden = !SERVER_ACCOUNTS; $("#clanBtn").textContent = c ? `My clan [${c.tag}]` : "Clans: start or join"; }
+
+// ---------- milestones on your own account ----------
+function renderMilestones(){
+  const box = $("#msProgress"), prof = S.acct && S.acct.profile;
+  if (!SERVER_ACCOUNTS || !S.user || !prof || !TIERS.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const eq = S.acct.equity, earned = prof.badges || [], next = TIERS.find(t => !hasTier(earned, t.id));
+  $("#msBadges").innerHTML = TIERS.filter(t => hasTier(earned, t.id)).map(t => badgeSvg(t.id, 15)).join("");
+  if (!next) { $("#msText").textContent = "Every badge earned. Imperium!"; $("#msBar").style.width = "100%"; return; }
+  const prev = TIERS[TIERS.indexOf(next) - 1], from = prev ? prev.at : S.acct.start;
+  const p = Math.max(0, Math.min(1, (eq - from) / (next.at - from)));
+  $("#msText").innerHTML = `Next badge: <b style="color:var(--text)">${next.name}</b> at ${usd(next.at).replace(".00", "")}`;
+  $("#msBar").style.width = (p * 100).toFixed(1) + "%";
+  $("#msProgress").title = `${usd(Math.max(0, next.at - eq))} to go`;
+}
+$("#myProfileBtn").addEventListener("click", () => { $("#userMenu").hidden = true; const p = S.acct && S.acct.profile; if (p && p.pid) openTrader(p.pid); });
+$("#privacyBtn").addEventListener("click", async () => {
+  $("#userMenu").hidden = true;
+  const p = S.acct && S.acct.profile; if (!p) return;
+  try { const r = await AUTH.setPrivate(!p.private); toast(r.messages[0]); loadBoard(true); } catch (e) { toast(e.message, "error"); }
+});
+
+document.querySelector('[data-t="board"]').addEventListener("click", () => { loadBoard(true); if (S.boardView === "clans") loadClans(true); });
+function openBoard(){ document.querySelector('[data-t="board"]').click(); $(".bottom").scrollIntoView({block: "nearest", behavior: "smooth"}); }
+$("#navBoard").addEventListener("click", e => { e.preventDefault(); history.replaceState(null, "", "#leaderboard"); openBoard(); });
+window.addEventListener("hashchange", () => { if (location.hash === "#leaderboard" && AUTH && AUTH.leaderboard) openBoard(); });
+$("#nameBtn").addEventListener("click", () => {
+  $("#userMenu").hidden = true;
+  $("#nameIn").value = (S.acct && S.acct.profile && S.acct.profile.name) || ""; $("#nameMsg").hidden = true;
+  $("#nameDlg").showModal(); $("#nameIn").focus();
+});
+$("#nameCancel").addEventListener("click", () => $("#nameDlg").close());
+$("#nameForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    const r = await AUTH.setName($("#nameIn").value);
+    $("#nameDlg").close(); toast(r.messages[0]); loadBoard(true);
+  } catch (err) { $("#nameMsg").hidden = false; $("#nameMsg").textContent = err.message; }
+});
+
+window.AureousUI = {
+  mode: MODE, toast,
+  serverEvent: () => LOCAL ? LOCAL.serverEvent : 0,
+  setRemote(fn){ LOCAL.setRemote(fn); S.syncError = null; reloadAccountView(); },
+  setConfig,
+  adoptRemote(r, opts = {}){
+    if (r && r.config) setConfig(r.config);
+    LOCAL.locked(async () => {
+      if (opts.silent) { const evs = r.events || []; LOCAL.serverEvent = evs.length ? evs[evs.length - 1].id : 0; LOCAL.adopt({...r, events: []}); }
+      else LOCAL.adopt(r);
+    }).then(opts.silent ? reloadAccountView : () => refreshState().catch(() => {}));   // keep new notifications
+  },
+  setUser(user, phase){
+    S.user = user; S.authPhase = phase || null; renderUser(); renderSaveNote(); renderSummary(); renderNameBtn(); renderClanBtn();
+    if (S.tab === "board") { loadBoard(true); if (S.boardView === "clans") loadClans(true); }
+    if (phase === "ready" && S.pendingJoin) { const c = S.pendingJoin; S.pendingJoin = null; doJoin(c); }
+  },
+  syncStatus(status, msg){ S.syncError = status === "error" ? msg : null; renderSaveNote(); },
+  enableAccounts(api){
+    AUTH = api; renderUser(); renderSaveNote(); renderSummary();
+    $("#boardTab").hidden = !api.leaderboard; $("#navBoard").hidden = !api.leaderboard;
+    if (location.hash === "#leaderboard" && api.leaderboard) openBoard();
+    if (hashTrader() && api.trader) { openBoard(); openTrader(hashTrader()); }
+    if (hashJoin() && api.invitePreview) openJoin(hashJoin());
+    if (hashClan() && api.clan) { S.boardView = "clans"; openBoard(); openClan(hashClan()); }
+  },
+};
+function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }
+
+// ---------- install as an app (home screen) ----------
+const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let installPrompt = null;
+function renderInstall(){ document.querySelectorAll("[data-install]").forEach(a => a.hidden = STANDALONE || MODE !== "browser"); }
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; renderInstall(); });
+window.addEventListener("appinstalled", () => { installPrompt = null; toast("Aureous is installed. Open it from your home screen."); });
+document.addEventListener("click", async e => {
+  const a = e.target.closest("[data-install]"); if (!a) return;
+  e.preventDefault();
+  if (installPrompt) { installPrompt.prompt(); try { await installPrompt.userChoice; } catch {} installPrompt = null; return; }
+  const share = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/></svg>`;
+  $("#inSteps").innerHTML = IOS
+    ? `<li>Open aureous.trade in <b>Safari</b>.</li><li>Tap the <b>Share</b> button ${share} at the bottom (or top) of the screen.</li><li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>`
+    : `<li>Open aureous.trade in <b>Chrome</b> (or Edge or Samsung Internet).</li><li>Open the browser menu <b>⋮</b>.</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li>`;
+  $("#installDlg").showModal();
+});
+$("#inOk").addEventListener("click", () => $("#installDlg").close());
+$("#inClose").addEventListener("click", () => $("#installDlg").close());
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1"))
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+renderInstall();
+renderNameBtn(); renderClanBtn();
+
+// ---------- loops ----------
+function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) { $("#conn").classList.add("bad"); $("#connText").textContent = "Offline"; } setTimeout(run, ms); }; run(); }
+(async function init(){
+  document.querySelectorAll("#intervals [data-i]").forEach(x => x.classList.toggle("on", x.dataset.i === S.interval));
+  initChart();
+  document.fonts?.ready.then(() => chart && chart.applyOptions({layout: {fontFamily: cssVar("--font")}}));
+  try { await refreshMarkets(); } catch (e) { toast("Couldn't load markets: " + e.message, "error"); }
+  syncLeverage(); renderSummary();
+  await refreshState().catch(() => {});
+  loadCandles();
+  loop(refreshState, 1500);
+  setTimeout(() => loop(refreshMarkets, 2500), 2500);
+  loop(refreshBook, 1500);
+  setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
+  countdown(); setInterval(countdown, 1000);
+  setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView === "clans") loadClans(); } }, 30000);
+})();
+</script>
+<script type="module" src="auth.js?v=4f54f94"></script>
+</body>
+</html>

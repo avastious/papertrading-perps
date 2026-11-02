@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About | Aureous</title>
+<meta name="description" content="Aureous is a paper-trading exchange for Hyperliquid perpetuals: live prices, $10,000 of pretend money and a fair leaderboard.">
+<meta property="og:title" content="About | Aureous">
+<meta property="og:description" content="Aureous is a paper-trading exchange for Hyperliquid perpetuals: live prices, $10,000 of pretend money and a fair leaderboard.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Aureous">
+<meta property="og:url" content="https://aureous.trade/about.html">
+<meta property="og:image" content="https://aureous.trade/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@aureoustrade">
+<meta name="twitter:image" content="https://aureous.trade/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121924'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23D5DCE5'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E131B">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="theme.js?v=4f54f94"></script>
+<link rel="stylesheet" href="site.css?v=4f54f94">
+</head>
+<body>
+<header class="site-head">
+  <a class="wordmark" href="./">Aureous</a>
+  <nav aria-label="Site"><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html">How it works</a><a href="about.html" aria-current="page">About</a></nav>
+  <a class="btn primary" href="./">Open the app</a>
+</header>
+<main>
+<h1>Practise trading perpetuals on live markets, with nothing at stake.</h1>
+<p class="lede">Aureous is a paper-trading exchange built on Hyperliquid's real prices and order books. You get $10,000 of pretend money, the same tools a real perps trader uses, and a leaderboard to measure yourself against everyone else.</p>
+<div class="cta"><a class="btn primary" href="./">Start trading</a><a class="btn" href="how-it-works.html">How it works</a></div>
+
+<div class="facts">
+  <div><b>$10,000</b><span>paper balance for everyone</span></div>
+  <div><b>Live</b><span>prices, order books and funding from Hyperliquid</span></div>
+  <div><b>24/7</b><span>stops and limits filled even with the page closed</span></div>
+</div>
+
+<h2>Why it exists</h2>
+<p>Perpetual futures are easy to start and easy to get wrong. Leverage, funding and liquidation behave in ways that only make sense once you've watched them happen to your own positions. Aureous lets you learn that with real market conditions and fake money, so the expensive lessons cost nothing.</p>
+
+<h2>Where the numbers come from</h2>
+<p>Every price, order book, chart and funding rate is read live from Hyperliquid's public market data. When you place an order, it's filled against the real order book at that moment, so a large order pays the same slippage it would on the real exchange. Nothing is sent to Hyperliquid, and no real orders are ever placed.</p>
+
+<h2>What's simulated</h2>
+<ul>
+  <li><strong>Market and limit orders</strong>, including post-only, immediate-or-cancel and reduce-only.</li>
+  <li><strong>Take-profit and stop-loss orders</strong>, triggered on the mark price.</li>
+  <li><strong>Cross margin and leverage</strong> up to 1000x on every market, past Hyperliquid's own limits.</li>
+  <li><strong>Trading fees</strong> at Hyperliquid's base rates: 0.045% when you take liquidity, 0.015% when you provide it.</li>
+  <li><strong>Hourly funding</strong> using Hyperliquid's actual funding history.</li>
+  <li><strong>Liquidation</strong> when your equity falls below maintenance margin.</li>
+</ul>
+<p>The details, and the few places the simulation is simpler than the real thing, are on <a href="how-it-works.html">How it works</a>.</p>
+
+<h2>The leaderboard</h2>
+<p>Everyone starts with the same $10,000, and the leaderboard ranks accounts by their current value, including open positions at the mark price. Trades are checked on the Aureous server against live prices, so a balance can't be edited to climb the rankings.</p>
+<p>You'll also find 20 Aureous bots on the board, each tagged <b>BOT</b>. Each one trades a simple strategy (trend following, breakouts, mean reversion, buying dips, a maximum-leverage degen) on the same live prices, fees and rules as you. Click one to see its strategy and trades, then try to beat it.</p>
+<p>Click any trader to see their open positions and recent trades, and learn from the best on the board. Account-value milestones earn Roman-coin badges, from the bronze Sestertius at $20,000 to Imperium at $1,000,000. Each new badge also earns a week in the spotlight.</p>
+
+<h2>Who's behind it</h2>
+<p>Aureous is an independent project. It isn't affiliated with, endorsed by or connected to Hyperliquid. The name comes from the Latin <em>aureus</em>, golden, and the gold coin of ancient Rome.</p>
+
+<h2>Follow along</h2>
+<p>News, leaderboard highlights and new features go out first on X at <a href="https://x.com/aureoustrade" rel="me">@aureoustrade</a>. Found a bug or have an idea? Send us a message there. We read everything.</p>
+<div class="cta"><a class="btn" href="https://x.com/aureoustrade" rel="me">Follow @aureoustrade on X</a></div>
+</main>
+<footer class="site-foot">
+  <nav aria-label="Footer"><a href="./">Trade</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="https://x.com/aureoustrade" rel="me">X @aureoustrade</a></nav>
+  <span class="note">Paper trading only. Not financial advice. Not affiliated with Hyperliquid.</span>
+</footer>
+</body>
+</html>
