@@ -197,3 +197,23 @@ def test_persistence(env, tmp_path):
     assert ex2.state["positions"]["ETH"]["size"] == 1
     assert len(ex2.state["orders"]) == 1
     assert ex2.equity() == pytest.approx(ex.equity())
+
+
+def test_builder_markets_merged(monkeypatch):
+    from aureous.api import HyperliquidAPIError, HyperliquidClient
+    hl, down = HyperliquidClient(), {"xyz": False}
+
+    def post(payload):
+        if payload.get("dex") == "xyz":
+            if down["xyz"]:
+                raise HyperliquidAPIError("down")
+            return [{"universe": [{"name": "xyz:XYZ100", "szDecimals": 4, "maxLeverage": 30},
+                                  {"name": "xyz:TSLA", "szDecimals": 3, "maxLeverage": 10}]}, [{"markPx": "25000"}, {"markPx": "400"}]]
+        return [{"universe": [{"name": "BTC", "szDecimals": 5, "maxLeverage": 40}]}, [{"markPx": "60000"}]]
+
+    monkeypatch.setattr(hl, "_post", post)
+    meta, ctxs = hl.meta_and_ctxs()
+    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100"] and ctxs[1]["markPx"] == "25000"
+    down["xyz"] = True
+    meta, _ = hl.meta_and_ctxs()
+    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100"]

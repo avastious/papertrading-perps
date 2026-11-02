@@ -3,8 +3,8 @@
 // plus helpers for tests: GET /token?uid=&name= mints a signed ID token; POST /set moves a price.
 const http = require('http'), crypto = require('crypto');
 const PROJECT = 'aureous-14551';
-const px = { BTC: 77800, ETH: 2266.4, SOL: 95.5, HYPE: 87.92, kPEPE: 0.00499 };
-const meta = { BTC: [5, 40], ETH: [4, 25], SOL: [2, 20], HYPE: [2, 10], kPEPE: [0, 10] };
+const px = { BTC: 77800, ETH: 2266.4, SOL: 95.5, HYPE: 87.92, kPEPE: 0.00499, 'xyz:XYZ100': 25012.5 };
+const meta = { BTC: [5, 40], ETH: [4, 25], SOL: [2, 20], HYPE: [2, 10], kPEPE: [0, 10], 'xyz:XYZ100': [4, 30] };
 let funding = [];   // {coin, fundingRate, time}
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'test-key-1', alg: 'RS256', use: 'sig' };
@@ -19,7 +19,8 @@ let rnd = 7; const rand = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
 const r = (x, d) => +x.toFixed(d);
 function info(q) {
   if (q.type === 'metaAndAssetCtxs') {
-    const names = Object.keys(px);
+    // builder groups ("dex") are listed only when asked for by name, like Hyperliquid
+    const names = Object.keys(px).filter(n => q.dex ? n.startsWith(q.dex + ':') : !n.includes(':'));
     return [{ universe: names.map(n => ({ name: n, szDecimals: meta[n][0], maxLeverage: meta[n][1] })) },
       names.map((n, i) => ({ markPx: String(r(px[n], 6)), midPx: String(r(px[n], 6)), oraclePx: String(r(px[n], 6)), funding: '0.0000125',
         openInterest: String(5e7 / px[n]), dayNtlVlm: String(1e9 / (i + 1)), prevDayPx: String(px[n]) }))];

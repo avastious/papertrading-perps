@@ -72,6 +72,19 @@ Endpoints:
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
+## Markets
+
+Every market on Hyperliquid's main list, plus chosen builder-run (HIP-3) markets. Hyperliquid only lists those when asked for their group by name, and calls them `<group>:<ticker>`, such as `xyz:XYZ100`. The choice lives in `EXTRA_MARKETS` in `aureous/web/engine.js` (website and trading server) and `aureous/api.py` (local server):
+
+```js
+const EXTRA_MARKETS = {xyz: ["XYZ100"]};   // trade.xyz: XYZ100 tracks the Nasdaq 100
+```
+
+- **More markets:** add more tickers or groups, e.g. `xyz: ["XYZ100", "TSLA", "NVDA"]`, and labels in `MARKET_LABELS`. Then push and publish.
+- **Names:** the site shows `XYZ100` without the group prefix, and its label ("Nasdaq 100") is searchable.
+- **Outages:** if a group can't be reached, its last prices are kept, so open positions still have a price.
+- **Funding:** if a builder market's funding history can't be read, its current hourly rate is used for each hour.
+
 ## Mobile app (install from the browser)
 
 aureous.trade can be installed as an app (a Progressive Web App). On Android, Chrome offers **Install app**. On iPhone, Safari has **Share → Add to Home Screen**. The **Get the app** link in the header and footer walks people through it, or shows Android's install prompt directly. Installed, it opens full screen with its own icon.

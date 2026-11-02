@@ -17,6 +17,11 @@
   // History caps keep a whole account small enough for browser storage and one cloud document.
   const MAX_TRADES = 2000, MAX_FUNDING = 2000, MAX_CURVE = 3000;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // Builder-deployed (HIP-3) markets to include alongside Hyperliquid's own list. Hyperliquid only
+  // lists them when asked for their group ("dex") by name, and names them "<dex>:<ticker>".
+  const EXTRA_MARKETS = {xyz: ["XYZ100"]};                  // trade.xyz: XYZ100 tracks the Nasdaq 100
+  const MARKET_LABELS = {"xyz:XYZ100": "Nasdaq 100"};
+  const displayName = name => String(name).replace(/^[a-z][a-z0-9]*:/, "");
 
   class PaperError extends Error {}
   class APIError extends Error {}
@@ -27,9 +32,9 @@
       this.url = base.replace(/\/$/, "") + "/info";
       this.fetch = fetchFn || ((...a) => root.fetch(...a));
     }
-    async post(payload) {
+    async post(payload, attempts = 3) {
       let last = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < attempts; attempt++) {
         try {
           const r = await this.fetch(this.url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
           if (r.status === 429) { last = new Error("rate limited (429)"); await sleep(1000 * (attempt + 1)); continue; }
@@ -39,7 +44,25 @@
       }
       throw new APIError(`${payload.type} request failed: ${last && last.message}`);
     }
-    metaAndCtxs() { return this.post({type: "metaAndAssetCtxs"}); }
+    // Hyperliquid's own markets plus the EXTRA_MARKETS above, as one [meta, ctxs] pair. If a builder
+    // group can't be reached, its last good data is reused so open positions keep a price.
+    async metaAndCtxs() {
+      this.extra = this.extra || {};
+      const groups = Object.entries(EXTRA_MARKETS).map(async ([dex, tickers]) => {
+        try {
+          const [meta, ctxs] = await this.post({type: "metaAndAssetCtxs", dex}, 1);   // one try: never slow the main list down
+          const want = new Set(tickers.flatMap(t => [t, `${dex}:${t}`]));
+          const u = [], c = [];
+          meta.universe.forEach((info, i) => { if (want.has(info.name)) { u.push({...info, name: info.name.includes(":") ? info.name : `${dex}:${info.name}`}); c.push(ctxs[i] || {}); } });
+          this.extra[dex] = [u, c];
+        } catch {}
+        return this.extra[dex] || [[], []];
+      });
+      const [[meta, ctxs], ...more] = await Promise.all([this.post({type: "metaAndAssetCtxs"}), ...groups]);
+      const universe = meta.universe.filter(x => !String(x.name).includes(":")), all = ctxs.slice(0, universe.length);
+      for (const [u, c] of more) { universe.push(...u); all.push(...c); }
+      return [{...meta, universe}, all];
+    }
     l2Book(coin) { return this.post({type: "l2Book", coin}); }
     fundingHistory(coin, startTime, endTime) {
       const p = {type: "fundingHistory", coin, startTime: Math.floor(startTime)};
@@ -363,8 +386,15 @@
       try {
         for (const [coin, p] of Object.entries(this.state.positions)) {
           const m = this.market(coin), start = Math.max(last, p.opened_ms);
-          let total = 0;
-          for (const h of await this.client.fundingHistory(coin, start + 1, now)) {
+          let total = 0, history;
+          try { history = await this.client.fundingHistory(coin, start + 1, now); }
+          catch (e) {
+            if (!coin.includes(":")) throw e;
+            // builder markets: if their history can't be read, use the current hourly rate for each hour passed
+            history = [];
+            for (let t = (Math.floor(start / HOUR_MS) + 1) * HOUR_MS; t <= now; t += HOUR_MS) history.push({time: t, fundingRate: m.funding});
+          }
+          for (const h of history) {
             const t = +h.time;
             if (t <= start || t > now) continue;
             const rate = parseFloat(h.fundingRate), pay = -p.size * m.oracle * rate;   // positive rate: longs pay
@@ -454,7 +484,7 @@
 
   // ------------------------------------------- local API (mirrors server.py)
   function fillMsg(t) {
-    let msg = `${t.side === "buy" ? "Bought" : "Sold"} ${g(t.sz)} ${t.coin} at ${g(t.px)}`;
+    let msg = `${t.side === "buy" ? "Bought" : "Sold"} ${g(t.sz)} ${displayName(t.coin)} at ${g(t.px)}`;
     if (Math.abs(t.realized) > 1e-9) msg += ` · PnL ${t.realized >= 0 ? "+" : "-"}$${fmt2(Math.abs(t.realized))}`;
     if (t.requested && t.sz < t.requested - 1e-12) msg += ` (partial: book only had ${g(t.sz)} of ${g(t.requested)} within 5% of mark)`;
     return msg;
@@ -664,5 +694,5 @@
   ];
   const SPOTLIGHT_MS = 7 * 24 * 3600 * 1000;
 
-  root.Aureous = {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, applyFill, roundSize, roundPx, HOUR_MS, TIERS, SPOTLIGHT_MS};
+  root.Aureous = {EXTRA_MARKETS, MARKET_LABELS, displayName, HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, applyFill, roundSize, roundPx, HOUR_MS, TIERS, SPOTLIGHT_MS};
 })(typeof window !== "undefined" ? window : globalThis);

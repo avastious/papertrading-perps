@@ -160,7 +160,7 @@ function render(){
   const max = Math.max(1, ...data.signups.map(d => d.signups));
   $("#bars").innerHTML = data.signups.map(d => `<div style="height:${d.signups / max * 100}%" title="${d.day}: ${d.signups} new"></div>`).join("");
   $("#barsFrom").textContent = new Date(data.signups[0].day).toLocaleDateString(undefined, {day: "numeric", month: "short"});
-  $("#markets").innerHTML = data.markets.length ? data.markets.map(m => `<div class="li"><span>${esc(m.coin)}</span><span>${m.trades} trade${m.trades === 1 ? "" : "s"}</span><span>${m.positions} open</span></div>`).join("") : `<div class="muted">No trades yet today.</div>`;
+  $("#markets").innerHTML = data.markets.length ? data.markets.map(m => `<div class="li"><span>${esc(m.coin.replace(/^[a-z][a-z0-9]*:/, ""))}</span><span>${m.trades} trade${m.trades === 1 ? "" : "s"}</span><span>${m.positions} open</span></div>`).join("") : `<div class="muted">No trades yet today.</div>`;
   $("#badges").innerHTML = TIERS.map(tr => `<div class="li"><span>${badge(tr.id)} ${tr.name}</span><span>$${num(tr.at)}</span><span>${num(data.badges[tr.id] || 0)}</span></div>`).join("");
   const clans = data.clans || [];
   $("#clans").innerHTML = clans.length ? clans.map(c => `<div class="li" style="grid-template-columns:1fr auto auto auto"><span><b>[${esc(c.tag)}]</b> ${esc(c.name)} <span class="muted">led by ${esc(c.leader || "?")}, started ${when(c.created)}</span></span>` +

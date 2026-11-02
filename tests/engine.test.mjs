@@ -187,3 +187,24 @@ test("local API flow mirrors the Python server", async () => {
   const b = await app.handle("/api/book", {coin: "eth"}); assert.equal(b.coin, "ETH"); assert.equal(b.bids.length, 14);
   await app.handle("/api/reset", {}, {balance: 5000}); assert.equal(ex.state.balance, 5000);
 });
+
+test("builder markets (xyz:XYZ100) are merged in, and kept if their group can't be reached", async () => {
+  const {HyperliquidClient, displayName} = globalThis.Aureous;
+  let xyzDown = false;
+  const fetchFn = async (url, init) => {
+    const q = JSON.parse(init.body);
+    if (q.dex === "xyz" && xyzDown) return {ok: false, status: 500, json: async () => ({})};
+    const body = q.dex === "xyz"
+      ? [{universe: [{name: "xyz:XYZ100", szDecimals: 4, maxLeverage: 30}, {name: "xyz:TSLA", szDecimals: 3, maxLeverage: 10}]}, [{markPx: "25000"}, {markPx: "400"}]]
+      : [{universe: [{name: "BTC", szDecimals: 5, maxLeverage: 40}]}, [{markPx: "60000"}]];
+    return {ok: true, status: 200, json: async () => body};
+  };
+  const hl = new HyperliquidClient("https://example.test", fetchFn);
+  let [meta, ctxs] = await hl.metaAndCtxs();
+  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100"]);   // only the markets we chose
+  assert.equal(ctxs[1].markPx, "25000");
+  xyzDown = true;
+  [meta] = await hl.metaAndCtxs();
+  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100"]);   // last good copy reused
+  assert.equal(displayName("xyz:XYZ100"), "XYZ100"); assert.equal(displayName("kPEPE"), "kPEPE");
+});

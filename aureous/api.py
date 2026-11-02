@@ -40,10 +40,29 @@ class HyperliquidClient:
         raise HyperliquidAPIError(f"{payload.get('type')} request failed: {last_err}")
 
     # --- endpoints -------------------------------------------------------
+    # Builder-deployed (HIP-3) markets to include, by group ("dex"). Hyperliquid names them "<dex>:<ticker>".
+    EXTRA_MARKETS = {"xyz": ["XYZ100"]}   # trade.xyz: XYZ100 tracks the Nasdaq 100
+
     def meta_and_ctxs(self):
         """[meta, assetCtxs] for every perp: max leverage, size decimals, mark,
-        mid, oracle, hourly funding, open interest, 24h volume."""
-        return self._post({"type": "metaAndAssetCtxs"})
+        mid, oracle, hourly funding, open interest, 24h volume. Includes EXTRA_MARKETS;
+        if a builder group can't be reached, its last good data is reused."""
+        meta, ctxs = self._post({"type": "metaAndAssetCtxs"})
+        universe = [u for u in meta["universe"] if ":" not in u["name"]]
+        ctxs = list(ctxs[:len(universe)])
+        self._extra = getattr(self, "_extra", {})
+        for dex, tickers in self.EXTRA_MARKETS.items():
+            try:
+                m2, c2 = self._post({"type": "metaAndAssetCtxs", "dex": dex})
+                want = set(tickers) | {f"{dex}:{t}" for t in tickers}
+                pairs = [({**u, "name": u["name"] if ":" in u["name"] else f"{dex}:{u['name']}"}, c)
+                         for u, c in zip(m2["universe"], c2) if u["name"] in want]
+                self._extra[dex] = pairs
+            except HyperliquidAPIError:
+                pass
+            for u, c in self._extra.get(dex, []):
+                universe.append(u); ctxs.append(c)
+        return [{**meta, "universe": universe}, ctxs]
 
     def l2_book(self, coin: str):
         """{'coin', 'time', 'levels': [bids, asks]} with up to 20 levels a side."""

@@ -266,6 +266,7 @@ tr.spot td:first-child{box-shadow:inset 2px 0 0 #E3B341}
 .clan-or::before,.clan-or::after{content:"";flex:1;height:1px;background:var(--line)}
 .clan-preview{font-size:22px;font-weight:600;margin:6px 0 2px}
 .clan-preview span{color:var(--muted);font-weight:500;font-size:16px;margin-right:6px}
+.mk-label{display:block;font-weight:400;font-size:10.5px;color:var(--faint);line-height:1.1}
 .spot-tag{font-size:11px;color:#E3B341;border:1px solid rgba(227,179,65,.45);border-radius:3px;padding:0 5px;margin-left:4px;white-space:nowrap}
 .milestones{display:flex;gap:8px;flex-wrap:wrap;padding:4px 12px 8px}
 .ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:3px 10px 3px 4px;color:var(--muted)}
@@ -391,6 +392,8 @@ td.rank{color:var(--muted);width:56px}
   .app{padding-bottom:env(safe-area-inset-bottom)}
   a[data-install]{display:none!important}
 }
+@media (min-width:900px){ .site-nav a[data-install]{display:none!important} }
+@media (max-width:1499px) and (min-width:900px){ #hTag{display:none} }
 .install-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
 .install-steps b{color:var(--text)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -400,7 +403,7 @@ td.rank{color:var(--muted);width:56px}
 <div class="app">
   <header>
     <span class="wordmark">Aureous</span>
-    <button class="coin-btn" id="coinBtn" title="Change market"><span class="coin-name" id="hCoin">–</span><span class="lev-chip" id="hMaxLev"></span></button>
+    <button class="coin-btn" id="coinBtn" title="Change market"><span class="coin-name" id="hCoin">–</span><span class="lev-chip" id="hMaxLev"></span><span class="lev-chip" id="hTag" hidden></span></button>
     <div class="bigprice" id="hPrice">–</div>
     <div class="hstat"><span>24h change</span><span id="hChange">–</span></div>
     <div class="hstat"><span>Funding / hour</span><span id="hFunding">–</span></div>
@@ -786,9 +789,11 @@ async function api(path, body){
   if (!r.ok || j.ok === false) throw new Error(j.error || `Server error (${r.status})`);
   return j;
 }
+const cname = c => (window.Aureous && Aureous.displayName ? Aureous.displayName(c) : String(c));
+const mlabel = c => ((window.Aureous && Aureous.MARKET_LABELS) || {})[c] || "";
 function toast(msg, kind = "event"){
   const el = document.createElement("div");
-  el.className = "toast " + kind; el.textContent = msg;
+  el.className = "toast " + kind; el.textContent = String(msg).replace(/\b[a-z][a-z0-9]*:([A-Z0-9]+)\b/g, "$1");
   $("#toasts").appendChild(el);
   setTimeout(() => el.remove(), kind === "error" ? 7000 : 5000);
 }
@@ -815,18 +820,19 @@ async function refreshMarkets(){
 function renderMarkets(){
   const q = $("#mkSearch").value.trim().toLowerCase(), sort = $("#mkSort").value;
   const key = {volume: m => -m.volume, change: m => -Math.abs(m.change), funding: m => -Math.abs(m.funding), oi: m => -m.oi, name: m => m.name.toLowerCase()}[sort];
-  const list = S.markets.filter(m => !q || m.name.toLowerCase().includes(q))
+  const list = S.markets.filter(m => !q || m.name.toLowerCase().includes(q) || mlabel(m.name).toLowerCase().includes(q))
     .sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
   const favs = new Set(S.favs);
   list.sort((a, b) => (favs.has(b.name) ? 1 : 0) - (favs.has(a.name) ? 1 : 0));   // favourites first, order kept otherwise
   $("#mkList").innerHTML = list.map(m => { const f = favs.has(m.name);
     return `<div class="mk-item${m.name === S.coin ? " on" : ""}"><button class="star${f ? " fav" : ""}" data-fav="${esc(m.name)}" aria-pressed="${f}" aria-label="${f ? "Remove" : "Add"} ${esc(m.name)} ${f ? "from" : "to"} favourites">${f ? "★" : "☆"}</button>` +
-      `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"><b>${esc(m.name)}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span></button></div>`;
+      `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"${mlabel(m.name) ? ` title="${esc(mlabel(m.name))}"` : ""}><b>${esc(cname(m.name))}${mlabel(m.name) ? `<small class="mk-label">${esc(mlabel(m.name))}</small>` : ""}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span></button></div>`;
   }).join("") || `<div class="empty">No market matches “${esc(q)}”</div>`;
 }
 function renderHeader(){
   const m = market(); if (!m) return;
-  $("#hCoin").textContent = m.name;
+  $("#hCoin").textContent = cname(m.name);
+  $("#hTag").hidden = !mlabel(m.name); $("#hTag").textContent = mlabel(m.name); $("#coinBtn").title = mlabel(m.name) ? `${mlabel(m.name)}. Change market` : "Change market";
   $("#hMaxLev").textContent = `up to ${m.max_lev}x`;
   const p = $("#hPrice");
   if (S.prevPrice !== null && S.prevCoin === m.name && m.mark !== S.prevPrice) {
@@ -841,7 +847,7 @@ function renderHeader(){
   $("#hFunding").title = `${pct(m.funding * 24 * 365, 1)} a year. Positive: longs pay shorts.`;
   $("#hVol").textContent = "$" + big(m.volume);
   $("#hOI").textContent = "$" + big(m.oi);
-  document.title = `${fpx(m.mark)} ${m.name} | Aureous`;
+  document.title = `${fpx(m.mark)} ${cname(m.name)} | Aureous`;
 }
 function countdown(){
   const now = new Date(), left = 3600 - (now.getMinutes() * 60 + now.getSeconds());
@@ -971,7 +977,7 @@ function renderLegend(bar){
   S.hovering = !!bar;
   if (!bar) { const k = S.candles[S.candles.length - 1]; if (!k) { $("#legend").innerHTML = ""; return; } bar = barOf(k); }
   const chg = bar.close / bar.open - 1;
-  $("#legend").innerHTML = `<b>${esc(S.coin)} ${S.interval}</b><span>O <i>${fpx(bar.open)}</i></span><span>H <i>${fpx(bar.high)}</i></span><span>L <i>${fpx(bar.low)}</i></span><span>C <i>${fpx(bar.close)}</i></span><span class="${cls(chg)}">${pct(chg)}</span>`;
+  $("#legend").innerHTML = `<b>${esc(cname(S.coin))} ${S.interval}</b><span>O <i>${fpx(bar.open)}</i></span><span>H <i>${fpx(bar.high)}</i></span><span>L <i>${fpx(bar.low)}</i></span><span>C <i>${fpx(bar.close)}</i></span><span class="${cls(chg)}">${pct(chg)}</span>`;
 }
 function drawPriceLines(){
   if (!candleSeries) return;
@@ -1027,7 +1033,7 @@ const UNIT_LABEL = {margin: "Margin (your money)", usd: "Position value", coin: 
 function renderSummary(){
   const m = market(), a = S.acct; if (!m) return;
   const n = notional(), lev = +$("#lev").value, fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
-  $("#sValue").textContent = n ? usd(n) + (S.unit !== "coin" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${m.name})` : "") : "–";
+  $("#sValue").textContent = n ? usd(n) + (S.unit !== "coin" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${cname(m.name)})` : "") : "–";
   $("#sMargin").textContent = n ? usd(n / lev) : "–";
   $("#sFee").textContent = n ? usd(n * fee) : "–";
   $("#sAvail").textContent = a ? usd(a.available) : "–";
@@ -1035,7 +1041,7 @@ function renderSummary(){
   if (locked()) { btn.className = "submit locked"; btn.textContent = AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
   else {
     btn.className = "submit " + (S.side === "buy" ? "long" : "short");
-    btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${m.name}${S.type === "limit" ? " at limit" : ""}`;
+    btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${S.type === "limit" ? " at limit" : ""}`;
   }
   $("#unitBtn").textContent = S.unit === "margin" ? "Margin" : S.unit === "usd" ? "Value" : m.name;
   $("#sizeLabel").textContent = S.unit === "coin" ? UNIT_LABEL.coin + m.name : S.unit === "margin" ? `Margin (your money) × ${$("#lev").value}x` : UNIT_LABEL.usd;
@@ -1073,11 +1079,11 @@ function confirmOrder(body, m){
   return new Promise(resolve => {
     const n = notional(), lev = +$("#lev").value;
     const rows = [["Market", m.name], ["Side", body.side === "buy" ? "Long" : "Short"], ["Type", body.type === "limit" ? `Limit at ${fpx(body.price)}` : "Market"],
-      ["Size", usd(n) + ` (${fpx(n / refPrice(), m.sz_dec)} ${m.name})`], ["Leverage", lev + "x"], ["Margin", usd(n / lev)]];
+      ["Size", usd(n) + ` (${fpx(n / refPrice(), m.sz_dec)} ${cname(m.name)})`], ["Leverage", lev + "x"], ["Margin", usd(n / lev)]];
     if (body.tp) rows.push(["Take profit", fpx(body.tp)]);
     if (body.sl) rows.push(["Stop loss", fpx(body.sl)]);
     if (body.reduce_only) rows.push(["Reduce only", "Yes"]);
-    $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${m.name}?`;
+    $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${cname(m.name)}?`;
     $("#cfSum").innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
     $("#cfOk").className = "btn " + (body.side === "buy" ? "primary" : "danger");
     $("#cfNoAsk").checked = false;
@@ -1158,7 +1164,7 @@ function renderAccount(){
   $('[data-t="positions"]').textContent = np ? `Positions (${np})` : "Positions";
   $('[data-t="orders"]').textContent = no ? `Open orders (${no})` : "Open orders";
 }
-const coinBtn = c => `<button class="coinlink" data-act="select" data-coin="${esc(c)}">${esc(c)}</button>`;
+const coinBtn = c => `<button class="coinlink" data-act="select" data-coin="${esc(c)}">${esc(cname(c))}</button>`;
 function renderBottom(){
   const a = S.acct, v = $("#bview"), bulk = $("#bulkBtn");
   if (!a) return;
@@ -1567,8 +1573,9 @@ async function drawTradeCard(d){
   const g = cv.getContext("2d"); cardBase(g, W, H);
   const up = d.pnl >= 0, col = up ? CARD_UP() : CARD_DOWN(), long = d.size > 0;
   // market + side
-  g.fillStyle = CARD.text; g.font = '600 46px "IBM Plex Sans", sans-serif'; g.fillText(d.coin, 64, 186);
-  const cw = g.measureText(d.coin).width, chip = `${long ? "LONG" : "SHORT"} ${d.lev}x`;
+  const coinName = cname(d.coin);
+  g.fillStyle = CARD.text; g.font = '600 46px "IBM Plex Sans", sans-serif'; g.fillText(coinName, 64, 186);
+  const cw = g.measureText(coinName).width, chip = `${long ? "LONG" : "SHORT"} ${d.lev}x`;
   g.font = '600 22px "IBM Plex Sans", sans-serif'; const tw = g.measureText(chip).width;
   g.fillStyle = long ? "rgba(47,165,125,.16)" : "rgba(219,90,85,.16)"; g.beginPath(); g.roundRect(64 + cw + 20, 154, tw + 28, 40, 6); g.fill();
   g.fillStyle = long ? CARD_UP() : CARD_DOWN(); g.fillText(chip, 64 + cw + 34, 182);
@@ -1933,8 +1940,8 @@ async function sharePosition(coin){
   const card = {coin, size: p.size, lev: p.lev, entry: p.entry, exit: p.mark, pnl: p.upnl, roe: p.roe, value: p.value,
     closes: closesFor(coin), name: myName(), badges: myBadges(), ts: Date.now()};
   const dir = p.size > 0 ? "long" : "short";
-  const text = `${p.upnl >= 0 ? "Up" : "Down"} ${pct(Math.abs(p.roe), 1).replace("+", "")} on a ${p.lev}x ${coin} ${dir}, paper trading live Hyperliquid prices on Aureous.`;
-  openShare(`Share your ${coin} ${dir}`, () => drawTradeCard(card), text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
+  const text = `${p.upnl >= 0 ? "Up" : "Down"} ${pct(Math.abs(p.roe), 1).replace("+", "")} on a ${p.lev}x ${cname(coin)} ${dir}, paper trading live Hyperliquid prices on Aureous.`;
+  openShare(`Share your ${cname(coin)} ${dir}`, () => drawTradeCard(card), text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
 }
 async function shareTrade(t){
   if (!t) return;
@@ -1943,8 +1950,8 @@ async function shareTrade(t){
   const lev = t.lev || 1, value = t.sz * entry, roe = t.realized / (value / lev);
   const card = {coin: t.coin, size: wasLong ? t.sz : -t.sz, lev, entry, exit: t.px, pnl: t.realized, roe, value,
     closes: closesFor(t.coin), name: myName(), badges: myBadges(), ts: t.ts, closed: true};
-  const text = `Closed a ${lev}x ${t.coin} ${wasLong ? "long" : "short"} ${t.realized >= 0 ? "up" : "down"} ${pct(Math.abs(roe), 1).replace("+", "")}, paper trading live Hyperliquid prices on Aureous.`;
-  openShare(`Share your ${t.coin} trade`, () => drawTradeCard(card), text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
+  const text = `Closed a ${lev}x ${cname(t.coin)} ${wasLong ? "long" : "short"} ${t.realized >= 0 ? "up" : "down"} ${pct(Math.abs(roe), 1).replace("+", "")}, paper trading live Hyperliquid prices on Aureous.`;
+  openShare(`Share your ${cname(t.coin)} trade`, () => drawTradeCard(card), text, S.acct.profile ? profileLink(S.acct.profile.pid) : SITE_URL);
 }
 async function shareProfile(d){
   const text = d.self ? `My Aureous account: ${usd(d.equity).replace(".00", "")} (${pct(d.return, 1)}) from a $10,000 start. Paper trading live Hyperliquid prices.`
@@ -1994,11 +2001,11 @@ function renderTrader(){
   } else {
     if (d.private && d.self) html += `<div class="tr-private">Your trades are hidden from other traders. Only you can see the sections below.</div>`;
     html += `<div class="tr-section"><h4>Open positions</h4>` + (pos.length ? `<div class="tbl-wrap"><table><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Value</th><th>Entry</th><th>Mark</th><th>PnL</th><th>Opened</th></tr></thead><tbody>` +
-      pos.map(p => `<tr><td><b>${esc(p.coin)}</b></td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td><td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${fpx(p.entry)}</td><td>${fpx(p.mark)}</td><td class="${cls(p.upnl)}">${sgnUsd(p.upnl)}</td><td>${ago(p.opened)}</td></tr>`).join("") +
+      pos.map(p => `<tr><td><b>${esc(cname(p.coin))}</b></td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td><td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${fpx(p.entry)}</td><td>${fpx(p.mark)}</td><td class="${cls(p.upnl)}">${sgnUsd(p.upnl)}</td><td>${ago(p.opened)}</td></tr>`).join("") +
       `</tbody></table></div>` : `<div class="empty" style="padding:14px">No open positions.</div>`) + `</div>`;
     const kind = {market: "Market", limit: "Limit", close: "Close", tp: "Take profit", sl: "Stop loss", liquidation: "Liquidation"};
     html += `<div class="tr-section"><h4>Recent trades</h4>` + ((d.trades || []).length ? `<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Market</th><th>Side</th><th>Size</th><th>Price</th><th>Closed PnL</th><th>Type</th></tr></thead><tbody>` +
-      d.trades.map(t => `<tr><td>${tstr(t.ts)}</td><td>${esc(t.coin)}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td><td>${t.sz}</td><td>${fpx(t.px)}</td><td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || esc(t.kind)}</td></tr>`).join("") +
+      d.trades.map(t => `<tr><td>${tstr(t.ts)}</td><td>${esc(cname(t.coin))}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td><td>${t.sz}</td><td>${fpx(t.px)}</td><td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || esc(t.kind)}</td></tr>`).join("") +
       `</tbody></table></div>` : `<div class="empty" style="padding:14px">No trades yet.</div>`) + `</div>`;
   }
   $("#trBody").innerHTML = html;
