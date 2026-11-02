@@ -72,6 +72,15 @@ Endpoints:
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
+## Mobile app (install from the browser)
+
+aureous.trade can be installed as an app (a Progressive Web App). On Android, Chrome offers **Install app**. On iPhone, Safari has **Share → Add to Home Screen**. The **Get the app** link in the header and footer walks people through it, or shows Android's install prompt directly. Installed, it opens full screen with its own icon.
+
+- **Files:** `manifest.webmanifest` (name, colours, icons in `icons/`) and `sw.js`.
+- **Service worker:** pages come from the network first and work offline from a saved copy. Our own scripts, styles and fonts are cached; prices, the trading server and sign-in are never cached.
+- **Phone screens:** the layout makes room for the notch and home bar when installed.
+- **Sign-in in the installed app:** home-screen apps can't use sign-in pop-ups, so Google sign-in redirects instead, through `aureous.trade/__/auth/*`. A Cloudflare Pages Function (`pages-functions/`, published as `functions/`) passes those requests to `aureous-14551.firebaseapp.com`, which keeps the sign-in on the same site as the app. This needs both `https://aureous.trade/__/auth/handler` and `https://www.aureous.trade/__/auth/handler` in Google Cloud Console → APIs & Services → Credentials → the "Web client (auto created by Google Service)" OAuth client → Authorized redirect URIs. Sign-in in a normal browser tab is unchanged.
+
 ## Share cards
 
 Positions, closed trades and profiles can be shared as 1200×675 images drawn in the browser. People can put their own image or video behind a card:

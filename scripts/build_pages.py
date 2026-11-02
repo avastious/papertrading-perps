@@ -33,6 +33,9 @@ def page(slug, title, desc, body, extra_head=""):
 <meta name="twitter:site" content="@aureoustrade">
 <meta name="twitter:image" content="{SITE_URL}og.png">
 <link rel="icon" href="{FAV}">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E131B">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="site.css">
 </head>

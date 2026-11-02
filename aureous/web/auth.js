@@ -12,7 +12,14 @@ const API_URL = (settings.apiUrl || "").replace(/\/$/, "");
 const SYNC_MS = 15000;
 
 // ------------------------------------------------------------------ Firebase sign-in
+// Installed as an app (home screen), pop-up sign-in doesn't work, so Google sign-in redirects instead,
+// through aureous.trade/__/auth (a Cloudflare Pages Function passes it on to Firebase) so the browser
+// treats it as the same site. Needs https://<domain>/__/auth/handler in the Google OAuth client's
+// authorized redirect URIs (see README).
+const STANDALONE = typeof matchMedia === "function" && (matchMedia("(display-mode: standalone)").matches || navigator.standalone === true);
+const OWN_AUTH_HOSTS = ["aureous.trade", "www.aureous.trade"];
 export async function firebaseBackend(cfg, appCheckSiteKey) {
+  if (STANDALONE && OWN_AUTH_HOSTS.includes(location.hostname)) cfg = {...cfg, authDomain: location.hostname};
   const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/`;
   const [{initializeApp}, A] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js")]);
   const app = initializeApp(cfg);
@@ -34,6 +41,7 @@ export async function firebaseBackend(cfg, appCheckSiteKey) {
     token: () => auth.currentUser ? auth.currentUser.getIdToken() : Promise.reject(new Error("You're not signed in.")),
     async signInWith(id) {
       const p = providers[id]();
+      if (STANDALONE) return A.signInWithRedirect(auth, p);
       try { await A.signInWithPopup(auth, p); }
       catch (e) {
         if (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") return A.signInWithRedirect(auth, p);

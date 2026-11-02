@@ -12,6 +12,8 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 cp -r "$root/aureous/web/." "$tmp/"
 touch "$tmp/.nojekyll"   # serve files as-is, no Jekyll processing
+# Cloudflare Pages Functions (the sign-in pass-through at /__/auth) live in functions/ on the published branch
+[ -d "$root/pages-functions" ] && cp -r "$root/pages-functions" "$tmp/functions"
 
 # Stamp our scripts and styles with this version (theme.js?v=abc1234) so browsers fetch the new
 # copies after every publish instead of mixing a fresh page with cached old code.

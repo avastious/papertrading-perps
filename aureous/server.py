@@ -261,6 +261,11 @@ def make_handler(app: App):
                 if os.path.exists(fp):
                     with open(fp, "rb") as f:
                         return self._send(200, f.read(), "font/woff2")
+            other = re.fullmatch(r"/(manifest\.webmanifest|icons/[\w-]+\.png)", url.path)
+            if other and os.path.exists(os.path.join(WEB_DIR, other.group(1))):
+                kind = "application/manifest+json" if other.group(1).endswith("webmanifest") else "image/png"
+                with open(os.path.join(WEB_DIR, other.group(1)), "rb") as f:
+                    return self._send(200, f.read(), kind)
             page = re.fullmatch(r"/([\w-]+\.(?:html|css|js))", url.path)
             if page and url.path not in STATIC and os.path.exists(os.path.join(WEB_DIR, page.group(1))):
                 kind = {"html": "text/html; charset=utf-8", "css": "text/css", "js": "application/javascript"}[page.group(1).rsplit(".", 1)[1]]
