@@ -854,8 +854,8 @@ function renderHeader(){
   const m = market(); if (!m) return;
   $("#hCoin").textContent = cname(m.name);
   $("#hTag").hidden = !mlabel(m.name); $("#hTag").textContent = mlabel(m.name); $("#coinBtn").title = mlabel(m.name) ? `${mlabel(m.name)}. Change market` : "Change market";
-  $("#hMaxLev").textContent = `up to ${MAX_LEV}x`;
-  $("#hMaxLev").title = `Hyperliquid allows up to ${m.max_lev}x on ${cname(m.name)}. With paper money, Aureous goes up to ${MAX_LEV}x.`;
+  $("#hMaxLev").textContent = `up to ${levCap(m)}x`;
+  $("#hMaxLev").title = S.overCap ? `Hyperliquid allows up to ${m.max_lev}x on ${cname(m.name)}. With paper money, Aureous goes up to ${MAX_LEV}x.` : `Hyperliquid's limit for ${cname(m.name)}.`;
   const p = $("#hPrice");
   if (S.prevPrice !== null && S.prevCoin === m.name && m.mark !== S.prevPrice) {
     p.classList.remove("tick-up", "tick-down"); void p.offsetWidth;
@@ -1057,15 +1057,23 @@ const MAX_LEV = (window.Aureous && Aureous.MAX_LEVERAGE) || 1000;
 const LEV_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100, 125, 150, 175, 200,
                    250, 300, 350, 400, 450, 500, 600, 700, 750, 800, 900, 1000].filter(x => x <= MAX_LEV);
 let levExact = null;                                  // a stored leverage that isn't one of the steps (e.g. 33x)
-function getLev(){ return levExact || LEV_STEPS[+$("#lev").value] || 1; }
+S.overCap = true;                                     // the site owner's switch: leverage past Hyperliquid's caps (from the server)
+const levCap = m => S.overCap ? MAX_LEV : (m ? m.max_lev : MAX_LEV);
+function levSteps(){ const cap = levCap(market()); const st = LEV_STEPS.filter(x => x <= cap); if (st[st.length - 1] !== cap) st.push(cap); return st; }
+function getLev(){ const st = levSteps(); return levExact || st[+$("#lev").value] || 1; }
 function setLevSlider(v){
-  let i = 0; LEV_STEPS.forEach((x, j) => { if (Math.abs(x - v) < Math.abs(LEV_STEPS[i] - v)) i = j; });
-  $("#lev").value = i; levExact = LEV_STEPS[i] === v ? null : v;
+  const st = levSteps(); v = Math.min(v, st[st.length - 1]);
+  let i = 0; st.forEach((x, j) => { if (Math.abs(x - v) < Math.abs(st[i] - v)) i = j; });
+  $("#lev").max = st.length - 1; $("#lev").value = i; levExact = st[i] === v ? null : v;
+}
+function setConfig(c){
+  if (!c || typeof c.over_cap !== "boolean" || c.over_cap === S.overCap) return;
+  S.overCap = c.over_cap; syncLeverage(); renderHeader(); renderSummary();
 }
 function renderLev(){
   const m = market(), L = getLev();
   $("#levOut").textContent = L + "x";
-  document.querySelectorAll("#levChips [data-lev]").forEach(b => b.classList.toggle("on", +b.dataset.lev === L));
+  document.querySelectorAll("#levChips [data-lev]").forEach(b => { b.classList.toggle("on", +b.dataset.lev === L); b.hidden = +b.dataset.lev > levCap(m); });
   const w = $("#levWarn");
   if (!m || L <= m.max_lev) { w.hidden = true; return; }
   const fee = (S.acct && S.acct.fees ? S.acct.fees.taker : .00045) * L, move = 1 / (2 * L);
@@ -1075,8 +1083,7 @@ function renderLev(){
 }
 function syncLeverage(){
   const m = market(); if (!m) return;
-  $("#lev").max = LEV_STEPS.length - 1;
-  setLevSlider(Math.min(m.lev, MAX_LEV));
+  setLevSlider(Math.min(m.lev, levCap(m)));
   renderLev();
 }
 function refPrice(){ const m = market(); if (!m) return NaN; if (S.type === "limit") { const p = num($("#px").value); return p > 0 ? p : m.mark; } return m.mark; }
@@ -2283,7 +2290,9 @@ window.AureousUI = {
   mode: MODE, toast,
   serverEvent: () => LOCAL ? LOCAL.serverEvent : 0,
   setRemote(fn){ LOCAL.setRemote(fn); S.syncError = null; reloadAccountView(); },
+  setConfig,
   adoptRemote(r, opts = {}){
+    if (r && r.config) setConfig(r.config);
     LOCAL.locked(async () => {
       if (opts.silent) { const evs = r.events || []; LOCAL.serverEvent = evs.length ? evs[evs.length - 1].id : 0; LOCAL.adopt({...r, events: []}); }
       else LOCAL.adopt(r);

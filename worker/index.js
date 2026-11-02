@@ -52,6 +52,7 @@ export default {
       if (url.pathname === "/api/leaderboard" && req.method === "GET") return reply(await ex.leaderboard(user ? user.uid : null));
       const tm = /^\/api\/trader\/([0-9a-f]{12})$/.exec(url.pathname);
       if (tm && req.method === "GET") return reply(await ex.trader(tm[1], user ? user.uid : null));
+      if (url.pathname === "/api/config" && req.method === "GET") return reply(await ex.config());
       if (url.pathname === "/api/clans" && req.method === "GET") return reply(await ex.clans(user ? user.uid : null));
       const cm = /^\/api\/clan\/([A-Za-z0-9]{2,5})$/.exec(url.pathname);
       if (cm && req.method === "GET") return reply(await ex.clanInfo(cm[1], user ? user.uid : null));
@@ -68,6 +69,10 @@ export default {
         if (url.pathname === "/api/admin/overview" && req.method === "GET") return reply(await ex.adminOverview());
         const um = /^\/api\/admin\/user\/([\w-]{1,128})$/.exec(url.pathname);
         if (um && req.method === "GET") return reply(await ex.adminUser(um[1]));
+        if (url.pathname === "/api/admin/settings" && req.method === "POST") {
+          let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
+          return reply(await ex.adminSettings(b));
+        }
         if (url.pathname === "/api/admin/clan-remove" && req.method === "POST") {
           let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
           return reply(await ex.adminClanRemove(b.tag));

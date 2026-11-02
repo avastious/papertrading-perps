@@ -76,6 +76,7 @@ export class Exchange extends DurableObject {
       id INTEGER PRIMARY KEY AUTOINCREMENT, tag TEXT NOT NULL UNIQUE, name TEXT NOT NULL, owner TEXT NOT NULL,
       invite TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)`);
     this.sql.exec("CREATE INDEX IF NOT EXISTS accounts_clan ON accounts(clan)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
     for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
     this.client = new SharedClient(env.HL_API_URL || "https://api.hyperliquid.xyz");
@@ -122,7 +123,7 @@ export class Exchange extends DurableObject {
   exchangeFor(row, withHistory = true) {
     const core = JSON.parse(row.core);
     const hist = withHistory ? JSON.parse(row.history) : {trades: [], funding_log: [], equity_curve: core.curve_ts ? [[core.curve_ts, 0]] : []};
-    const ex = new PaperExchange(this.client, {storage: null, refreshMs: 0, curveMs: CURVE_MS});
+    const ex = new PaperExchange(this.client, {storage: null, refreshMs: 0, curveMs: CURVE_MS, overCap: this.setting("over_cap", true)});
     ex.state = {...core, ...hist};
     return ex;
   }
@@ -207,7 +208,7 @@ export class Exchange extends DurableObject {
         const ex = this.exchangeFor(row);
         this.addEvents(uid, await this.catchUp(ex));
         this.persist(row, ex, true);
-        return {ok: true, state: ex.state, profile: this.ownProfile(uid), events: this.eventsSince(uid, since)};
+        return {ok: true, state: ex.state, profile: this.ownProfile(uid), events: this.eventsSince(uid, since), config: this.config()};
       } catch (e) { return fail(e); }
     });
   }
@@ -234,7 +235,7 @@ export class Exchange extends DurableObject {
         else this.addEvents(uid, events);
         this.persist(row, ex, true);
         if (error) return {...fail(error), state: ex.state, events: this.eventsSince(uid, since)};
-        return {ok: true, ...result, state: ex.state, profile: this.ownProfile(uid), events: this.eventsSince(uid, since)};
+        return {ok: true, ...result, state: ex.state, profile: this.ownProfile(uid), events: this.eventsSince(uid, since), config: this.config()};
       } catch (e) { return fail(e); }
     });
   }
@@ -340,6 +341,21 @@ export class Exchange extends DurableObject {
       }
       return out;
     } catch (e) { return fail(e); }
+  }
+
+  // ------------------------------------------------------------------ site settings (admin switches)
+  setting(key, fallback) {
+    if (!this.settingsCache) this.settingsCache = Object.fromEntries(this.sql.exec("SELECT key, value FROM settings").toArray().map(r => [r.key, JSON.parse(r.value)]));
+    return key in this.settingsCache ? this.settingsCache[key] : fallback;
+  }
+  config() { return {ok: true, over_cap: this.setting("over_cap", true), max_leverage: globalThis.Aureous.MAX_LEVERAGE}; }
+  adminSettings(body) {
+    if (typeof body.over_cap === "boolean") {
+      this.sql.exec("INSERT INTO settings (key, value) VALUES ('over_cap', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", JSON.stringify(body.over_cap));
+      this.settingsCache = null; this.adminCache = null;
+    }
+    const on = this.setting("over_cap", true);
+    return {...this.config(), messages: [on ? `Leverage up to ${globalThis.Aureous.MAX_LEVERAGE}x is on for every market.` : "Leverage is back to each market's Hyperliquid limit. Positions already open keep their leverage."]};
   }
 
   // ------------------------------------------------------------------ clans
@@ -529,7 +545,7 @@ export class Exchange extends DurableObject {
                  new_today: people.filter(u => u.created >= today).length, new_7d: people.filter(u => u.created >= now - 7 * DAY).length,
                  trades_today: tradesToday, trades_7d: trades7, volume_today: volumeToday, open_positions: openPositions,
                  liquidations_today: liquidationsToday, private_profiles: people.filter(u => u.private).length},
-        signups: days, badges: badgeCount,
+        signups: days, badges: badgeCount, settings: this.config(),
         clans: this.sql.exec(`SELECT c.tag, c.name, c.created, (SELECT COUNT(*) FROM accounts a WHERE a.clan = c.id) AS members,
                               (SELECT name FROM accounts a WHERE a.uid = c.owner) AS leader FROM clans c ORDER BY members DESC, c.created`).toArray(),
         markets: [...markets.values()].sort((a, b) => b.volume - a.volume || b.positions - a.positions).slice(0, 12),

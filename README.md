@@ -82,7 +82,7 @@ Endpoints:
 
 ## Leverage
 
-Every market goes up to 1000x (`MAX_LEVERAGE` in `engine.js` / `engine.py`), past Hyperliquid's per-market caps.
+Every market goes up to 1000x (`MAX_LEVERAGE` in `engine.js` / `engine.py`), past Hyperliquid's per-market caps. The site owner can switch this off on the admin page (**Settings → Leverage above Hyperliquid's limits**). That's stored on the server (`settings` table, `GET /api/config`) and applies to everyone at once. When it's off, new orders and leverage changes are limited to each market's Hyperliquid cap. Open positions keep their leverage and can still be closed.
 
 - **Liquidation:** at or below a market's own cap, maintenance margin is the market's (1 / (2 × cap)). Above it, it's half the position's initial margin (1 / (2 × leverage)).
 - **Order form:** a stepped slider (1x to 1000x) with quick buttons, and a warning above the market's cap showing the move that liquidates and the share of margin the opening fee takes.
@@ -281,6 +281,8 @@ node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, h
 node tests/server/admin.check.mjs        # owner-only dashboard (start wrangler dev with --var ADMIN_EMAILS:owner@example.com)
 node tests/server/bots.check.mjs         # house bots (fresh server, bots on, with the ADMIN_EMAILS var above)
 node tests/server/clans.check.mjs        # clans: create, invite, join, leader rules, rankings, moderation
+node tests/server/settings.check.mjs     # the owner's leverage switch
+node tests/server/markets.check.mjs      # builder markets (xyz:XYZ100)
 ```
 
 ## Files

@@ -119,6 +119,8 @@ async function main() {
     catch (e) { UI.syncStatus("error", e.message); }
   };
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sync(); });
+  // site settings (e.g. whether leverage can go past Hyperliquid's caps), for visitors too
+  call("/api/config", undefined, false).then(c => UI.setConfig && UI.setConfig(c)).catch(() => {});
 
   UI.enableAccounts({
     providers: settings.providers || ["google", "email"],

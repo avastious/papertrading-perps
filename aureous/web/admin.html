@@ -33,6 +33,10 @@ body{font-size:14px;line-height:1.45}
 .bars div:hover{filter:brightness(1.2)}
 .bars-x{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:6px}
 .list{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.switch-row{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.switch-row input{margin-top:3px;width:16px;height:16px;flex:none}
+.switch-row b{display:block;font-weight:600}
+.switch-row small{display:block;color:var(--muted);margin-top:3px;line-height:1.45}
 .list .li{display:grid;grid-template-columns:1fr auto auto;gap:12px}
 .list .li span:not(:first-child){color:var(--muted);text-align:right}
 .users{margin-top:16px}
@@ -94,6 +98,10 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
     <div class="card"><h2>Badges earned</h2><div class="list" id="badges"></div></div>
   </div>
   <div class="card" style="margin-top:16px"><h2>Clans</h2><div class="list" id="clans"></div></div>
+  <div class="card" style="margin-top:16px"><h2>Settings</h2>
+    <label class="switch-row"><input type="checkbox" id="setOverCap"><span><b>Leverage above Hyperliquid's limits</b>
+      <small>On: every market goes up to <span id="maxLevTxt">1000</span>x. Off: each market's Hyperliquid limit (40x on BTC, less on most coins). Positions already open keep their leverage either way; only new orders are affected.</small></span></label>
+  </div>
   <div class="users">
     <div class="tools">
       <input id="q" placeholder="Search name or ID" aria-label="Search traders">
@@ -162,6 +170,7 @@ function render(){
   $("#barsFrom").textContent = new Date(data.signups[0].day).toLocaleDateString(undefined, {day: "numeric", month: "short"});
   $("#markets").innerHTML = data.markets.length ? data.markets.map(m => `<div class="li"><span>${esc(m.coin.replace(/^[a-z][a-z0-9]*:/, ""))}</span><span>${m.trades} trade${m.trades === 1 ? "" : "s"}</span><span>${m.positions} open</span></div>`).join("") : `<div class="muted">No trades yet today.</div>`;
   $("#badges").innerHTML = TIERS.map(tr => `<div class="li"><span>${badge(tr.id)} ${tr.name}</span><span>$${num(tr.at)}</span><span>${num(data.badges[tr.id] || 0)}</span></div>`).join("");
+  if (data.settings) { $("#setOverCap").checked = !!data.settings.over_cap; $("#maxLevTxt").textContent = data.settings.max_leverage || 1000; }
   const clans = data.clans || [];
   $("#clans").innerHTML = clans.length ? clans.map(c => `<div class="li" style="grid-template-columns:1fr auto auto auto"><span><b>[${esc(c.tag)}]</b> ${esc(c.name)} <span class="muted">led by ${esc(c.leader || "?")}, started ${when(c.created)}</span></span>` +
     `<span>${c.members} member${c.members === 1 ? "" : "s"}</span><span></span><button class="btn" data-close-clan="${esc(c.tag)}" data-name="${esc(c.name)}" style="padding:2px 10px;font-size:12px">Close</button></div>`).join("") : `<div class="muted">No clans yet.</div>`;
@@ -214,6 +223,12 @@ async function openUser(uid){
   $("#aRemove").onclick = () => { if (confirm(`Remove ${d.name} from Aureous? Their trading data, badges and leaderboard entry are deleted. Their login stays in Firebase (delete it there if needed).`)) act("remove", {}, "Removed."); };
 }
 $("#dClose").onclick = () => $("#dlg").close();
+$("#setOverCap").addEventListener("change", async e => {
+  const on = e.target.checked;
+  if (!on && !confirm("Turn off leverage above Hyperliquid's limits? New orders above each market's limit will be refused. Open positions keep their leverage.")) { e.target.checked = true; return; }
+  try { const r = await call("/api/admin/settings", {over_cap: on}); toast(r.messages[0]); await load(); }
+  catch (err) { toast(err.message); e.target.checked = !on; }
+});
 $("#clans").addEventListener("click", async e => {
   const b = e.target.closest("[data-close-clan]"); if (!b) return;
   if (!confirm(`Close the clan ${b.dataset.name} [${b.dataset.closeClan}]? Its members stay on Aureous but leave the clan, and they're told it was closed.`)) return;

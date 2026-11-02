@@ -92,8 +92,9 @@ def apply_fill(size: float, entry: float, sz: float, px: float):
 class PaperExchange:
     def __init__(self, client, state_path: str, starting_balance: float = 10_000.0,
                  taker_fee: float = 0.00045, maker_fee: float = 0.00015,
-                 refresh_secs: float = 2.0, clock=time.time):
+                 refresh_secs: float = 2.0, clock=time.time, over_cap: bool = True):
         self.client = client
+        self.over_cap = over_cap   # allow leverage past Hyperliquid's per-market cap, up to MAX_LEVERAGE
         self.state_path = state_path
         self.taker_fee = taker_fee
         self.maker_fee = maker_fee
@@ -408,8 +409,9 @@ class PaperExchange:
 
     def set_leverage(self, coin: str, lev: int) -> int:
         m = self.market(coin)
-        if lev < 1 or lev > MAX_LEVERAGE:
-            raise PaperError(f"Leverage must be a whole number from 1 to {MAX_LEVERAGE}x.")
+        cap = MAX_LEVERAGE if self.over_cap else m.max_leverage
+        if lev < 1 or lev > cap:
+            raise PaperError(f"{m.name} leverage must be 1-{cap}x.")
         old = self.state["leverage"].get(m.name)
         self.state["leverage"][m.name] = lev
         if self.available() < 0:

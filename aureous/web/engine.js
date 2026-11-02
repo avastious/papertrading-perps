@@ -123,6 +123,8 @@
       this.refreshMs = opts.refreshMs ?? 2500;
       this.now = opts.now || (() => Date.now());
       this.curveMs = opts.curveMs ?? 60000;        // how often to add a point to the equity curve
+      // overCap: allow leverage past Hyperliquid's per-market cap, up to MAX_LEVERAGE (the site owner's switch)
+      this.overCap = opts.overCap ?? true;
       this.markets = new Map();
       this.lookup = new Map();
       this.lastRefresh = 0;
@@ -197,6 +199,7 @@
       const m = this.market(coin);
       return Math.min(parseInt(this.state.leverage[m.name] ?? DEFAULT_LEVERAGE, 10), MAX_LEVERAGE);
     }
+    maxLeverage(coin) { return this.overCap ? MAX_LEVERAGE : this.market(coin).max_leverage; }
     mmr(coin) { const m = this.market(coin); return Math.min(m.mmr, 1 / (2 * this.leverage(coin))); }
     upnl(coin) { const p = this.state.positions[coin]; return p ? p.size * (this.market(coin).mark - p.entry) : 0; }
     positionMargin(coin) { const p = this.state.positions[coin]; return p ? Math.abs(p.size) * this.market(coin).mark / this.leverage(coin) : 0; }
@@ -363,7 +366,9 @@
     }
     setLeverage(coin, lev) {
       const m = this.market(coin);
-      if (!(Number.isInteger(lev) && lev >= 1 && lev <= MAX_LEVERAGE)) throw new PaperError(`Leverage must be a whole number from 1 to ${MAX_LEVERAGE}x.`);
+      const cap = this.maxLeverage(coin);
+      if (!(Number.isInteger(lev) && lev >= 1 && lev <= cap)) throw new PaperError(this.overCap ? `Leverage must be a whole number from 1 to ${cap}x.`
+        : `${m.name} leverage must be 1-${cap}x. Leverage above Hyperliquid's limits is switched off on Aureous at the moment.`);
       const old = this.state.leverage[m.name];
       this.state.leverage[m.name] = lev;
       if (this.available() < 0) {
@@ -573,7 +578,7 @@
       await ex.refresh();
       return [...ex.markets.values()].map(m => ({
         name: m.name, mark: m.mark, mid: m.mid, oracle: m.oracle, change: m.change24h, funding: m.funding,
-        volume: m.day_volume, oi: m.open_interest * m.mark, max_lev: m.max_leverage, sz_dec: m.sz_decimals, lev: ex.leverage(m.name),
+        volume: m.day_volume, oi: m.open_interest * m.mark, max_lev: m.max_leverage, cap: ex.maxLeverage(m.name), sz_dec: m.sz_decimals, lev: ex.leverage(m.name),
       }));
     }
     async state(since = 0) {
@@ -617,6 +622,8 @@
       await ex.refresh();
       const m = ex.market(b.coin), coin = m.name;
       if (b.leverage && +b.leverage !== ex.leverage(coin)) ex.setLeverage(coin, +b.leverage);
+      if (!b.reduce_only && ex.leverage(coin) > ex.maxLeverage(coin))
+        throw new PaperError(`Your ${coin} leverage is ${ex.leverage(coin)}x, but leverage above ${ex.maxLeverage(coin)}x is switched off at the moment. Lower it to place new orders (closing is fine).`);
       const dir = b.side === "buy" ? 1 : -1, isLimit = b.type === "limit";
       const price = isLimit ? +b.price : m.mark;
       if (isLimit && !(price > 0)) throw new PaperError("Enter a limit price.");
