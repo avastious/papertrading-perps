@@ -72,6 +72,22 @@ Endpoints:
 - Reaching Denarius unlocks the gold accent, and Aureus turns your name gold.
 - Profiles show open positions and the last 50 trades unless the trader chooses "Hide my trades".
 
+## Chart drawing tools
+
+`aureous/web/draw.js` adds TradingView-style drawing tools to the Lightweight Charts chart. They're drawn by a series primitive, so they move with scrolling and zooming.
+
+- **Tools:** trend line, ray, extended line, horizontal and vertical lines, rectangle, Fibonacci retracement, measure, text, a candle magnet, hide all and delete all.
+- **Editing:** select, drag and resize, colour, Delete, Ctrl/Cmd+Z, and Alt shortcuts.
+- **Storage:** drawings are saved per market in localStorage. Points are stored as time (ms) and price and placed through the bar index, interpolating between bars and past the last candle, so they stay put when you change timeframe.
+
+## Leverage
+
+Every market goes up to 1000x (`MAX_LEVERAGE` in `engine.js` / `engine.py`), past Hyperliquid's per-market caps.
+
+- **Liquidation:** at or below a market's own cap, maintenance margin is the market's (1 / (2 × cap)). Above it, it's half the position's initial margin (1 / (2 × leverage)).
+- **Order form:** a stepped slider (1x to 1000x) with quick buttons, and a warning above the market's cap showing the move that liquidates and the share of margin the opening fee takes.
+- **Max button:** for market orders it counts the price impact of the visible order book as well as the fee.
+
 ## Markets
 
 Every market on Hyperliquid's main list, plus chosen builder-run (HIP-3) markets. Hyperliquid only lists those when asked for their group by name, and calls them `<group>:<ticker>`, such as `xyz:XYZ100`. The choice lives in `EXTRA_MARKETS` in `aureous/web/engine.js` (website and trading server) and `aureous/api.py` (local server):

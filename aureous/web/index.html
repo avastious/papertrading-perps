@@ -31,6 +31,7 @@
 <script src="theme.js"></script>
 <script src="lightweight-charts.js"></script>
 <script src="engine.js"></script>
+<script src="draw.js"></script>
 <script src="firebase-config.js"></script>
 <style>
 @font-face{font-family:"IBM Plex Sans";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2")}
@@ -106,10 +107,22 @@ header{display:flex;align-items:center;gap:26px;padding:9px 18px;flex-wrap:wrap}
 .chart-tools .sep{width:1px;height:16px;background:var(--line);margin:0 6px}
 .chart-tools .hint{margin-left:auto;font-size:11.5px;color:var(--faint)}
 .chart-wrap{flex:1;position:relative;min-height:0}
-#chartEl{position:absolute;inset:0}
-.legend{position:absolute;top:8px;left:10px;z-index:3;font-size:12px;color:var(--muted);pointer-events:none;display:flex;gap:10px;flex-wrap:wrap}
+#chartEl{position:absolute;inset:0 0 0 38px}
+#chartEl.drawing{cursor:crosshair}
+.legend{position:absolute;top:8px;left:48px;z-index:3;font-size:12px;color:var(--muted);pointer-events:none;display:flex;gap:10px;flex-wrap:wrap}
 .legend b{color:var(--text);font-weight:600}
 .legend span i{font-style:normal;color:var(--text)}
+.draw-bar{position:absolute;left:0;top:0;bottom:0;width:38px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-right:1px solid var(--line-soft);overflow-y:auto;scrollbar-width:none;z-index:4}
+.draw-bar button{width:30px;height:30px;flex:none;display:grid;place-items:center;background:none;border:0;border-radius:5px;color:var(--muted);padding:0}
+.draw-bar button:hover{color:var(--text);background:var(--raise)}
+.draw-bar button.on{color:var(--accent,#5B8DEF);background:var(--raise)}
+.draw-sep{width:20px;height:1px;background:var(--line);margin:4px 0;flex:none}
+.draw-panel{position:absolute;top:34px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--panel);border:1px solid var(--line);border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.draw-panel .sw{width:18px;height:18px;border-radius:50%;border:2px solid transparent;background:var(--c);padding:0;outline:1px solid var(--line)}
+.draw-panel .sw.on{border-color:var(--panel);outline:2px solid var(--c)}
+.draw-panel button:not(.sw){background:none;border:1px solid var(--line);border-radius:4px;color:var(--muted);font:inherit;font-size:12px;padding:3px 8px;display:grid;place-items:center}
+.draw-panel button:not(.sw):hover{color:var(--text)}
+@media (max-width:899px){ #chartEl{left:34px} .draw-bar{width:34px} .draw-bar button{width:28px;height:28px} .legend{left:42px} }
 .chart-msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);z-index:2;pointer-events:none}
 
 /* ---------- book ---------- */
@@ -150,6 +163,10 @@ header{display:flex;align-items:center;gap:26px;padding:9px 18px;flex-wrap:wrap}
 .chips button:hover{color:var(--text);border-color:var(--line)}
 .lev-row{display:flex;justify-content:space-between;align-items:baseline}
 .lev-row output{font-weight:600;font-size:14px}
+.lev-chips{display:flex;gap:4px;margin-top:6px}
+.lev-chips button{flex:1;background:var(--raise);border:1px solid var(--line);border-radius:4px;color:var(--muted);font:inherit;font-size:11.5px;padding:3px 0}
+.lev-chips button:hover,.lev-chips button.on{color:var(--text);border-color:var(--muted)}
+.lev-warn{margin:6px 0 0;font-size:11.5px;line-height:1.4;color:#E3B341}
 input[type=range]{width:100%;accent-color:var(--accent)}
 .checks{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
 .checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
@@ -456,11 +473,13 @@ td.rank{color:var(--muted);width:56px}
       <button data-i="1h" class="on">1h</button><button data-i="4h">4h</button><button data-i="1d">1d</button>
       <span class="sep"></span>
       <button id="resetView" title="Back to the latest candles at the default zoom">Reset view</button>
-      <span class="hint">Drag to move, scroll to zoom, drag the price axis to stretch</span>
+      <span class="hint">Drag to move, scroll to zoom. Drawing tools on the left</span>
     </div>
     <div class="chart-wrap">
       <div class="legend" id="legend"></div>
       <div class="chart-msg" id="chartMsg">Loading chart</div>
+      <div class="draw-bar" id="drawBar" role="toolbar" aria-label="Drawing tools"></div>
+      <div class="draw-panel" id="drawPanel" hidden></div>
       <div id="chartEl"></div>
     </div>
   </section>
@@ -495,7 +514,9 @@ td.rank{color:var(--muted);width:56px}
       </div>
       <div class="field">
         <div class="lev-row"><span>Leverage</span><output id="levOut">10x</output></div>
-        <input type="range" id="lev" min="1" max="40" value="10" aria-label="Leverage">
+        <input type="range" id="lev" min="0" max="40" step="1" value="9" aria-label="Leverage">
+        <div class="lev-chips" id="levChips"><button type="button" data-lev="5">5x</button><button type="button" data-lev="10">10x</button><button type="button" data-lev="25">25x</button><button type="button" data-lev="50">50x</button><button type="button" data-lev="100">100x</button><button type="button" data-lev="1000">1000x</button></div>
+        <p class="lev-warn" id="levWarn" hidden></p>
       </div>
       <div class="checks">
         <label><input type="checkbox" id="ro"> Reduce only</label>
@@ -833,7 +854,8 @@ function renderHeader(){
   const m = market(); if (!m) return;
   $("#hCoin").textContent = cname(m.name);
   $("#hTag").hidden = !mlabel(m.name); $("#hTag").textContent = mlabel(m.name); $("#coinBtn").title = mlabel(m.name) ? `${mlabel(m.name)}. Change market` : "Change market";
-  $("#hMaxLev").textContent = `up to ${m.max_lev}x`;
+  $("#hMaxLev").textContent = `up to ${MAX_LEV}x`;
+  $("#hMaxLev").title = `Hyperliquid allows up to ${m.max_lev}x on ${cname(m.name)}. With paper money, Aureous goes up to ${MAX_LEV}x.`;
   const p = $("#hPrice");
   if (S.prevPrice !== null && S.prevCoin === m.name && m.mark !== S.prevPrice) {
     p.classList.remove("tick-up", "tick-down"); void p.offsetWidth;
@@ -856,6 +878,7 @@ function countdown(){
 function selectCoin(name){
   if (!S.mk[name]) return;
   S.coin = name; store.set("coin", name);
+  if (DRAW) DRAW.setCoin(name);
   S.book = null; S.prevPrice = null;
   $("#px").value = ""; $("#tpIn").value = ""; $("#slIn").value = "";
   $("#markets").classList.remove("open");
@@ -865,7 +888,9 @@ function selectCoin(name){
 
 // ---------- chart (TradingView Lightweight Charts) ----------
 const LC = window.LightweightCharts;
-let chart, candleSeries, volSeries, priceLines = [];
+let chart, candleSeries, volSeries, priceLines = [], DRAW = null;
+const SCROLL_OPTS = {mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true};
+const SCALE_OPTS = {mouseWheel: true, pinch: true, axisPressedMouseMove: {time: true, price: true}, axisDoubleClickReset: {time: true, price: true}};
 // Lightweight Charts plots UTC; shift so the axis shows the viewer's local time.
 const toChartTime = ms => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
 function initChart(){
@@ -878,8 +903,8 @@ function initChart(){
       vertLine: {color: C.faint, labelBackgroundColor: C.crossLabel}, horzLine: {color: C.faint, labelBackgroundColor: C.crossLabel}},
     rightPriceScale: {borderColor: C.line, scaleMargins: {top: .1, bottom: .22}},
     timeScale: {borderColor: C.line, timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 7, minBarSpacing: .5},
-    handleScroll: {mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true},
-    handleScale: {mouseWheel: true, pinch: true, axisPressedMouseMove: {time: true, price: true}, axisDoubleClickReset: {time: true, price: true}},
+    handleScroll: SCROLL_OPTS,
+    handleScale: SCALE_OPTS,
     kineticScroll: {mouse: true, touch: true},
   });
   candleSeries = chart.addSeries(LC.CandlestickSeries, {
@@ -891,6 +916,13 @@ function initChart(){
   chart.subscribeCrosshairMove(p => renderLegend(p && p.time !== undefined ? p.seriesData.get(candleSeries) : null));
   chart.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r && r.from < 20) loadOlder(); });
   $("#chartEl").addEventListener("dblclick", resetView);
+  if (window.AureousDraw) {
+    try {
+      DRAW = AureousDraw.create({chart, series: candleSeries, wrap: $(".chart-wrap"), chartEl: $("#chartEl"), bar: $("#drawBar"), panel: $("#drawPanel"),
+        candles: () => S.candles, intervalMs: () => INTERVAL_MS[S.interval], fmt: fpx, store, scrollOpts: SCROLL_OPTS, scaleOpts: SCALE_OPTS});
+      DRAW.setCoin(S.coin);
+    } catch (e) { console.error("drawing tools", e); $("#drawBar").hidden = true; }
+  } else $("#drawBar").hidden = true;
 }
 function resetView(){
   if (!chart) return;
@@ -931,7 +963,7 @@ async function loadCandles(){
     candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
     $("#chartMsg").hidden = !!S.candles.length;
     if (!S.candles.length) $("#chartMsg").textContent = "No price history for this market yet";
-    resetView(); tickLastCandle(); drawPriceLines(); renderLegend(null);
+    resetView(); tickLastCandle(); drawPriceLines(); renderLegend(null); if (DRAW) DRAW.refresh();
   } catch (e) { if (gen === S.chartGen) $("#chartMsg").textContent = "Couldn't load the chart. Retrying shortly."; }
 }
 async function loadOlder(){
@@ -1020,19 +1052,41 @@ function renderBook(){
 }
 
 // ---------- ticket ----------
+// Leverage slider: 1x to 1000x in steps, so low values stay easy to pick
+const MAX_LEV = (window.Aureous && Aureous.MAX_LEVERAGE) || 1000;
+const LEV_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80, 90, 100, 125, 150, 175, 200,
+                   250, 300, 350, 400, 450, 500, 600, 700, 750, 800, 900, 1000].filter(x => x <= MAX_LEV);
+let levExact = null;                                  // a stored leverage that isn't one of the steps (e.g. 33x)
+function getLev(){ return levExact || LEV_STEPS[+$("#lev").value] || 1; }
+function setLevSlider(v){
+  let i = 0; LEV_STEPS.forEach((x, j) => { if (Math.abs(x - v) < Math.abs(LEV_STEPS[i] - v)) i = j; });
+  $("#lev").value = i; levExact = LEV_STEPS[i] === v ? null : v;
+}
+function renderLev(){
+  const m = market(), L = getLev();
+  $("#levOut").textContent = L + "x";
+  document.querySelectorAll("#levChips [data-lev]").forEach(b => b.classList.toggle("on", +b.dataset.lev === L));
+  const w = $("#levWarn");
+  if (!m || L <= m.max_lev) { w.hidden = true; return; }
+  const fee = (S.acct && S.acct.fees ? S.acct.fees.taker : .00045) * L, move = 1 / (2 * L);
+  const p = x => (x * 100).toFixed(x < .001 ? 3 : x < .01 ? 2 : 1).replace(/\.?0+$/, "") + "%";
+  w.hidden = false;
+  w.textContent = `Above ${m.max_lev}x, Hyperliquid's limit for ${cname(m.name)}. At ${L}x a ${p(move)} move against you liquidates the position, and the opening fee takes ${p(fee)} of your margin.`;
+}
 function syncLeverage(){
   const m = market(); if (!m) return;
-  const lev = $("#lev"); lev.max = m.max_lev; lev.value = Math.min(m.lev, m.max_lev);
-  $("#levOut").textContent = lev.value + "x";
+  $("#lev").max = LEV_STEPS.length - 1;
+  setLevSlider(Math.min(m.lev, MAX_LEV));
+  renderLev();
 }
 function refPrice(){ const m = market(); if (!m) return NaN; if (S.type === "limit") { const p = num($("#px").value); return p > 0 ? p : m.mark; } return m.mark; }
 // Size can be typed three ways: margin (your money; leverage multiplies it), position value in dollars, or coins
-function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "margin" ? sz * +$("#lev").value : S.unit === "usd" ? sz : sz * refPrice(); }
-function sizeFor(n){ const m = market(); return S.unit === "margin" ? (n / +$("#lev").value).toFixed(2) : S.unit === "usd" ? n.toFixed(2) : String(+(n / refPrice()).toFixed(m ? m.sz_dec : 4)); }
+function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "margin" ? sz * getLev() : S.unit === "usd" ? sz : sz * refPrice(); }
+function sizeFor(n){ const m = market(); return S.unit === "margin" ? (n / getLev()).toFixed(2) : S.unit === "usd" ? n.toFixed(2) : String(+(n / refPrice()).toFixed(m ? m.sz_dec : 4)); }
 const UNIT_LABEL = {margin: "Margin (your money)", usd: "Position value", coin: "Size in "};
 function renderSummary(){
   const m = market(), a = S.acct; if (!m) return;
-  const n = notional(), lev = +$("#lev").value, fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
+  const n = notional(), lev = getLev(), fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
   $("#sValue").textContent = n ? usd(n) + (S.unit !== "coin" ? ` (${fpx(n / refPrice(), m.sz_dec)} ${cname(m.name)})` : "") : "–";
   $("#sMargin").textContent = n ? usd(n / lev) : "–";
   $("#sFee").textContent = n ? usd(n * fee) : "–";
@@ -1044,7 +1098,7 @@ function renderSummary(){
     btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${S.type === "limit" ? " at limit" : ""}`;
   }
   $("#unitBtn").textContent = S.unit === "margin" ? "Margin" : S.unit === "usd" ? "Value" : m.name;
-  $("#sizeLabel").textContent = S.unit === "coin" ? UNIT_LABEL.coin + m.name : S.unit === "margin" ? `Margin (your money) × ${$("#lev").value}x` : UNIT_LABEL.usd;
+  $("#sizeLabel").textContent = S.unit === "coin" ? UNIT_LABEL.coin + m.name : S.unit === "margin" ? `Margin (your money) × ${getLev()}x` : UNIT_LABEL.usd;
 }
 function setSide(side){ S.side = side; document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.side === side)); renderSummary(); }
 function setType(type){
@@ -1062,7 +1116,7 @@ async function submitOrder(ev){
   const size = num($("#size").value);
   if (!(size > 0)) { toast("Enter a size first.", "error"); $("#size").focus(); return; }
   const body = {coin: m.name, side: S.side, type: S.type, size: S.unit === "margin" ? Math.round(notional() * 100) / 100 : size,
-                unit: S.unit === "margin" ? "usd" : S.unit, leverage: +$("#lev").value, reduce_only: $("#ro").checked};
+                unit: S.unit === "margin" ? "usd" : S.unit, leverage: getLev(), reduce_only: $("#ro").checked};
   if (S.type === "limit") {
     body.price = num($("#px").value);
     if (!(body.price > 0)) { toast("Enter a limit price.", "error"); $("#px").focus(); return; }
@@ -1077,7 +1131,7 @@ async function submitOrder(ev){
 
 function confirmOrder(body, m){
   return new Promise(resolve => {
-    const n = notional(), lev = +$("#lev").value;
+    const n = notional(), lev = getLev();
     const rows = [["Market", m.name], ["Side", body.side === "buy" ? "Long" : "Short"], ["Type", body.type === "limit" ? `Limit at ${fpx(body.price)}` : "Market"],
       ["Size", usd(n) + ` (${fpx(n / refPrice(), m.sz_dec)} ${cname(m.name)})`], ["Leverage", lev + "x"], ["Margin", usd(n / lev)]];
     if (body.tp) rows.push(["Take profit", fpx(body.tp)]);
@@ -1269,16 +1323,33 @@ $("#unitBtn").addEventListener("click", () => {
 });
 $("#chips").addEventListener("click", e => {
   const b = e.target.closest("[data-pct]"); if (!b || !S.acct || !market()) return;
-  // leave room for the fee (charged on the whole position) and a little slippage, so Max works at any leverage
-  const lev = +$("#lev").value, fee = S.acct.fees ? S.acct.fees.taker : .00045;
-  const n = Math.max(0, S.acct.available) * +b.dataset.pct / (1 / lev + fee + .0005);
+  // Leave room for the fee (charged on the whole position) and, for market orders, the price impact of
+  // eating into the visible order book, which matters a lot at high leverage. Never more than the book shows.
+  const m = market(), lev = getLev(), fee = S.acct.fees ? S.acct.fees.taker : .00045;
+  const budget = Math.max(0, S.acct.available) * +b.dataset.pct;
+  let n = budget / (1 / lev + fee + .0005);
+  const levels = S.book && S.type === "market" ? (S.side === "buy" ? S.book.asks : S.book.bids) : null;
+  if (levels && levels.length && m) {
+    const depth = levels.reduce((s, [px, sz]) => s + px * sz, 0);
+    const impact = N => { let left = N, cost = 0;           // $ lost against the mark when filling N dollars
+      for (const [px, sz] of levels) { const take = Math.min(left, px * sz); cost += take * Math.abs(px / m.mark - 1); left -= take; if (left <= 0) break; }
+      return cost; };
+    const fits = N => N / lev + N * (fee + .0002) + impact(N) <= budget;
+    let lo = 0, hi = Math.min(n, depth * .98);
+    for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+    n = lo;
+  }
   $("#size").value = sizeFor(n);
   renderSummary();
 });
 ["#size", "#px", "#post"].forEach(s => $(s).addEventListener("input", renderSummary));
-$("#lev").addEventListener("input", () => { $("#levOut").textContent = $("#lev").value + "x"; renderSummary(); });
+$("#lev").addEventListener("input", () => { levExact = null; renderLev(); renderSummary(); });
+$("#levChips").addEventListener("click", e => {
+  const b = e.target.closest("[data-lev]"); if (!b) return;
+  setLevSlider(+b.dataset.lev); renderLev(); renderSummary(); $("#lev").dispatchEvent(new Event("change"));
+});
 $("#lev").addEventListener("change", async () => {
-  const m = market(), v = +$("#lev").value;
+  const m = market(), v = getLev();
   if (locked()) return;
   try { await act("/api/leverage", {coin: m.name, leverage: v}); m.lev = v; }
   catch { syncLeverage(); renderSummary(); }

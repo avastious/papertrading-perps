@@ -13,6 +13,10 @@
   "use strict";
 
   const HOUR_MS = 3600000, EPS = 1e-12, DEFAULT_LEVERAGE = 10, MAX_SLIPPAGE = 0.05;
+  // Paper money, so any market can go up to 1000x, past Hyperliquid's own cap (market.max_leverage).
+  // Above that cap, a position's maintenance margin is half its initial margin (1 / (2 x leverage)),
+  // so liquidation comes when the move eats half the margin, just as at the cap.
+  const MAX_LEVERAGE = 1000;
   const INTERVAL_SECS = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400};
   // History caps keep a whole account small enough for browser storage and one cloud document.
   const MAX_TRADES = 2000, MAX_FUNDING = 2000, MAX_CURVE = 3000;
@@ -191,14 +195,15 @@
     // ---------------------------------------------------------- account
     leverage(coin) {
       const m = this.market(coin);
-      return Math.min(parseInt(this.state.leverage[m.name] ?? DEFAULT_LEVERAGE, 10), m.max_leverage);
+      return Math.min(parseInt(this.state.leverage[m.name] ?? DEFAULT_LEVERAGE, 10), MAX_LEVERAGE);
     }
+    mmr(coin) { const m = this.market(coin); return Math.min(m.mmr, 1 / (2 * this.leverage(coin))); }
     upnl(coin) { const p = this.state.positions[coin]; return p ? p.size * (this.market(coin).mark - p.entry) : 0; }
     positionMargin(coin) { const p = this.state.positions[coin]; return p ? Math.abs(p.size) * this.market(coin).mark / this.leverage(coin) : 0; }
     equity() { return this.state.balance + Object.keys(this.state.positions).reduce((s, c) => s + this.upnl(c), 0); }
     marginUsed() { return Object.keys(this.state.positions).reduce((s, c) => s + this.positionMargin(c), 0); }
     maintenance() {
-      return Object.entries(this.state.positions).reduce((s, [c, p]) => { const m = this.market(c); return s + Math.abs(p.size) * m.mark * m.mmr; }, 0);
+      return Object.entries(this.state.positions).reduce((s, [c, p]) => { const m = this.market(c); return s + Math.abs(p.size) * m.mark * this.mmr(c); }, 0);
     }
     orderMargin() {
       return this.state.orders.filter(o => o.type === "limit" && !o.reduce_only)
@@ -209,9 +214,9 @@
       const p = this.state.positions[coin];
       if (!p) return null;
       const m = this.market(coin), s = p.size, e = p.entry;
-      const otherMaint = this.maintenance() - Math.abs(s) * m.mark * m.mmr;
+      const mmr = this.mmr(coin), otherMaint = this.maintenance() - Math.abs(s) * m.mark * mmr;
       const e0 = this.equity() - this.upnl(coin) - otherMaint;
-      const px = (s * e - e0) / (s * (1 - sign(s) * m.mmr));
+      const px = (s * e - e0) / (s * (1 - sign(s) * mmr));
       return px > 0 ? px : null;
     }
 
@@ -243,8 +248,10 @@
       const others = this.marginUsed() - this.positionMargin(coin);
       const im = others + Math.abs(n) * m.mark / this.leverage(coin);
       if (eq - im - this.orderMargin() < 0) {
-        throw new PaperError(`Insufficient margin: this needs $${fmt2(im - others)} at ${this.leverage(coin)}x, ` +
-                             `you have $${fmt2(this.available())} available.`);
+        const impact = Math.abs(sz) * Math.abs(px - m.mark);
+        throw new PaperError(`Insufficient margin: this needs $${fmt2(im - others)} at ${this.leverage(coin)}x` +
+                             (fee + impact >= 0.01 * (im - others) ? ` plus $${fmt2(fee)} in fees` + (impact >= 0.01 ? ` and $${fmt2(impact)} of price impact (filling at ${g(px)} against a mark of ${g(m.mark)})` : "") : "") +
+                             `. You have $${fmt2(this.available())} available.`);
       }
     }
     execute(coin, sz, px, feeRate, kind) {
@@ -356,7 +363,7 @@
     }
     setLeverage(coin, lev) {
       const m = this.market(coin);
-      if (!(lev >= 1 && lev <= m.max_leverage)) throw new PaperError(`${m.name} leverage must be 1-${m.max_leverage}x.`);
+      if (!(Number.isInteger(lev) && lev >= 1 && lev <= MAX_LEVERAGE)) throw new PaperError(`Leverage must be a whole number from 1 to ${MAX_LEVERAGE}x.`);
       const old = this.state.leverage[m.name];
       this.state.leverage[m.name] = lev;
       if (this.available() < 0) {
@@ -694,5 +701,5 @@
   ];
   const SPOTLIGHT_MS = 7 * 24 * 3600 * 1000;
 
-  root.Aureous = {EXTRA_MARKETS, MARKET_LABELS, displayName, HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, applyFill, roundSize, roundPx, HOUR_MS, TIERS, SPOTLIGHT_MS};
+  root.Aureous = {MAX_LEVERAGE, EXTRA_MARKETS, MARKET_LABELS, displayName, HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, applyFill, roundSize, roundPx, HOUR_MS, TIERS, SPOTLIGHT_MS};
 })(typeof window !== "undefined" ? window : globalThis);

@@ -21,6 +21,7 @@ HOUR_MS = 3_600_000
 EPS = 1e-12
 DEFAULT_LEVERAGE = 10
 MAX_SLIPPAGE = 0.05
+MAX_LEVERAGE = 1000  # paper money: any market up to 1000x (above Hyperliquid's cap, maintenance = half the initial margin)
 
 
 class PaperError(Exception):
@@ -177,7 +178,11 @@ class PaperExchange:
     # -------------------------------------------------------------- account
     def leverage(self, coin: str) -> int:
         m = self.market(coin)
-        return min(int(self.state["leverage"].get(m.name, DEFAULT_LEVERAGE)), m.max_leverage)
+        return min(int(self.state["leverage"].get(m.name, DEFAULT_LEVERAGE)), MAX_LEVERAGE)
+
+    def mmr(self, coin: str) -> float:
+        """Maintenance margin rate: the market's own, or half the initial margin above Hyperliquid's cap."""
+        return min(self.market(coin).mmr, 1.0 / (2 * self.leverage(coin)))
 
     def upnl(self, coin: str) -> float:
         p = self.state["positions"].get(coin)
@@ -194,7 +199,7 @@ class PaperExchange:
         return sum(self.position_margin(c) for c in self.state["positions"])
 
     def maintenance(self) -> float:
-        return sum(abs(p["size"]) * self.market(c).mark * self.market(c).mmr
+        return sum(abs(p["size"]) * self.market(c).mark * self.mmr(c)
                    for c, p in self.state["positions"].items())
 
     def order_margin(self) -> float:
@@ -212,9 +217,10 @@ class PaperExchange:
             return None
         m = self.market(coin)
         s, e = p["size"], p["entry"]
-        other_maint = self.maintenance() - abs(s) * m.mark * m.mmr
+        mmr = self.mmr(coin)
+        other_maint = self.maintenance() - abs(s) * m.mark * mmr
         e0 = self.equity() - self.upnl(coin) - other_maint
-        denom = s * (1 - sign(s) * m.mmr)
+        denom = s * (1 - sign(s) * mmr)
         px = (s * e - e0) / denom
         return px if px > 0 else None
 
@@ -402,8 +408,8 @@ class PaperExchange:
 
     def set_leverage(self, coin: str, lev: int) -> int:
         m = self.market(coin)
-        if lev < 1 or lev > m.max_leverage:
-            raise PaperError(f"{m.name} leverage must be 1-{m.max_leverage}x.")
+        if lev < 1 or lev > MAX_LEVERAGE:
+            raise PaperError(f"Leverage must be a whole number from 1 to {MAX_LEVERAGE}x.")
         old = self.state["leverage"].get(m.name)
         self.state["leverage"][m.name] = lev
         if self.available() < 0:

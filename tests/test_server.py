@@ -38,6 +38,6 @@ def test_flow(tmp_path):
     s, r = call("/api/cancel", {"target": "all"}); assert ex.state["orders"] == []
     s, r = call("/api/order", {"coin": "BTC", "side": "buy", "size": 10_000_000}); assert s == 400 and "Insufficient" in r["error"]
     s, r = call("/api/order", {"coin": "NOPE", "side": "buy", "size": 1}); assert s == 400
-    s, r = call("/api/leverage", {"coin": "ETH", "leverage": 99}); assert s == 400
+    s, r = call("/api/leverage", {"coin": "ETH", "leverage": 1001}); assert s == 400
     s, r = call("/api/book?coin=eth"); assert r["coin"] == "ETH" and len(r["bids"]) == 14
     s, r = call("/api/reset", {"balance": 5000}); assert ex.state["balance"] == 5000

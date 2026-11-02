@@ -97,12 +97,25 @@ def test_usd_margin_and_leverage_checks(env):
     with pytest.raises(PaperError, match="Insufficient margin"):
         ex.market_order("BTC", 0.5)                  # $30k notional at 2x needs $15k
     with pytest.raises(PaperError):
-        ex.set_leverage("BTC", 41)
+        ex.set_leverage("BTC", 1001)
     ex.set_leverage("BTC", 40)
     ex.market_order("BTC", 0.5)
     with pytest.raises(PaperError, match="lower leverage"):
         ex.set_leverage("BTC", 1)
     ex.close("BTC")                                  # reducing always allowed
+
+
+def test_leverage_above_hyperliquid_cap(env):
+    ex, *_ = env
+    m = ex.market("BTC")
+    ex.set_leverage("BTC", 40)
+    assert ex.mmr("BTC") == m.mmr                     # at or below the cap: the market's own maintenance
+    ex.set_leverage("BTC", 1000)
+    assert ex.mmr("BTC") == pytest.approx(1 / 2000)   # above: half of the 0.1% initial margin
+    ex.client.depth = 50.0
+    ex.market_order("BTC", 100)                       # $6M on $10k at 1000x
+    p = ex.state["positions"]["BTC"]
+    assert 0 < (p["entry"] - ex.liq_price("BTC")) / p["entry"] < 0.002    # liquidation a tiny move away
 
 
 def test_flip_and_reduce_only(env):

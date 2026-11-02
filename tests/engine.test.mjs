@@ -79,11 +79,24 @@ test("margin and leverage checks", async () => {
   const {ex} = await env();
   ex.setLeverage("BTC", 2);
   await rejects(ex.marketOrder("BTC", 0.5), /Insufficient margin/);
-  throws(() => ex.setLeverage("BTC", 41));
+  throws(() => ex.setLeverage("BTC", 1001));
   ex.setLeverage("BTC", 40);
   await ex.marketOrder("BTC", 0.5);
   throws(() => ex.setLeverage("BTC", 1), /lower leverage/);
   await ex.close("BTC");
+});
+
+test("leverage above Hyperliquid's cap (up to 1000x)", async () => {
+  const {ex} = await env();
+  await ex.refresh();
+  const m = ex.market("BTC");
+  ex.setLeverage("BTC", 40); assert.equal(ex.mmr("BTC"), m.mmr);
+  ex.setLeverage("BTC", 1000); near(ex.mmr("BTC"), 1 / 2000);
+  ex.client.depth = 50;
+  await ex.marketOrder("BTC", 100);                 // $6M on $10k at 1000x
+  const p = ex.state.positions.BTC;
+  const gap = (p.entry - ex.liqPrice("BTC")) / p.entry;
+  assert.ok(gap > 0 && gap < 0.002, `liquidation is a tiny move away (${gap})`);
 });
 
 test("flip and reduce-only", async () => {

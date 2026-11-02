@@ -34,8 +34,11 @@ r = await call('/api/order', { token: billy, body: { coin: 'BTC', side: 'buy', s
 ok(r.status === 400 && /Insufficient/.test(r.j.error), 'oversized order rejected', r.j.error);
 r = await call('/api/order', { token: billy, body: { coin: 'BTC', side: 'buy', size: -5, unit: 'usd' } });
 ok(r.status === 400, 'negative size rejected', r.j.error);
+r = await call('/api/leverage', { token: billy, body: { coin: 'BTC', leverage: 1001 } });
+ok(r.status === 400, 'leverage above 1000x rejected', r.j.error);
 r = await call('/api/leverage', { token: billy, body: { coin: 'BTC', leverage: 500 } });
-ok(r.status === 400, 'leverage above market max rejected', r.j.error);
+ok(r.status === 200, '500x allowed (past Hyperliquid\'s 40x, paper money)', r.j.error);
+await call('/api/leverage', { token: billy, body: { coin: 'BTC', leverage: 10 } });
 r = await call('/api/order', { token: sam, body: { coin: 'ETH', side: 'sell', type: 'limit', size: 2, unit: 'coin', price: 2300 } });
 ok(r.status === 200 && r.j.state.orders.length === 1, 'sam rests a sell limit at 2300');
 
