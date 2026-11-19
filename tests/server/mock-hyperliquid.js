@@ -30,6 +30,11 @@ function info(q) {
     const lv = (s, i) => ({ px: String(r(p * (1 + s * 0.0001 * i), d)), sz: String(2 + (i % 3)), n: 1 });
     return { coin: q.coin, levels: [[...Array(20)].map((_, i) => lv(-1, i + 1)), [...Array(20)].map((_, i) => lv(1, i + 1))] };
   }
+  if (q.type === 'recentTrades') {
+    const p = px[q.coin], d = p > 1000 ? 1 : p > 10 ? 2 : 6, now = Date.now();
+    return [...Array(30)].map((_, i) => { const side = (i * 7 + Math.floor(now / 4000)) % 3 ? 'B' : 'A';
+      return { coin: q.coin, side, px: String(r(p * (1 + (side === 'B' ? 1 : -1) * 0.00004 * (i % 4)), d)), sz: String(r((0.05 + ((i * 37) % 23) / 7) * 2000 / Math.max(p, 1) + 0.001, 4)), time: now - i * 1700 - 300, hash: '0x', tid: i }; });
+  }
   if (q.type === 'candleSnapshot') {
     const { coin, interval, startTime, endTime } = q.req;
     const step = { '1m': 6e4, '5m': 3e5, '15m': 9e5, '1h': 36e5, '4h': 144e5, '1d': 864e5 }[interval];

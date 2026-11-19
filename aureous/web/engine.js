@@ -68,6 +68,7 @@
       return [{...meta, universe}, all];
     }
     l2Book(coin) { return this.post({type: "l2Book", coin}); }
+    recentTrades(coin) { return this.post({type: "recentTrades", coin}); }
     fundingHistory(coin, startTime, endTime) {
       const p = {type: "fundingHistory", coin, startTime: Math.floor(startTime)};
       if (endTime != null) p.endTime = Math.floor(endTime);
@@ -561,6 +562,7 @@
         "/api/markets": () => this.markets(),
         "/api/state": () => this.state(+(q.since || 0)),
         "/api/book": () => this.book(q.coin),
+        "/api/recent": () => this.recent(q.coin),
         "/api/candles": () => this.candles(q.coin, q.interval || "1h", Math.min(+(q.n || 120), 1000), q.end ? +q.end : null),
         "/api/order": () => this.locked(() => this.order(body)),
         "/api/close": () => this.locked(() => this.close(body)),
@@ -607,6 +609,12 @@
       await this.ex.refresh();
       const name = this.ex.market(coin).name, b = await this.ex.book(name);
       return {coin: name, bids: b.bids.slice(0, 14), asks: b.asks.slice(0, 14)};
+    }
+    // the market's latest public trades on Hyperliquid, newest first: [time ms, price, size, "buy"|"sell"]
+    async recent(coin) {
+      await this.ex.refresh();
+      const name = this.ex.market(coin).name, raw = await this.ex.client.recentTrades(name);
+      return {coin: name, trades: (raw || []).map(t => [+t.time, +t.px, +t.sz, t.side === "B" ? "buy" : "sell"]).sort((a, b) => b[0] - a[0]).slice(0, 40)};
     }
     async candles(coin, interval, n, end = null) {
       const secs = INTERVAL_SECS[interval];

@@ -40,4 +40,5 @@ def test_flow(tmp_path):
     s, r = call("/api/order", {"coin": "NOPE", "side": "buy", "size": 1}); assert s == 400
     s, r = call("/api/leverage", {"coin": "ETH", "leverage": 1001}); assert s == 400
     s, r = call("/api/book?coin=eth"); assert r["coin"] == "ETH" and len(r["bids"]) == 14
+    s, r = call("/api/recent?coin=eth"); assert r["coin"] == "ETH" and r["trades"] == [[3000, 2999.0, 0.25, "sell"], [1000, 3000.0, 0.5, "buy"]]
     s, r = call("/api/reset", {"balance": 5000}); assert ex.state["balance"] == 5000

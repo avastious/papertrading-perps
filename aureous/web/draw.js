@@ -24,7 +24,7 @@
     {id: "text", label: "Text", pts: 1, icon: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>'},
   ];
   const BY_ID = Object.fromEntries(TOOLS.map(t => [t.id, t]));
-  const COLORS = ["#5B8DEF", "#E3B341", "#2FA57D", "#DB5A55", "#B48CF2", "#E6EBF1"];
+  const COLORS = ["#D1A85A", "#5B8DEF", "#2FA57D", "#DB5A55", "#B48CF2", "#E6EBF1"];
   const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
   const HIT = 6, HANDLE = 8, MAX_PER_COIN = 300, UNDO = 50;
   const svg = (body, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;

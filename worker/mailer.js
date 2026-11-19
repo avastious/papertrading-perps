@@ -31,14 +31,14 @@ export function codeEmail(code, purpose) {
   const what = purpose === "reset" ? "reset your Aureous password" : "confirm your email for Aureous";
   const subject = purpose === "reset" ? `${code} is your Aureous password reset code` : `${code} is your Aureous verification code`;
   const text = `Your code to ${what} is ${code}\n\nIt expires in 10 minutes. If you didn't ask for it, ignore this email: nothing changes without the code.\n\nAureous (paper trading) - https://aureous.trade`;
-  const html = `<!doctype html><html><body style="margin:0;background:#0E131B;font-family:Arial,Helvetica,sans-serif;color:#E6EBF1">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0E131B;padding:32px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#131A24;border:1px solid #222D3C;border-radius:10px;padding:28px">
-<tr><td style="font-family:Georgia,'Times New Roman',serif;letter-spacing:4px;font-size:20px;color:#E6EBF1">AUREOUS</td></tr>
-<tr><td style="padding-top:18px;font-size:15px;line-height:1.5;color:#C3CBD6">Your code to ${esc(what)}:</td></tr>
-<tr><td style="padding:16px 0;font-size:34px;font-weight:bold;letter-spacing:8px;color:#FFFFFF">${esc(code)}</td></tr>
-<tr><td style="font-size:13px;line-height:1.5;color:#8592A3">It expires in 10 minutes. If you didn't ask for it, ignore this email: nothing changes without the code.</td></tr>
-<tr><td style="padding-top:22px;font-size:12px;color:#55627A">Aureous, paper trading on live Hyperliquid prices. <a href="https://aureous.trade" style="color:#8592A3">aureous.trade</a></td></tr>
+  const html = `<!doctype html><html><body style="margin:0;background:#0C0D10;font-family:Arial,Helvetica,sans-serif;color:#ECE8E1">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0C0D10;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#131418;border:1px solid #272A31;border-radius:10px;padding:28px">
+<tr><td style="font-family:Georgia,'Times New Roman',serif;letter-spacing:4px;font-size:20px;color:#ECE8E1">AUREOUS</td></tr>
+<tr><td style="padding-top:18px;font-size:15px;line-height:1.5;color:#D6D2CA">Your code to ${esc(what)}:</td></tr>
+<tr><td style="padding:16px 0;font-size:34px;font-weight:bold;letter-spacing:8px;color:#E2BE77">${esc(code)}</td></tr>
+<tr><td style="font-size:13px;line-height:1.5;color:#9B978F">It expires in 10 minutes. If you didn't ask for it, ignore this email: nothing changes without the code.</td></tr>
+<tr><td style="padding-top:22px;font-size:12px;color:#67645E">Aureous, paper trading on live Hyperliquid prices. <a href="https://aureous.trade" style="color:#9B978F">aureous.trade</a></td></tr>
 </table></td></tr></table></body></html>`;
   return {subject, text, html};
 }

@@ -68,6 +68,10 @@ class HyperliquidClient:
         """{'coin', 'time', 'levels': [bids, asks]} with up to 20 levels a side."""
         return self._post({"type": "l2Book", "coin": coin})
 
+    def recent_trades(self, coin: str):
+        """[{'coin', 'side': 'B'|'A', 'px', 'sz', 'time', ...}] - the market's latest public trades."""
+        return self._post({"type": "recentTrades", "coin": coin})
+
     def funding_history(self, coin: str, start_ms: int, end_ms: int | None = None):
         """[{'coin', 'fundingRate', 'premium', 'time'}] - one entry per hour."""
         payload = {"type": "fundingHistory", "coin": coin, "startTime": int(start_ms)}

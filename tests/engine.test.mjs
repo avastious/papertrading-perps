@@ -23,6 +23,7 @@ class FakeClient {
     return {coin, levels: [Array.from({length: 20}, (_, i) => lvl(r(p * (1 - 0.0001 * (i + 1))))),
                            Array.from({length: 20}, (_, i) => lvl(r(p * (1 + 0.0001 * (i + 1)))))]};
   }
+  async recentTrades(coin) { const p = this.px[coin]; return [{coin, side: "B", px: String(p), sz: "0.5", time: 1000}, {coin, side: "A", px: String(p - 1), sz: "0.25", time: 3000}]; }
   async fundingHistory(coin, start, end) { return this.fundingEvents.filter(e => e.coin === coin && e.time >= start && e.time <= (end ?? 1e18)); }
   async candles() { return []; }
 }
@@ -198,6 +199,7 @@ test("local API flow mirrors the Python server", async () => {
   await app.handle("/api/cancel", {}, {target: "all"}); assert.deepEqual(ex.state.orders, []);
   await rejects(app.handle("/api/order", {}, {coin: "BTC", side: "buy", size: 1e7}), /Insufficient/);
   const b = await app.handle("/api/book", {coin: "eth"}); assert.equal(b.coin, "ETH"); assert.equal(b.bids.length, 14);
+  const t = await app.handle("/api/recent", {coin: "eth"}); assert.deepEqual(t.trades, [[3000, 2999, 0.25, "sell"], [1000, 3000, 0.5, "buy"]]);
   await app.handle("/api/reset", {}, {balance: 5000}); assert.equal(ex.state.balance, 5000);
 });
 

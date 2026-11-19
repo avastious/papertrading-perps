@@ -112,6 +112,15 @@ class App:
         bids, asks = self.ex.book(name)
         return {"coin": name, "bids": bids[:14], "asks": asks[:14]}
 
+    def recent(self, coin: str):
+        """The market's latest public trades, newest first: [time ms, price, size, "buy"|"sell"]."""
+        with self.lock:
+            name = self.ex.market(coin).name
+        raw = self.ex.client.recent_trades(name) or []
+        trades = sorted(([int(t["time"]), float(t["px"]), float(t["sz"]), "buy" if t["side"] == "B" else "sell"] for t in raw),
+                        key=lambda t: -t[0])
+        return {"coin": name, "trades": trades[:40]}
+
     def candles(self, coin: str, interval: str, n: int, end: int | None = None):
         secs = INTERVAL_SECS.get(interval)
         if not secs:
@@ -282,6 +291,7 @@ def make_handler(app: App):
                 "/api/markets": lambda: app.markets(),
                 "/api/state": lambda: app.state(int(q.get("since", 0))),
                 "/api/book": lambda: app.book(q["coin"]),
+                "/api/recent": lambda: app.recent(q["coin"]),
                 "/api/candles": lambda: app.candles(q["coin"], q.get("interval", "1h"), min(int(q.get("n", 120)), 1000),
                                                     int(q["end"]) if q.get("end") else None),
             }

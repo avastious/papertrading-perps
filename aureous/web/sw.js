@@ -3,7 +3,7 @@
 //  - Our own scripts, styles, fonts and icons: served from the saved copy and refreshed in the background.
 //    (Published files carry ?v=<version>, so a new release is a new address and is fetched fresh.)
 //  - Everything else (Hyperliquid prices, the trading server, Google sign-in) is never touched.
-const CACHE = "aureous-v1";
+const CACHE = "aureous-v2";
 const SHELL = ["./", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

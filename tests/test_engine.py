@@ -25,6 +25,11 @@ class FakeClient:
         return {"coin": coin, "levels": [[lvl(round(p * (1 - 0.0001 * i), 2)) for i in range(1, 21)],
                                          [lvl(round(p * (1 + 0.0001 * i), 2)) for i in range(1, 21)]]}
 
+    def recent_trades(self, coin):
+        p = self.px[coin]
+        return [{"coin": coin, "side": "B", "px": str(p), "sz": "0.5", "time": 1000},
+                {"coin": coin, "side": "A", "px": str(p - 1), "sz": "0.25", "time": 3000}]
+
     def funding_history(self, coin, start, end=None):
         return [e for e in self.funding_events if e["coin"] == coin and start <= e["time"] <= (end or 1e18)]
 
