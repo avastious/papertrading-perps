@@ -27,6 +27,7 @@
   // Entropy ("io"): ANTH is Anthropic pre-IPO priced as the company's valuation in billions of dollars.
   const EXTRA_MARKETS = {xyz: ["XYZ100", "ANT"], io: ["ANTH"]};
   const MARKET_LABELS = {"xyz:XYZ100": "Nasdaq 100", "xyz:ANT": "Anthropic pre-IPO, per share", "io:ANTH": "Anthropic pre-IPO, valuation $bn"};
+  const EXTRA_REFRESH_MS = 10000;
   const displayName = name => String(name).replace(/^[a-z][a-z0-9]*:/, "");
 
   class PaperError extends Error {}
@@ -52,9 +53,13 @@
     }
     // Hyperliquid's own markets plus the EXTRA_MARKETS above, as one [meta, ctxs] pair. If a builder
     // group can't be reached, its last good data is reused so open positions keep a price.
+    // Builder groups are re-read at most every EXTRA_REFRESH_MS: each read costs as much of Hyperliquid's
+    // per-visitor rate limit as the main list, and a few seconds' lag on these markets is fine.
     async metaAndCtxs() {
-      this.extra = this.extra || {};
+      this.extra = this.extra || {}; this.extraAt = this.extraAt || {};
       const groups = Object.entries(EXTRA_MARKETS).map(async ([dex, tickers]) => {
+        if (this.extra[dex] && Date.now() - (this.extraAt[dex] || 0) < EXTRA_REFRESH_MS) return this.extra[dex];
+        this.extraAt[dex] = Date.now();
         try {
           const [meta, ctxs] = await this.post({type: "metaAndAssetCtxs", dex}, 1);   // one try: never slow the main list down
           const want = new Set(tickers.map(t => t.toUpperCase())), bare = n => String(n).replace(/^[^:]*:/, "").toUpperCase();

@@ -2575,9 +2575,9 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   await refreshState().catch(() => {});
   loadCandles();
   loop(refreshState, 1500);
-  setTimeout(() => loop(refreshMarkets, 2500), 2500);
+  setTimeout(() => loop(refreshMarkets, 3000), 3000);
   loop(refreshBook, 1500);
-  loop(refreshTrades, 2000);
+  loop(refreshTrades, 5000);
   setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
   countdown(); setInterval(countdown, 1000);
   setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView === "clans") loadClans(); } }, 30000);
