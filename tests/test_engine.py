@@ -222,6 +222,8 @@ def test_builder_markets_merged(monkeypatch):
     hl, down = HyperliquidClient(), {"xyz": False}
 
     def post(payload):
+        if payload.get("dex") == "io":
+            return [{"universe": [{"name": "io:anth", "szDecimals": 3, "maxLeverage": 3}]}, [{"markPx": "1950"}]]
         if payload.get("dex") == "xyz":
             if down["xyz"]:
                 raise HyperliquidAPIError("down")
@@ -231,7 +233,7 @@ def test_builder_markets_merged(monkeypatch):
 
     monkeypatch.setattr(hl, "_post", post)
     meta, ctxs = hl.meta_and_ctxs()
-    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100"] and ctxs[1]["markPx"] == "25000"
+    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100", "io:ANTH"] and ctxs[1]["markPx"] == "25000"
     down["xyz"] = True
     meta, _ = hl.meta_and_ctxs()
-    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100"]
+    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100", "io:ANTH"]

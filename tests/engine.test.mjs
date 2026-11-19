@@ -209,17 +209,18 @@ test("builder markets (xyz:XYZ100) are merged in, and kept if their group can't 
   const fetchFn = async (url, init) => {
     const q = JSON.parse(init.body);
     if (q.dex === "xyz" && xyzDown) return {ok: false, status: 500, json: async () => ({})};
-    const body = q.dex === "xyz"
+    const body = q.dex === "io" ? [{universe: [{name: "io:anth", szDecimals: 3, maxLeverage: 3}, {name: "io:SNDK", szDecimals: 2, maxLeverage: 10}]}, [{markPx: "1950"}, {markPx: "90"}]]
+      : q.dex === "xyz"
       ? [{universe: [{name: "xyz:XYZ100", szDecimals: 4, maxLeverage: 30}, {name: "xyz:TSLA", szDecimals: 3, maxLeverage: 10}]}, [{markPx: "25000"}, {markPx: "400"}]]
       : [{universe: [{name: "BTC", szDecimals: 5, maxLeverage: 40}]}, [{markPx: "60000"}]];
     return {ok: true, status: 200, json: async () => body};
   };
   const hl = new HyperliquidClient("https://example.test", fetchFn);
   let [meta, ctxs] = await hl.metaAndCtxs();
-  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100"]);   // only the markets we chose
-  assert.equal(ctxs[1].markPx, "25000");
+  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100", "io:ANTH"]);   // only the markets we chose, names tidied
+  assert.equal(ctxs[1].markPx, "25000"); assert.equal(ctxs[2].markPx, "1950");
   xyzDown = true;
   [meta] = await hl.metaAndCtxs();
-  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100"]);   // last good copy reused
+  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100", "io:ANTH"]);   // last good copy reused
   assert.equal(displayName("xyz:XYZ100"), "XYZ100"); assert.equal(displayName("kPEPE"), "kPEPE");
 });

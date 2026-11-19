@@ -3,8 +3,8 @@
 // plus helpers for tests: GET /token?uid=&name= mints a signed ID token; POST /set moves a price.
 const http = require('http'), crypto = require('crypto');
 const PROJECT = 'aureous-14551';
-const px = { BTC: 77800, ETH: 2266.4, SOL: 95.5, HYPE: 87.92, kPEPE: 0.00499, 'xyz:XYZ100': 25012.5 };
-const meta = { BTC: [5, 40], ETH: [4, 25], SOL: [2, 20], HYPE: [2, 10], kPEPE: [0, 10], 'xyz:XYZ100': [4, 30] };
+const px = { BTC: 77800, ETH: 2266.4, SOL: 95.5, HYPE: 87.92, kPEPE: 0.00499, 'xyz:XYZ100': 25012.5, 'xyz:ANT': 115.42, 'io:ANTH': 1952.3 };
+const meta = { BTC: [5, 40], ETH: [4, 25], SOL: [2, 20], HYPE: [2, 10], kPEPE: [0, 10], 'xyz:XYZ100': [4, 30], 'xyz:ANT': [2, 10], 'io:ANTH': [3, 3] };
 let funding = [];   // {coin, fundingRate, time}
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'test-key-1', alg: 'RS256', use: 'sig' };

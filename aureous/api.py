@@ -41,7 +41,9 @@ class HyperliquidClient:
 
     # --- endpoints -------------------------------------------------------
     # Builder-deployed (HIP-3) markets to include, by group ("dex"). Hyperliquid names them "<dex>:<ticker>".
-    EXTRA_MARKETS = {"xyz": ["XYZ100"]}   # trade.xyz: XYZ100 tracks the Nasdaq 100
+    # trade.xyz: XYZ100 tracks the Nasdaq 100, ANT is Anthropic pre-IPO per share; Entropy ("io"): ANTH is
+    # Anthropic pre-IPO priced as its valuation in billions of dollars.
+    EXTRA_MARKETS = {"xyz": ["XYZ100", "ANT"], "io": ["ANTH"]}
 
     def meta_and_ctxs(self):
         """[meta, assetCtxs] for every perp: max leverage, size decimals, mark,
@@ -54,9 +56,10 @@ class HyperliquidClient:
         for dex, tickers in self.EXTRA_MARKETS.items():
             try:
                 m2, c2 = self._post({"type": "metaAndAssetCtxs", "dex": dex})
-                want = set(tickers) | {f"{dex}:{t}" for t in tickers}
-                pairs = [({**u, "name": u["name"] if ":" in u["name"] else f"{dex}:{u['name']}"}, c)
-                         for u, c in zip(m2["universe"], c2) if u["name"] in want]
+                want = {t.upper() for t in tickers}
+                bare = lambda n: str(n).split(":", 1)[-1].upper()
+                pairs = [({**u, "name": f"{dex}:{bare(u['name'])}"}, c)
+                         for u, c in zip(m2["universe"], c2) if bare(u["name"]) in want]
                 self._extra[dex] = pairs
             except HyperliquidAPIError:
                 pass

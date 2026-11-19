@@ -23,8 +23,10 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Builder-deployed (HIP-3) markets to include alongside Hyperliquid's own list. Hyperliquid only
   // lists them when asked for their group ("dex") by name, and names them "<dex>:<ticker>".
-  const EXTRA_MARKETS = {xyz: ["XYZ100"]};                  // trade.xyz: XYZ100 tracks the Nasdaq 100
-  const MARKET_LABELS = {"xyz:XYZ100": "Nasdaq 100"};
+  // trade.xyz: XYZ100 tracks the Nasdaq 100, ANT is Anthropic pre-IPO priced per share.
+  // Entropy ("io"): ANTH is Anthropic pre-IPO priced as the company's valuation in billions of dollars.
+  const EXTRA_MARKETS = {xyz: ["XYZ100", "ANT"], io: ["ANTH"]};
+  const MARKET_LABELS = {"xyz:XYZ100": "Nasdaq 100", "xyz:ANT": "Anthropic pre-IPO, per share", "io:ANTH": "Anthropic pre-IPO, valuation $bn"};
   const displayName = name => String(name).replace(/^[a-z][a-z0-9]*:/, "");
 
   class PaperError extends Error {}
@@ -55,9 +57,9 @@
       const groups = Object.entries(EXTRA_MARKETS).map(async ([dex, tickers]) => {
         try {
           const [meta, ctxs] = await this.post({type: "metaAndAssetCtxs", dex}, 1);   // one try: never slow the main list down
-          const want = new Set(tickers.flatMap(t => [t, `${dex}:${t}`]));
+          const want = new Set(tickers.map(t => t.toUpperCase())), bare = n => String(n).replace(/^[^:]*:/, "").toUpperCase();
           const u = [], c = [];
-          meta.universe.forEach((info, i) => { if (want.has(info.name)) { u.push({...info, name: info.name.includes(":") ? info.name : `${dex}:${info.name}`}); c.push(ctxs[i] || {}); } });
+          meta.universe.forEach((info, i) => { if (want.has(bare(info.name))) { u.push({...info, name: `${dex}:${bare(info.name)}`}); c.push(ctxs[i] || {}); } });
           this.extra[dex] = [u, c];
         } catch {}
         return this.extra[dex] || [[], []];
