@@ -35,7 +35,12 @@ export default {
     const cors = corsHeaders(req, env);
     const url = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null, {status: cors["Access-Control-Allow-Origin"] ? 204 : 403, headers: cors});
-    const reply = r => json(r.ok === false ? {ok: false, error: r.error, state: r.state, events: r.events} : r, r.ok === false ? r.status || 500 : 200, cors);
+    const reply = r => json(r.ok === false ? {ok: false, error: r.error, code: r.code, state: r.state, events: r.events} : r, r.ok === false ? r.status || 500 : 200, cors);
+    const readBody = async () => {
+      const t = await req.text();
+      if (t.length > MAX_BODY) return null;
+      try { const b = t ? JSON.parse(t) : {}; return b && typeof b === "object" && !Array.isArray(b) ? b : {}; } catch { return {}; }
+    };
 
     try {
       if (url.pathname === "/" || url.pathname === "/api/health") return json({ok: true, service: "aureous-api"}, 200, cors);
@@ -58,7 +63,28 @@ export default {
       if (cm && req.method === "GET") return reply(await ex.clanInfo(cm[1], user ? user.uid : null));
       const im = /^\/api\/invite\/([A-Za-z0-9]{6,16})$/.exec(url.pathname);
       if (im && req.method === "GET") return reply(await ex.clanPreview(im[1]));
+      // ---- email codes (see mailer.js): which kind of email the site can send, and password resets (no sign-in)
+      if (url.pathname === "/api/auth-config" && req.method === "GET") return reply(await ex.authConfig());
+      if (req.method === "POST" && /^\/api\/(email-check|reset\/send|reset\/confirm)$/.test(url.pathname)) {
+        const b = await readBody(); if (!b) return json({ok: false, error: "Request too large."}, 413, cors);
+        const ip = req.headers.get("CF-Connecting-IP") || "local";
+        if (url.pathname === "/api/email-check") return reply(await ex.emailCheck(b.email));
+        if (url.pathname === "/api/reset/send") return reply(await ex.resetSend(b.email, ip));
+        return reply(await ex.resetConfirm(b.email, b.code, b.password, ip));
+      }
       if (!user) return json({ok: false, error: "Sign in to trade."}, 401, cors);
+
+      // ---- email/password accounts must use a real address they've confirmed
+      if (user.provider === "password") {
+        if (req.method === "POST" && /^\/api\/verify\/(send|confirm)$/.test(url.pathname)) {
+          const b = await readBody(); if (!b) return json({ok: false, error: "Request too large."}, 413, cors);
+          return reply(url.pathname.endsWith("send") ? await ex.verifySend(user) : await ex.verifyConfirm(user, b.code));
+        }
+        if (url.pathname !== "/api/delete") {
+          const gate = await ex.emailGate(user.email, user.emailVerified);
+          if (gate) return reply(gate);
+        }
+      }
 
       // ---- admin: only the site owner's verified sign-in email (ADMIN_EMAILS in wrangler.jsonc)
       if (url.pathname.startsWith("/api/admin/")) {

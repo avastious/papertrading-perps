@@ -593,12 +593,26 @@ td.rank{color:var(--muted);width:56px}
     <form id="authForm" novalidate>
       <label class="field" id="authNameField" hidden><span>Name</span><div class="inp"><input id="authName" autocomplete="name"></div></label>
       <label class="field"><span>Email</span><div class="inp"><input id="authEmail" type="email" autocomplete="email"></div></label>
-      <label class="field" id="authPwField"><span>Password</span><div class="inp"><input id="authPw" type="password" autocomplete="current-password"></div></label>
+      <label class="field" id="authCodeField" hidden><span>6-digit code from the email</span><div class="inp"><input id="authCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" placeholder="123456"></div></label>
+      <label class="field" id="authPwField"><span id="authPwLabel">Password</span><div class="inp"><input id="authPw" type="password" autocomplete="current-password"></div></label>
       <p class="auth-msg" id="authMsg" hidden></p>
       <button class="btn primary" id="authSubmit" type="submit">Sign in</button>
       <div class="auth-links"><button type="button" class="link-btn" id="authForgot">Forgot password?</button><button type="button" class="link-btn" id="authSwitch">Create an account</button></div>
     </form>
     <p class="privacy">Signing in uses Google Firebase. Aureous keeps only your paper account and the leaderboard name you choose. Your email is never shown, and you can delete everything from the account menu.</p>
+  </div>
+</dialog>
+
+<dialog id="verifyDlg" aria-labelledby="vfTitle">
+  <div class="auth">
+    <h3 id="vfTitle">Confirm your email</h3>
+    <p id="vfText"></p>
+    <form id="vfForm" class="auth" novalidate>
+      <label class="field" id="vfCodeField"><span>6-digit code</span><div class="inp"><input id="vfCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"></div></label>
+      <p class="auth-msg" id="vfMsg" hidden></p>
+      <button class="btn primary" id="vfOk" type="submit">Confirm</button>
+      <div class="auth-links"><button type="button" class="link-btn" id="vfResend">Send a new code</button><button type="button" class="link-btn" id="vfOut">Use a different account</button></div>
+    </form>
   </div>
 </dialog>
 
@@ -1099,7 +1113,7 @@ function renderSummary(){
   $("#sFee").textContent = n ? usd(n * fee) : "–";
   $("#sAvail").textContent = a ? usd(a.available) : "–";
   const btn = $("#submit");
-  if (locked()) { btn.className = "submit locked"; btn.textContent = AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
+  if (locked()) { btn.className = "submit locked"; btn.textContent = S.user && S.authPhase === "blocked" ? (S.emailBlock && S.emailBlock.reason === "disposable_email" ? "Use a real email to trade" : "Confirm your email to trade") : AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
   else {
     btn.className = "submit " + (S.side === "buy" ? "long" : "short");
     btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${S.type === "limit" ? " at limit" : ""}`;
@@ -1118,7 +1132,7 @@ function setType(type){
 }
 async function submitOrder(ev){
   ev.preventDefault();
-  if (locked()) { if (AUTH) openAuth(); return; }
+  if (locked()) { if (S.user && S.authPhase === "blocked" && S.emailBlock) openVerify(S.emailBlock); else if (AUTH) openAuth(); return; }
   const m = market(); if (!m) return;
   const size = num($("#size").value);
   if (!(size > 0)) { toast("Enter a size first.", "error"); $("#size").focus(); return; }
@@ -1395,7 +1409,7 @@ $("#tpslDlg").addEventListener("close", () => {
     .then(r => r.messages.forEach(m => toast(m))).catch(() => {});
 });
 $("#resetBtn").addEventListener("click", () => {
-  if (locked()) { if (AUTH) openAuth(); return; }
+  if (locked()) { if (S.user && S.authPhase === "blocked" && S.emailBlock) openVerify(S.emailBlock); else if (AUTH) openAuth(); return; }
   $("#dBal").value = S.acct ? S.acct.start : 10000;
   $("#resetBalField").hidden = SERVER_ACCOUNTS;
   $("#resetText").textContent = SERVER_ACCOUNTS
@@ -1419,6 +1433,7 @@ function renderSaveNote(){
   if (SERVER_ACCOUNTS) {
     if (S.user && S.authPhase === "loading") text = "Loading your account…";
     else if (S.user && S.authPhase === "error") { text = "Couldn't load your account. Refresh the page to try again."; warn = true; }
+    else if (S.user && S.authPhase === "blocked") { text = S.emailBlock && S.emailBlock.reason === "disposable_email" ? "Throwaway email addresses can't be used. Sign out and use your real email, or Google." : "Confirm your email address to start trading."; warn = true; }
     else if (S.user && S.syncError) { text = "Can't reach the Aureous server right now. Retrying…"; warn = true; }
     else if (S.user) text = "Paper money only. Your account lives on the Aureous server, so stops, limits and funding keep running even with this page closed.";
     else if (AUTH) text = "Sign in to trade. Everyone starts with $10,000 of paper money and competes on the leaderboard.";
@@ -1448,16 +1463,20 @@ function renderUser(){
 const PROVIDER_NAMES = {google: "Google", github: "GitHub", microsoft: "Microsoft"};
 function setAuthMode(mode){
   S.authMode = mode;
-  const up = mode === "signup", reset = mode === "reset";
-  $("#authTitle").textContent = up ? "Create your Aureous account" : reset ? "Reset your password" : "Sign in to Aureous";
-  $("#authSub").textContent = reset ? "We'll email you a link to choose a new password."
+  const up = mode === "signup", reset = mode === "reset", reset2 = mode === "reset2", anyReset = reset || reset2;
+  $("#authTitle").textContent = up ? "Create your Aureous account" : anyReset ? "Reset your password" : "Sign in to Aureous";
+  $("#authSub").textContent = reset ? "Enter your email and we'll send you a way to choose a new password."
+    : reset2 ? `Enter the 6-digit code we emailed to ${S.resetEmail || "you"} and choose a new password.`
+    : up ? "Use your real email: you'll confirm it before trading. Everyone starts with $10,000 of paper money."
     : SERVER_ACCOUNTS ? "Get $10,000 of paper money, trade live Hyperliquid markets and climb the leaderboard." : "Keep your paper account and pick it up on any device.";
-  $("#authNameField").hidden = !up; $("#authPwField").hidden = reset;
-  $("#authPw").autocomplete = up ? "new-password" : "current-password";
-  $("#authSubmit").textContent = up ? "Create account" : reset ? "Send reset link" : "Sign in";
-  $("#authSwitch").textContent = up || reset ? "I already have an account" : "Create an account";
-  $("#authForgot").hidden = up || reset;
-  $("#authProviders").hidden = $("#authOr").hidden = reset || !AUTH.providers.some(p => p !== "email");
+  $("#authNameField").hidden = !up; $("#authPwField").hidden = reset; $("#authCodeField").hidden = !reset2;
+  $("#authEmail").closest(".field").hidden = reset2;
+  $("#authPwLabel").textContent = reset2 ? "New password (at least 8 characters)" : up ? "Password (at least 8 characters)" : "Password";
+  $("#authPw").autocomplete = up || reset2 ? "new-password" : "current-password";
+  $("#authSubmit").textContent = up ? "Create account" : reset ? "Send reset email" : reset2 ? "Change password" : "Sign in";
+  $("#authSwitch").textContent = up || anyReset ? "I already have an account" : "Create an account";
+  $("#authForgot").hidden = up || reset; $("#authForgot").textContent = reset2 ? "Send a new code" : "Forgot password?";
+  $("#authProviders").hidden = $("#authOr").hidden = anyReset || !AUTH.providers.some(p => p !== "email");
   if (!AUTH.providers.includes("email")) $("#authOr").hidden = true;
   authMsg("");
 }
@@ -1480,13 +1499,29 @@ $("#authProviders").addEventListener("click", e => {
   authBusy(async () => { if (await AUTH.signInWith(b.dataset.provider)) $("#authDlg").close(); });
 });
 $("#authSwitch").addEventListener("click", () => setAuthMode(S.authMode === "signin" ? "signup" : "signin"));
-$("#authForgot").addEventListener("click", () => setAuthMode("reset"));
+$("#authForgot").addEventListener("click", () => {
+  if (S.authMode !== "reset2") { setAuthMode("reset"); return; }
+  authBusy(async () => { await AUTH.resetPassword(S.resetEmail); authMsg("A new code is on its way.", true); });
+});
 $("#authForm").addEventListener("submit", e => {
   e.preventDefault();
   const email = $("#authEmail").value.trim(), pw = $("#authPw").value, name = $("#authName").value.trim();
-  if (!email) { authMsg("Enter your email."); return; }
+  if (!email && S.authMode !== "reset2") { authMsg("Enter your email."); return; }
   authBusy(async () => {
-    if (S.authMode === "reset") { await AUTH.resetPassword(email); authMsg("Check your inbox for a reset link.", true); return; }
+    if (S.authMode === "reset") {
+      const how = await AUTH.resetPassword(email);
+      if (how === "code") { S.resetEmail = email; setAuthMode("reset2"); $("#authCode").focus(); authMsg("If that email has an Aureous account, a code is on its way. Check your spam folder too.", true); }
+      else authMsg("Check your inbox for a reset link.", true);
+      return;
+    }
+    if (S.authMode === "reset2") {
+      const code = $("#authCode").value.trim();
+      if (!/^\d{6}$/.test(code)) { authMsg("Enter the 6-digit code from the email."); return; }
+      if (pw.length < 8) { authMsg("Use a password of at least 8 characters."); return; }
+      await AUTH.resetConfirm(S.resetEmail, code, pw);
+      $("#authPw").value = ""; $("#authCode").value = ""; $("#authDlg").close(); toast("Password changed. You're signed in.");
+      return;
+    }
     if (!pw) { authMsg("Enter your password."); return; }
     if (S.authMode === "signup") await AUTH.signUpEmail(email, pw, name); else await AUTH.signInEmail(email, pw);
     $("#authPw").value = ""; $("#authDlg").close();
@@ -2298,6 +2333,10 @@ window.AureousUI = {
       else LOCAL.adopt(r);
     }).then(opts.silent ? reloadAccountView : () => refreshState().catch(() => {}));   // keep new notifications
   },
+  emailBlocked(info){
+    S.emailBlock = info; renderSummary(); renderSaveNote();
+    if (info) openVerify(info); else if ($("#verifyDlg").open) $("#verifyDlg").close();
+  },
   setUser(user, phase){
     S.user = user; S.authPhase = phase || null; renderUser(); renderSaveNote(); renderSummary(); renderNameBtn(); renderClanBtn();
     if (S.tab === "board") { loadBoard(true); if (S.boardView === "clans") loadClans(true); }
@@ -2314,6 +2353,40 @@ window.AureousUI = {
   },
 };
 function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }
+
+// ---------- confirming your email (email/password accounts) ----------
+S.emailBlock = null; S.vfSentAt = 0;
+function vfMsg(text, ok = false){ const m = $("#vfMsg"); m.hidden = !text; m.textContent = text; m.classList.toggle("ok", ok); }
+async function vfSend(){
+  try { await AUTH.verifySend(); S.vfSentAt = Date.now(); vfMsg(S.emailBlock.codes ? "Code sent. It can take a minute; check your spam folder too." : "Email sent. Check your inbox (and spam).", true); }
+  catch (e) { vfMsg(e.message); }
+}
+function openVerify(info){
+  S.emailBlock = info;
+  const disposable = info.reason === "disposable_email", email = esc(info.email || "your email");
+  $("#vfTitle").textContent = disposable ? "Use a real email address" : "Confirm your email";
+  $("#vfText").innerHTML = disposable ? `Throwaway email addresses (like ${email}) can't be used on Aureous. Sign out, then create an account with your real email, or continue with Google.`
+    : info.codes ? `We've emailed a 6-digit code to <b>${email}</b>. Enter it here to start trading. This keeps the leaderboard to real people.`
+    : `We've emailed a link to <b>${email}</b>. Open it, then come back and press <b>I've confirmed</b>.`;
+  $("#vfCodeField").hidden = disposable || !info.codes;
+  $("#vfOk").hidden = disposable; $("#vfOk").textContent = info.codes ? "Confirm" : "I've confirmed";
+  $("#vfResend").hidden = disposable; $("#vfResend").textContent = info.codes ? "Send a new code" : "Send the link again";
+  $("#vfOut").textContent = disposable ? "Sign out" : "Use a different account";
+  vfMsg(""); $("#vfCode").value = "";
+  if (!$("#verifyDlg").open) $("#verifyDlg").showModal();
+  if (!disposable && info.codes && Date.now() - S.vfSentAt > 60000) vfSend();     // send the first code straight away
+}
+$("#vfForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const code = $("#vfCode").value.trim();
+  if (S.emailBlock.codes && !/^\d{6}$/.test(code)) { vfMsg("Enter the 6-digit code from the email."); return; }
+  $("#vfOk").disabled = true;
+  try { await AUTH.verifyConfirm(S.emailBlock.codes ? code : null); $("#verifyDlg").close(); toast("Email confirmed. You're ready to trade."); }
+  catch (err) { vfMsg(err.message); }
+  finally { $("#vfOk").disabled = false; }
+});
+$("#vfResend").addEventListener("click", () => { if (Date.now() - S.vfSentAt < 60000) { vfMsg("A code was just sent. Wait a minute before asking for another."); return; } vfSend(); });
+$("#vfOut").addEventListener("click", async () => { $("#verifyDlg").close(); try { await AUTH.signOut(); } catch {} });
 
 // ---------- install as an app (home screen) ----------
 const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;

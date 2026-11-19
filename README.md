@@ -138,6 +138,28 @@ They're always tagged **BOT** on the leaderboard and their profiles show their s
 
 To switch them off, set `"BOTS": "off"` in `wrangler.jsonc` and push. Within a minute they're removed from the database. Set it back to `"on"` and they start again from $10,000.
 
+## Real emails, email codes and name rules
+
+**Email/password accounts must confirm a real address before trading.** The server (`worker/index.js`) refuses every request from a `password` sign-in whose token isn't `email_verified` (`code: "verify_email"`), and from addresses on throwaway domains (`code: "disposable_email"`; list in `worker/vendor/disposable-domains.js`, refresh with `scripts/update_disposable.sh`). Google sign-ins are already verified. The site shows a **Confirm your email** window:
+
+- with **email codes** set up, a 6-digit code is emailed and checked by the server, which then marks the Firebase account verified;
+- without, Firebase's own confirmation link is used (the person clicks it, then **I've confirmed**).
+
+**Forgot password** works the same way: a 6-digit code plus a new password (8+ characters) when codes are set up, Firebase's reset link otherwise. Codes are hashed, expire after 10 minutes, allow 5 wrong tries, at most one email a minute and 5 an hour per address, plus a site-wide cap (`MAIL_HOURLY_LIMIT`, default 60). Resets give the same answer whether or not an account exists.
+
+### Turning on email codes
+
+You need two things, both added under Cloudflare → Workers & Pages → **aureous-api** → Settings → **Variables and Secrets** → **Add**, as type **Secret**:
+
+1. **`FIREBASE_SERVICE_ACCOUNT`**: lets the server mark emails verified and set new passwords. Firebase console → ⚙ Project settings → **Service accounts** → **Generate new private key**. Paste the whole downloaded JSON file as the value. Keep that file private and delete it afterwards.
+2. **A way to send email.** Either:
+   - **Resend** (free: 3,000 emails a month, at most 100 a day). Sign up at resend.com, then **Domains → Add domain → aureous.trade** and add the DNS records it shows to Cloudflare (Resend can add them for you). Create an **API key** with sending access and add it as the secret **`RESEND_API_KEY`**.
+   - **Cloudflare Email Service** (public beta; sending to any address needs the Workers Paid plan, $5 a month). Onboard aureous.trade under **Email → Email Sending**, then add `"send_email": [{"name": "EMAIL"}]` to `wrangler.jsonc` and push.
+
+Mail comes from `no-reply@aureous.trade` (set `MAIL_FROM` to change it). `GET /api/auth-config` says `{"codes": true}` once both are in place. Everything works before that, using Firebase's links.
+
+**Names** (leaderboard names, clan names and tags) are checked by `worker/moderation.js`. It uses [obscenity](https://github.com/jo3-l/obscenity) (MIT, bundled in `worker/vendor/obscenity.js`), which handles l33t-speak, look-alike characters and repeated letters, on the name as written and with spaces/dots/dashes removed. It also refuses staff-looking words ("admin", "moderator", "official", "aureous"…). Existing names that break the rules are renamed once at start-up (`sweepNames`), and their owners are told.
+
 ## Admin dashboard
 
 `https://aureous.trade/admin.html` is a private dashboard. Sign in there with an email listed in `ADMIN_EMAILS` (in `wrangler.jsonc`); Google must have verified it. Everyone else is refused. It shows:
@@ -283,6 +305,7 @@ node tests/server/bots.check.mjs         # house bots (fresh server, bots on, wi
 node tests/server/clans.check.mjs        # clans: create, invite, join, leader rules, rankings, moderation
 node tests/server/settings.check.mjs     # the owner's leverage switch
 node tests/server/markets.check.mjs      # builder markets (xyz:XYZ100)
+node tests/server/email.check.mjs        # real emails, email codes, name rules (needs a .dev.vars pointing email + Firebase admin at the stand-in; see the file's header)
 ```
 
 ## Files

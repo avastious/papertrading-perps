@@ -38,7 +38,10 @@ export async function firebaseBackend(cfg, appCheckSiteKey) {
   return {
     onUser: cb => A.onAuthStateChanged(auth, u => cb(u && {uid: u.uid, name: u.displayName, email: u.email, photo: u.photoURL,
                                                            provider: (u.providerData[0] || {}).providerId || null})),
-    token: () => auth.currentUser ? auth.currentUser.getIdToken() : Promise.reject(new Error("You're not signed in.")),
+    token: (force = false) => auth.currentUser ? auth.currentUser.getIdToken(force) : Promise.reject(new Error("You're not signed in.")),
+    // after the email is confirmed: fetch the account again so the next token says so
+    async refreshUser() { if (auth.currentUser) { await auth.currentUser.reload(); await auth.currentUser.getIdToken(true); } },
+    sendVerifyLink: () => auth.currentUser ? A.sendEmailVerification(auth.currentUser) : Promise.resolve(),
     async signInWith(id) {
       const p = providers[id]();
       if (STANDALONE) return A.signInWithRedirect(auth, p);
@@ -96,7 +99,9 @@ async function main() {
   }) : null);
   if (!backend) return;
 
-  let signedIn = false, syncTimer = null, generation = 0;
+  let signedIn = false, syncTimer = null, generation = 0, currentUser = null;
+  let codes = null;                                          // can the server email one-time codes? (else Firebase links)
+  const codesReady = call("/api/auth-config", undefined, false).then(c => (codes = !!c.codes)).catch(() => (codes = false));
 
   // talk to the trading server; the sign-in token proves who is asking
   async function call(path, body, withAuth = true) {
@@ -129,8 +134,38 @@ async function main() {
       catch (e) { if (SILENT.has(e.code)) return false; throw new Error(friendly(e)); }
     },
     async signInEmail(email, pw) { try { await backend.signInEmail(email, pw); } catch (e) { throw new Error(friendly(e)); } },
-    async signUpEmail(email, pw, name) { try { await backend.signUpEmail(email, pw, name); } catch (e) { throw new Error(friendly(e)); } },
-    async resetPassword(email) { try { await backend.resetPassword(email); } catch (e) { throw new Error(friendly(e)); } },
+    async signUpEmail(email, pw, name) {
+      if (pw.length < 8) throw new Error("Use a password of at least 8 characters.");
+      const chk = await call("/api/email-check", {email}, false).catch(() => ({}));
+      if (chk.disposable) throw new Error("Please use your real email address. Throwaway inboxes can't be used on Aureous.");
+      await codesReady;
+      try { await backend.signUpEmail(email, pw, name); } catch (e) { throw new Error(friendly(e)); }
+      if (!codes) backend.sendVerifyLink().catch(() => {});  // no codes: Firebase's confirmation link
+    },
+    // forgotten password: a 6-digit code by email when the server can send one, otherwise Firebase's reset link
+    async resetPassword(email) {
+      await codesReady;
+      if (codes) { await call("/api/reset/send", {email}, false); return "code"; }
+      try { await backend.resetPassword(email); } catch (e) { throw new Error(friendly(e)); }
+      return "link";
+    },
+    async resetConfirm(email, code, password) {
+      await call("/api/reset/confirm", {email, code, password}, false);
+      try { await backend.signInEmail(email, password); } catch (e) { throw new Error(friendly(e)); }
+    },
+    // confirming the email of an email/password account
+    usesCodes: async () => { await codesReady; return codes; },
+    async verifySend() {
+      await codesReady;
+      if (codes) return call("/api/verify/send", {});
+      try { await backend.sendVerifyLink(); } catch (e) { throw new Error(friendly(e)); }
+      return {ok: true};
+    },
+    async verifyConfirm(code) {
+      if (code) await call("/api/verify/confirm", {code});
+      await backend.refreshUser();
+      await loadAccount(currentUser, true);
+    },
     async signOut() { await backend.signOut(); },
     async setName(name) { const r = await call("/api/profile", {name}); UI.adoptRemote(r); return r; },
     async deleteAccount(password) {
@@ -150,7 +185,8 @@ async function main() {
     async clanAction(action, body = {}) { const r = await call(`/api/clan/${action}`, body); UI.adoptRemote(r); return r; },
   });
 
-  backend.onUser(async user => {
+  // load the account; email/password accounts that haven't confirmed their (real) email get asked to
+  async function loadAccount(user, throwIfBlocked = false) {
     const gen = ++generation;
     clearInterval(syncTimer); syncTimer = null;
     if (!user) { signedIn = false; UI.setRemote(null); UI.setUser(null); return; }
@@ -162,13 +198,23 @@ async function main() {
       UI.setRemote(remote);
       UI.adoptRemote(r, {silent: true});                     // don't replay old notifications
       UI.setUser(user, "ready");
+      UI.emailBlocked && UI.emailBlocked(null);
       syncTimer = setInterval(sync, SYNC_MS);
     } catch (e) {
       if (gen !== generation) return;
       signedIn = false;
+      const why = e.response && e.response.code;
+      if (why === "verify_email" || why === "disposable_email") {
+        UI.setUser(user, "blocked");
+        await codesReady;
+        if (throwIfBlocked) throw new Error(why === "verify_email" ? "Your email isn't confirmed yet." : e.message);
+        UI.emailBlocked({reason: why, email: user.email, codes, message: e.message});
+        return;
+      }
       UI.setUser(user, "error");
       UI.toast("Couldn't load your account: " + e.message, "error");
     }
-  });
+  }
+  backend.onUser(user => { currentUser = user; return loadAccount(user); });
 }
 main();

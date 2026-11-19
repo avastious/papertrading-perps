@@ -48,5 +48,6 @@ export async function verifyIdToken(token, projectId, jwksUrl = GOOGLE_JWKS) {
   if (!(claims.iat <= now + skew) || (claims.auth_time && claims.auth_time > now + skew)) throw new AuthError("Token is from the future.");
   if (typeof claims.sub !== "string" || !claims.sub || claims.sub.length > 128) throw new AuthError("Token has no user.");
   return {uid: claims.sub, name: typeof claims.name === "string" ? claims.name : null, email: typeof claims.email === "string" ? claims.email : null,
-          emailVerified: claims.email_verified === true};
+          emailVerified: claims.email_verified === true,
+          provider: claims.firebase && typeof claims.firebase.sign_in_provider === "string" ? claims.firebase.sign_in_provider : null};
 }

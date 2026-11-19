@@ -7,6 +7,9 @@
 import {DurableObject} from "cloudflare:workers";
 import "../aureous/web/engine.js";
 import {BOTS, BOT_PREFIX, BOT_BY_UID, isBot, decide, describe} from "./bots.js";
+import {nameProblem, isDisposableEmail} from "./moderation.js";
+import {mailerFor, codeEmail} from "./mailer.js";
+import {GoogleAdmin} from "./google-admin.js";
 
 const {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, TIERS, SPOTLIGHT_MS} = globalThis.Aureous;
 
@@ -77,6 +80,9 @@ export class Exchange extends DurableObject {
       invite TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)`);
     this.sql.exec("CREATE INDEX IF NOT EXISTS accounts_clan ON accounts(clan)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS codes (email TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT NOT NULL, expires INTEGER NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0, sent_at INTEGER NOT NULL, window_start INTEGER NOT NULL, sends INTEGER NOT NULL, PRIMARY KEY (email, purpose))`);
+    this.sweepNames();
     for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
     this.client = new SharedClient(env.HL_API_URL || "https://api.hyperliquid.xyz");
@@ -109,7 +115,7 @@ export class Exchange extends DurableObject {
   defaultName(profile) {
     const n = (profile && profile.name || "").trim().split(/\s+/).filter(Boolean);
     const guess = n.length ? n[0] + (n.length > 1 ? " " + n[n.length - 1][0] + "." : "") : "";
-    return NAME_RE.test(guess) ? guess : "Trader " + Math.floor(1000 + Math.random() * 9000);
+    return NAME_RE.test(guess) && !nameProblem(guess) ? guess : "Trader " + Math.floor(1000 + Math.random() * 9000);
   }
   create(uid, profile) {
     const ex = new PaperExchange(this.client, {storage: null});
@@ -258,6 +264,7 @@ export class Exchange extends DurableObject {
   async setName(uid, name) {
     name = String(name || "").trim().replace(/\s+/g, " ");
     if (!NAME_RE.test(name)) return {ok: false, status: 400, error: "Use 3–24 letters, numbers, spaces, dots, dashes or underscores."};
+    const bad = nameProblem(name); if (bad) return {ok: false, status: 400, error: bad};
     if (!this.row(uid)) return {ok: false, status: 404, error: "No account yet."};
     this.sql.exec("UPDATE accounts SET name = ? WHERE uid = ?", name, uid);
     this.board = null;
@@ -343,6 +350,133 @@ export class Exchange extends DurableObject {
     } catch (e) { return fail(e); }
   }
 
+  // Names chosen before the filter existed: rename any that break the rules and tell their owners.
+  sweepNames() {
+    const VERSION = 1;
+    const done = this.sql.exec("SELECT value FROM settings WHERE key = 'name_sweep'").toArray()[0];
+    if (done && +JSON.parse(done.value) >= VERSION) return;
+    let renamed = 0;
+    for (const r of this.sql.exec("SELECT uid, name FROM accounts").toArray()) {
+      if (isBot(r.uid) || !nameProblem(r.name)) continue;
+      const name = "Trader " + Math.floor(1000 + Math.random() * 9000);
+      this.sql.exec("UPDATE accounts SET name = ? WHERE uid = ?", name, r.uid);
+      this.addEvents(r.uid, [{kind: "event", msg: `Your leaderboard name broke the naming rules, so it was changed to ${name}. You can pick a new one from the account menu.`}]);
+      renamed++;
+    }
+    for (const c of this.sql.exec("SELECT id, tag, name FROM clans").toArray()) {
+      if (!nameProblem(c.name) && !nameProblem(c.tag)) continue;
+      let tag; do { tag = "C" + Math.floor(1000 + Math.random() * 9000); } while (this.sql.exec("SELECT 1 FROM clans WHERE tag = ?", tag).toArray().length);
+      const name = "Clan " + tag.slice(1);
+      this.sql.exec("UPDATE clans SET tag = ?, name = ? WHERE id = ?", tag, name, c.id);
+      for (const m of this.sql.exec("SELECT uid FROM accounts WHERE clan = ?", c.id).toArray())
+        this.addEvents(m.uid, [{kind: "event", msg: `Your clan's name or tag broke the naming rules, so it's now ${name} [${tag}]. The leader can rename it.`}]);
+      renamed++;
+    }
+    this.sql.exec("INSERT INTO settings (key, value) VALUES ('name_sweep', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", JSON.stringify(VERSION));
+    if (renamed) console.log("name sweep renamed", renamed);
+  }
+
+  // ------------------------------------------------------------------ email: real addresses and one-time codes
+  // Email/password accounts must confirm their address before trading, and throwaway inboxes are refused.
+  // With email sending + Firebase admin access set up (mailer.js, google-admin.js) that's done with 6-digit
+  // codes, and forgotten passwords are reset with a code too; otherwise the site uses Firebase's links.
+  get mailer() { if (this._mailer === undefined) this._mailer = mailerFor(this.env); return this._mailer; }
+  get admin() { if (this._admin === undefined) { try { this._admin = GoogleAdmin.configured(this.env) ? new GoogleAdmin(this.env) : null; } catch (e) { console.error("admin", e.message); this._admin = null; } } return this._admin; }
+  authConfig() { return {ok: true, codes: !!(this.mailer && this.admin)}; }
+  emailCheck(email) {
+    email = String(email || "").trim().toLowerCase();
+    return {ok: true, disposable: isDisposableEmail(email)};
+  }
+  emailGate(email, verified) {
+    if (isDisposableEmail(email)) return {ok: false, status: 403, code: "disposable_email",
+      error: "Throwaway email addresses can't be used on Aureous. Use your real email, or continue with Google."};
+    if (!verified) return {ok: false, status: 403, code: "verify_email", error: "Confirm your email address to start trading."};
+    return null;
+  }
+  async codeHash(email, purpose, code) {
+    const data = new TextEncoder().encode(`${this.env.OTP_PEPPER || this.env.FIREBASE_PROJECT_ID || "aureous"}|${email}|${purpose}|${code}`);
+    return [...new Uint8Array(await crypto.subtle.digest("SHA-256", data))].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  // limits: one code a minute and 5 an hour per address, and a site-wide hourly cap (protects the email quota)
+  async sendCode(email, purpose) {
+    const now = Date.now(), row = this.sql.exec("SELECT * FROM codes WHERE email = ? AND purpose = ?", email, purpose).toArray()[0];
+    if (row && now - row.sent_at < 60000) return {ok: false, status: 429, error: "A code was just sent. Wait a minute before asking for another."};
+    const sameHour = row && now - row.window_start < 3600000;
+    if (sameHour && row.sends >= 5) return {ok: false, status: 429, error: "Too many codes for this email. Try again in an hour."};
+    const hour = Math.floor(now / 3600000), cap = +(this.env.MAIL_HOURLY_LIMIT || 60);
+    if (!this.mailHour || this.mailHour.hour !== hour) this.mailHour = {hour, n: 0};
+    if (this.mailHour.n >= cap) return {ok: false, status: 429, error: "Aureous is sending a lot of emails right now. Try again in a few minutes."};
+    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
+    try { await this.mailer.send({to: email, ...codeEmail(code, purpose)}); }
+    catch (e) { console.error("email", e.message); return {ok: false, status: 502, error: "Couldn't send the email just now. Try again shortly."}; }
+    this.mailHour.n++;
+    this.sql.exec(`INSERT INTO codes (email, purpose, hash, expires, attempts, sent_at, window_start, sends) VALUES (?, ?, ?, ?, 0, ?, ?, ?)
+      ON CONFLICT(email, purpose) DO UPDATE SET hash = excluded.hash, expires = excluded.expires, attempts = 0, sent_at = excluded.sent_at,
+      window_start = excluded.window_start, sends = excluded.sends`,
+      email, purpose, await this.codeHash(email, purpose, code), now + 600000, now, sameHour ? row.window_start : now, sameHour ? row.sends + 1 : 1);
+    return {ok: true};
+  }
+  // -> null when right (and the code is used up), otherwise an error reply
+  async checkCode(email, purpose, code) {
+    const row = this.sql.exec("SELECT * FROM codes WHERE email = ? AND purpose = ?", email, purpose).toArray()[0];
+    const wrong = {ok: false, status: 400, error: "That code isn't right. Check the latest email and try again."};
+    if (!row || row.expires < Date.now() || !row.hash) return {ok: false, status: 400, error: "That code has expired. Ask for a new one."};
+    if (row.attempts >= 5) return {ok: false, status: 429, error: "Too many wrong tries. Ask for a new code."};
+    if (!/^\d{6}$/.test(String(code || "").trim())) return wrong;
+    if (await this.codeHash(email, purpose, String(code).trim()) !== row.hash) {
+      this.sql.exec("UPDATE codes SET attempts = attempts + 1 WHERE email = ? AND purpose = ?", email, purpose);
+      return wrong;
+    }
+    this.sql.exec("UPDATE codes SET hash = '', expires = 0 WHERE email = ? AND purpose = ?", email, purpose);
+    return null;
+  }
+  noCodes() { return {ok: false, status: 503, code: "no_codes", error: "Email codes aren't switched on yet."}; }
+  async verifySend(user) {
+    const email = String(user.email || "").toLowerCase();
+    if (isDisposableEmail(email)) return this.emailGate(email, false);
+    if (user.emailVerified) return {ok: true, verified: true};
+    if (!this.mailer || !this.admin) return this.noCodes();
+    if (!email) return {ok: false, status: 400, error: "Your account has no email address."};
+    const r = await this.sendCode(email, "verify");
+    return r.ok ? {ok: true, messages: [`We sent a 6-digit code to ${email}.`]} : r;
+  }
+  async verifyConfirm(user, code) {
+    if (user.emailVerified) return {ok: true, verified: true};
+    if (!this.mailer || !this.admin) return this.noCodes();
+    const email = String(user.email || "").toLowerCase();
+    const bad = await this.checkCode(email, "verify", code);
+    if (bad) return bad;
+    try { await this.admin.update(user.uid, {emailVerified: true}); }
+    catch (e) { console.error("verify", e.message); return {ok: false, status: 502, error: "Couldn't confirm your email just now. Try again shortly."}; }
+    return {ok: true, verified: true, messages: ["Email confirmed. Welcome to Aureous!"]};
+  }
+  async resetSend(email, ip) {
+    if (!this.mailer || !this.admin) return this.noCodes();
+    email = String(email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return {ok: false, status: 400, error: "That email address doesn't look right."};
+    if (this.limited("reset:" + ip)) return {ok: false, status: 429, error: "Too many requests. Wait a moment and try again."};
+    const done = {ok: true, messages: ["If there's an Aureous account with a password for that email, a code is on its way."]};
+    let acct = null;
+    try { acct = await this.admin.byEmail(email); } catch (e) { console.error("lookup", e.message); return {ok: false, status: 502, error: "Couldn't start the reset just now. Try again shortly."}; }
+    if (!acct || !acct.hasPassword) return done;           // same answer either way, so emails can't be probed
+    const r = await this.sendCode(email, "reset");
+    return r.ok ? done : r;
+  }
+  async resetConfirm(email, code, password, ip) {
+    if (!this.mailer || !this.admin) return this.noCodes();
+    email = String(email || "").trim().toLowerCase();
+    if (this.limited("reset:" + ip)) return {ok: false, status: 429, error: "Too many requests. Wait a moment and try again."};
+    if (typeof password !== "string" || password.length < 8 || password.length > 128) return {ok: false, status: 400, error: "Use a password of at least 8 characters."};
+    const bad = await this.checkCode(email, "reset", code);
+    if (bad) return bad;
+    try {
+      const acct = await this.admin.byEmail(email);
+      if (!acct) return {ok: false, status: 400, error: "That code has expired. Ask for a new one."};
+      await this.admin.update(acct.uid, {password, emailVerified: true});      // they've just proved they own the inbox
+    } catch (e) { console.error("reset", e.message); return {ok: false, status: 502, error: "Couldn't change the password just now. Try again shortly."}; }
+    return {ok: true, messages: ["Password changed. Signing you in…"]};
+  }
+
   // ------------------------------------------------------------------ site settings (admin switches)
   setting(key, fallback) {
     if (!this.settingsCache) this.settingsCache = Object.fromEntries(this.sql.exec("SELECT key, value FROM settings").toArray().map(r => [r.key, JSON.parse(r.value)]));
@@ -390,6 +524,7 @@ export class Exchange extends DurableObject {
         const name = String(body.name || "").trim().replace(/\s+/g, " "), tag = String(body.tag || "").trim().toUpperCase();
         if (!NAME_RE.test(name)) return {ok: false, status: 400, error: "Clan name: use 3–24 letters, numbers, spaces, dots, dashes or underscores."};
         if (!TAG_RE.test(tag)) return {ok: false, status: 400, error: "Clan tag: use 2–5 letters or numbers."};
+        const bad = nameProblem(name, "clan name") || nameProblem(tag, "clan tag"); if (bad) return {ok: false, status: 400, error: bad};
         if (this.sql.exec("SELECT 1 FROM clans WHERE tag = ?", tag).toArray().length) return {ok: false, status: 409, error: `The tag ${tag} is taken. Try another.`};
         const now = Date.now();
         this.sql.exec("INSERT INTO clans (tag, name, owner, invite, created) VALUES (?, ?, ?, ?, ?)", tag, name, uid, newInvite(), now);
@@ -428,6 +563,7 @@ export class Exchange extends DurableObject {
       if (action === "rename") {
         const name = String(body.name || "").trim().replace(/\s+/g, " ");
         if (!NAME_RE.test(name)) return {ok: false, status: 400, error: "Clan name: use 3–24 letters, numbers, spaces, dots, dashes or underscores."};
+        const bad = nameProblem(name, "clan name"); if (bad) return {ok: false, status: 400, error: bad};
         this.sql.exec("UPDATE clans SET name = ? WHERE id = ?", name, mine.id);
         return done([`Clan renamed to ${name}.`], {clan: mine.tag});
       }
