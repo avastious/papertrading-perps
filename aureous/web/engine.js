@@ -23,12 +23,16 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Builder-deployed (HIP-3) markets to include alongside Hyperliquid's own list. Hyperliquid only
   // lists them when asked for their group ("dex") by name, and names them "<dex>:<ticker>".
-  // trade.xyz: XYZ100 tracks the Nasdaq 100, ANT is Anthropic pre-IPO priced per share.
-  // Entropy ("io"): ANTH is Anthropic pre-IPO priced as the company's valuation in billions of dollars.
-  const EXTRA_MARKETS = {xyz: ["XYZ100", "ANT"], io: ["ANTH"]};
-  const MARKET_LABELS = {"xyz:XYZ100": "Nasdaq 100", "xyz:ANT": "Anthropic pre-IPO, per share", "io:ANTH": "Anthropic pre-IPO, valuation $bn"};
+  // "*" takes every live market in the group. trade.xyz ("xyz"): stocks (AAPL, NVDA, SPCX…), indices (SP500,
+  // XYZ100…), commodities and currencies. Entropy ("io"): ANTH, Anthropic pre-IPO priced as its valuation in $bn.
+  const EXTRA_MARKETS = {xyz: "*", io: ["ANTH"]};
+  // Names shown under the ticker and matched by search ("apple", "s&p"). Labels for tickers a group doesn't list are unused.
+  const MARKET_LABELS = {"xyz:SP500": "S&P 500", "xyz:XYZ100": "Nasdaq 100", "xyz:JP225": "Nikkei 225 (Japan)", "xyz:KR200": "KOSPI 200 (Korea)", "xyz:VIX": "Volatility index (VIX)", "xyz:NIFTY": "Nifty 50 (India)", "xyz:DAX": "DAX (Germany)", "xyz:UK100": "FTSE 100 (UK)", "xyz:HK50": "Hang Seng (Hong Kong)", "xyz:AAPL": "Apple", "xyz:NVDA": "Nvidia", "xyz:MSFT": "Microsoft", "xyz:GOOGL": "Alphabet (Google)", "xyz:GOOG": "Alphabet (Google)", "xyz:AMZN": "Amazon", "xyz:META": "Meta (Facebook)", "xyz:TSLA": "Tesla", "xyz:AVGO": "Broadcom", "xyz:ORCL": "Oracle", "xyz:NFLX": "Netflix", "xyz:AMD": "AMD", "xyz:INTC": "Intel", "xyz:TSM": "TSMC", "xyz:ASML": "ASML", "xyz:ARM": "Arm Holdings", "xyz:PLTR": "Palantir", "xyz:COIN": "Coinbase", "xyz:HOOD": "Robinhood", "xyz:MSTR": "Strategy (MicroStrategy)", "xyz:BABA": "Alibaba", "xyz:SNDK": "SanDisk", "xyz:MU": "Micron", "xyz:NET": "Cloudflare", "xyz:NOW": "ServiceNow", "xyz:SNOW": "Snowflake", "xyz:PANW": "Palo Alto Networks", "xyz:CRWV": "CoreWeave", "xyz:CRM": "Salesforce", "xyz:ADBE": "Adobe", "xyz:QCOM": "Qualcomm", "xyz:CSCO": "Cisco", "xyz:IBM": "IBM", "xyz:UBER": "Uber", "xyz:SHOP": "Shopify", "xyz:PYPL": "PayPal", "xyz:SQ": "Block", "xyz:XYZ": "Block", "xyz:JPM": "JPMorgan Chase", "xyz:GS": "Goldman Sachs", "xyz:BAC": "Bank of America", "xyz:V": "Visa", "xyz:MA": "Mastercard", "xyz:BRKB": "Berkshire Hathaway", "xyz:LLY": "Eli Lilly", "xyz:NVO": "Novo Nordisk", "xyz:UNH": "UnitedHealth", "xyz:WMT": "Walmart", "xyz:COST": "Costco", "xyz:KO": "Coca-Cola", "xyz:PEP": "PepsiCo", "xyz:MCD": "McDonald's", "xyz:NKE": "Nike", "xyz:DIS": "Disney", "xyz:XOM": "ExxonMobil", "xyz:CVX": "Chevron", "xyz:BA": "Boeing", "xyz:GE": "GE Aerospace", "xyz:GEV": "GE Vernova", "xyz:DELL": "Dell", "xyz:SMCI": "Super Micro Computer", "xyz:RKLB": "Rocket Lab", "xyz:NBIS": "Nebius", "xyz:AMAT": "Applied Materials", "xyz:ACN": "Accenture", "xyz:NU": "Nu Holdings", "xyz:BB": "BlackBerry", "xyz:BE": "Bloom Energy", "xyz:AAOI": "Applied Optoelectronics", "xyz:NOK": "Nokia", "xyz:SNAP": "Snap", "xyz:RDDT": "Reddit", "xyz:RBLX": "Roblox", "xyz:SPOT": "Spotify", "xyz:ABNB": "Airbnb", "xyz:GME": "GameStop", "xyz:AMC": "AMC", "xyz:CRCL": "Circle", "xyz:SMSN": "Samsung Electronics", "xyz:SKHX": "SK Hynix", "xyz:SOFTBANK": "SoftBank", "xyz:TCEHY": "Tencent", "xyz:BIDU": "Baidu", "xyz:PDD": "PDD (Temu)", "xyz:NIO": "NIO", "xyz:RIVN": "Rivian", "xyz:LCID": "Lucid", "xyz:SPCX": "SpaceX", "xyz:CBRS": "Cerebras", "xyz:QNT": "Quantinuum", "xyz:ANT": "Anthropic pre-IPO, per share", "xyz:OPENAI": "OpenAI pre-IPO", "xyz:SMH": "Semiconductor ETF", "xyz:QQQ": "Nasdaq 100 ETF", "xyz:SPY": "S&P 500 ETF", "xyz:GOLD": "Gold", "xyz:SILVER": "Silver", "xyz:CL": "WTI crude oil", "xyz:BRENTOIL": "Brent crude oil", "xyz:NATGAS": "Natural gas", "xyz:COPPER": "Copper", "xyz:PLATINUM": "Platinum", "xyz:PALLADIUM": "Palladium", "xyz:ALUMINIUM": "Aluminium", "xyz:URANIUM": "Uranium", "xyz:EUR": "Euro vs US dollar", "xyz:JPY": "US dollar vs yen", "xyz:GBP": "British pound vs US dollar", "xyz:DXY": "US dollar index", "io:ANTH": "Anthropic pre-IPO, valuation $bn"};
   const EXTRA_REFRESH_MS = 10000;
-  const displayName = name => String(name).replace(/^[a-z][a-z0-9]*:/, "");
+  // Builder tickers show without their group ("xyz:NVDA" -> "NVDA"), unless that name is also one of Hyperliquid's
+  // own markets: then the group stays visible ("XYZ (xyz)") so the two can't be confused.
+  const CLASHES = new Set();
+  const displayName = name => { const s = String(name), m = /^([a-z][a-z0-9]*):(.+)$/.exec(s); return !m ? s : CLASHES.has(s) ? `${m[2]} (${m[1]})` : m[2]; };
 
   class PaperError extends Error {}
   class APIError extends Error {}
@@ -62,16 +66,17 @@
         this.extraAt[dex] = Date.now();
         try {
           const [meta, ctxs] = await this.post({type: "metaAndAssetCtxs", dex}, 1);   // one try: never slow the main list down
-          const want = new Set(tickers.map(t => t.toUpperCase())), bare = n => String(n).replace(/^[^:]*:/, "").toUpperCase();
+          const want = tickers === "*" ? null : new Set(tickers.map(t => t.toUpperCase())), bare = n => String(n).replace(/^[^:]*:/, "").toUpperCase();
           const u = [], c = [];
-          meta.universe.forEach((info, i) => { if (want.has(bare(info.name))) { u.push({...info, name: `${dex}:${bare(info.name)}`}); c.push(ctxs[i] || {}); } });
+          meta.universe.forEach((info, i) => { if (want ? want.has(bare(info.name)) : !info.isDelisted) { u.push({...info, name: `${dex}:${bare(info.name)}`}); c.push(ctxs[i] || {}); } });
           this.extra[dex] = [u, c];
         } catch {}
         return this.extra[dex] || [[], []];
       });
       const [[meta, ctxs], ...more] = await Promise.all([this.post({type: "metaAndAssetCtxs"}), ...groups]);
       const universe = meta.universe.filter(x => !String(x.name).includes(":")), all = ctxs.slice(0, universe.length);
-      for (const [u, c] of more) { universe.push(...u); all.push(...c); }
+      const own = new Set(universe.map(x => x.name));
+      for (const [u, c] of more) { universe.push(...u); all.push(...c); u.forEach(x => { if (own.has(displayName(x.name).replace(/ \(.*\)$/, ""))) CLASHES.add(x.name); }); }
       return [{...meta, universe}, all];
     }
     l2Book(coin) { return this.post({type: "l2Book", coin}); }

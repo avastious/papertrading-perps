@@ -93,11 +93,12 @@ Every market goes up to 1000x (`MAX_LEVERAGE` in `engine.js` / `engine.py`), pas
 Every market on Hyperliquid's main list, plus chosen builder-run (HIP-3) markets. Hyperliquid only lists those when asked for their group by name, and calls them `<group>:<ticker>`, such as `xyz:XYZ100`. The choice lives in `EXTRA_MARKETS` in `aureous/web/engine.js` (website and trading server) and `aureous/api.py` (local server):
 
 ```js
-const EXTRA_MARKETS = {xyz: ["XYZ100", "ANT"], io: ["ANTH"]};   // Nasdaq 100; Anthropic pre-IPO on trade.xyz and Entropy
+const EXTRA_MARKETS = {xyz: "*", io: ["ANTH"]};   // every live trade.xyz market (stocks, SP500, XYZ100, commodities…); Entropy's Anthropic
 ```
 
-- **More markets:** add more tickers or groups, e.g. `xyz: ["XYZ100", "TSLA", "NVDA"]`, and labels in `MARKET_LABELS`. Then push and publish.
-- **Names:** the site shows `XYZ100` without the group prefix, and its label ("Nasdaq 100") is searchable.
+- **More markets:** `"*"` takes a whole group (new trade.xyz listings appear on their own, delisted ones drop out); a list such as `["ANTH"]` takes only those tickers. Add company names to `MARKET_LABELS` so search finds them ("apple", "s&p"). Then push and publish.
+- **Names:** the site shows `NVDA` without the group prefix. If a ticker clashes with one of Hyperliquid's own markets (`xyz:HYPE`), it shows as `HYPE (xyz)`. The market list has Crypto / Stocks, indices & more / Favourites filters.
+- **Load:** a group costs one request to Hyperliquid however many markets it has, and groups are re-read at most every 10 seconds.
 - **Outages:** if a group can't be reached, its last prices are kept, so open positions still have a price.
 - **Funding:** if a builder market's funding history can't be read, its current hourly rate is used for each hour.
 

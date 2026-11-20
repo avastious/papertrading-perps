@@ -228,12 +228,13 @@ def test_builder_markets_merged(monkeypatch):
             if down["xyz"]:
                 raise HyperliquidAPIError("down")
             return [{"universe": [{"name": "xyz:XYZ100", "szDecimals": 4, "maxLeverage": 30},
-                                  {"name": "xyz:TSLA", "szDecimals": 3, "maxLeverage": 10}]}, [{"markPx": "25000"}, {"markPx": "400"}]]
+                                  {"name": "xyz:TSLA", "szDecimals": 3, "maxLeverage": 10},
+                                  {"name": "xyz:GONE", "szDecimals": 1, "maxLeverage": 5, "isDelisted": True}]}, [{"markPx": "25000"}, {"markPx": "400"}, {"markPx": "1"}]]
         return [{"universe": [{"name": "BTC", "szDecimals": 5, "maxLeverage": 40}]}, [{"markPx": "60000"}]]
 
     monkeypatch.setattr(hl, "_post", post)
     meta, ctxs = hl.meta_and_ctxs()
-    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100", "io:ANTH"] and ctxs[1]["markPx"] == "25000"
+    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100", "xyz:TSLA", "io:ANTH"] and ctxs[1]["markPx"] == "25000"
     down["xyz"] = True
     meta, _ = hl.meta_and_ctxs()
-    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100", "io:ANTH"]
+    assert [u["name"] for u in meta["universe"]] == ["BTC", "xyz:XYZ100", "xyz:TSLA", "io:ANTH"]

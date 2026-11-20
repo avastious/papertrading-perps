@@ -203,7 +203,7 @@ test("local API flow mirrors the Python server", async () => {
   await app.handle("/api/reset", {}, {balance: 5000}); assert.equal(ex.state.balance, 5000);
 });
 
-test("builder markets (xyz:XYZ100) are merged in, and kept if their group can't be reached", async () => {
+test("builder markets (every live xyz market, io:ANTH) are merged in, and kept if their group can't be reached", async () => {
   const {HyperliquidClient, displayName} = globalThis.Aureous;
   let xyzDown = false;
   const fetchFn = async (url, init) => {
@@ -211,16 +211,16 @@ test("builder markets (xyz:XYZ100) are merged in, and kept if their group can't 
     if (q.dex === "xyz" && xyzDown) return {ok: false, status: 500, json: async () => ({})};
     const body = q.dex === "io" ? [{universe: [{name: "io:anth", szDecimals: 3, maxLeverage: 3}, {name: "io:SNDK", szDecimals: 2, maxLeverage: 10}]}, [{markPx: "1950"}, {markPx: "90"}]]
       : q.dex === "xyz"
-      ? [{universe: [{name: "xyz:XYZ100", szDecimals: 4, maxLeverage: 30}, {name: "xyz:TSLA", szDecimals: 3, maxLeverage: 10}]}, [{markPx: "25000"}, {markPx: "400"}]]
+      ? [{universe: [{name: "xyz:XYZ100", szDecimals: 4, maxLeverage: 30}, {name: "xyz:TSLA", szDecimals: 3, maxLeverage: 10}, {name: "xyz:BTC", szDecimals: 3, maxLeverage: 5}, {name: "xyz:GONE", szDecimals: 1, maxLeverage: 5, isDelisted: true}]}, [{markPx: "25000"}, {markPx: "400"}, {markPx: "60100"}, {markPx: "1"}]]
       : [{universe: [{name: "BTC", szDecimals: 5, maxLeverage: 40}]}, [{markPx: "60000"}]];
     return {ok: true, status: 200, json: async () => body};
   };
   const hl = new HyperliquidClient("https://example.test", fetchFn);
   let [meta, ctxs] = await hl.metaAndCtxs();
-  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100", "io:ANTH"]);   // only the markets we chose, names tidied
-  assert.equal(ctxs[1].markPx, "25000"); assert.equal(ctxs[2].markPx, "1950");
+  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100", "xyz:TSLA", "xyz:BTC", "io:ANTH"]);   // all live xyz markets, only ANTH from io, names tidied
+  assert.equal(ctxs[1].markPx, "25000"); assert.equal(ctxs[4].markPx, "1950");
   xyzDown = true;
   [meta] = await hl.metaAndCtxs();
-  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100", "io:ANTH"]);   // last good copy reused
-  assert.equal(displayName("xyz:XYZ100"), "XYZ100"); assert.equal(displayName("kPEPE"), "kPEPE");
+  assert.deepEqual(meta.universe.map(u => u.name), ["BTC", "xyz:XYZ100", "xyz:TSLA", "xyz:BTC", "io:ANTH"]);   // last good copy reused
+  assert.equal(displayName("xyz:XYZ100"), "XYZ100"); assert.equal(displayName("xyz:BTC"), "BTC (xyz)");   // clashes keep their group assert.equal(displayName("kPEPE"), "kPEPE");
 });

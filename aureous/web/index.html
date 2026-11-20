@@ -124,6 +124,10 @@ button{cursor:pointer}
 .mk-search svg{width:15px;height:15px;color:var(--faint);flex:none}
 .mk-search input{flex:1;min-width:0;background:none;border:0;padding:8px 0;outline:none}
 .mk-tools select{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-ctl);padding:4px 8px;font-size:12.5px;color:var(--muted)}
+.mk-cats{display:flex;gap:4px;padding:8px 12px 0;flex-wrap:wrap}
+.mk-cats button{background:none;border:1px solid var(--line);border-radius:14px;padding:4px 11px;font-size:12px;color:var(--muted)}
+.mk-cats button:hover{color:var(--text)}
+.mk-cats button[aria-pressed=true]{color:var(--accent);border-color:var(--accent);background:var(--accent-wash)}
 .mk-head,.mk-row{display:grid;grid-template-columns:minmax(120px,1.3fr) 1fr 80px 92px 84px 84px;gap:10px;align-items:center}
 .mk-head{font-size:11px;color:var(--faint);padding:8px 14px 6px 38px}
 .mk-head button{background:none;border:0;padding:0;color:inherit;font:inherit;text-align:right}
@@ -556,13 +560,14 @@ td.rank{color:var(--muted);width:56px}
 
   <aside class="markets" id="markets" aria-label="Markets">
     <div class="mk-tools">
-      <label class="mk-search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg><input id="mkSearch" placeholder="Search markets" aria-label="Search markets" autocomplete="off"></label>
+      <label class="mk-search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg><input id="mkSearch" placeholder="Search: BTC, Apple, S&amp;P 500…" aria-label="Search markets" autocomplete="off"></label>
       <select id="mkSort" aria-label="Sort markets">
         <option value="volume">Volume</option><option value="change">Movers</option>
         <option value="funding">Funding</option><option value="oi">Open int.</option><option value="name">A–Z</option>
       </select>
       <button class="tiny mk-close" id="mkClose" type="button" aria-label="Close markets">Close</button>
     </div>
+    <div class="mk-cats" id="mkCats" role="group" aria-label="Market type"><button type="button" data-cat="all" aria-pressed="true">All</button><button type="button" data-cat="crypto" aria-pressed="false">Crypto</button><button type="button" data-cat="tradfi" aria-pressed="false">Stocks, indices &amp; more</button><button type="button" data-cat="fav" aria-pressed="false">Favourites</button></div>
     <div class="mk-head" id="mkHead"><button type="button" data-sort="name">Market</button><span style="text-align:right">Price</span><button type="button" data-sort="change">24h</button><button type="button" data-sort="funding">Funding / hr</button><button type="button" data-sort="volume">Volume</button><button type="button" data-sort="oi">Open interest</button></div>
     <div class="mk-list" id="mkList"></div>
   </aside>
@@ -970,7 +975,9 @@ async function refreshMarkets(){
 function renderMarkets(){
   const q = $("#mkSearch").value.trim().toLowerCase(), sort = $("#mkSort").value;
   const key = {volume: m => -m.volume, change: m => -Math.abs(m.change), funding: m => -Math.abs(m.funding), oi: m => -m.oi, name: m => m.name.toLowerCase()}[sort];
-  const list = S.markets.filter(m => !q || m.name.toLowerCase().includes(q) || mlabel(m.name).toLowerCase().includes(q))
+  const cat = S.mkCat || "all", favSet = new Set(S.favs);
+  const inCat = m => cat === "all" || (cat === "crypto" ? !m.name.includes(":") : cat === "tradfi" ? m.name.includes(":") : favSet.has(m.name));
+  const list = S.markets.filter(m => inCat(m) && (!q || m.name.toLowerCase().includes(q) || mlabel(m.name).toLowerCase().includes(q)))
     .sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
   const favs = new Set(S.favs);
   list.sort((a, b) => (favs.has(b.name) ? 1 : 0) - (favs.has(a.name) ? 1 : 0));   // favourites first, order kept otherwise
@@ -978,7 +985,8 @@ function renderMarkets(){
     return `<div class="mk-item${m.name === S.coin ? " on" : ""}"><button class="star${f ? " fav" : ""}" data-fav="${esc(m.name)}" aria-pressed="${f}" aria-label="${f ? "Remove" : "Add"} ${esc(m.name)} ${f ? "from" : "to"} favourites">${f ? "★" : "☆"}</button>` +
       `<button class="mk-row${m.name === S.coin ? " on" : ""}" data-coin="${esc(m.name)}"${mlabel(m.name) ? ` title="${esc(mlabel(m.name))}"` : ""}><b>${esc(cname(m.name))}${mlabel(m.name) ? `<small class="mk-label">${esc(mlabel(m.name))}</small>` : ""}</b><span class="r">${fpx(m.mark)}</span><span class="r ${cls(m.change)}">${pct(m.change)}</span>` +
       `<span class="r q">${pct(m.funding, 4)}</span><span class="r q">$${big(m.volume)}</span><span class="r q">$${big(m.oi)}</span></button></div>`;
-  }).join("") || `<div class="empty">No market matches “${esc(q)}”</div>`;
+  }).join("") || `<div class="empty">${q ? `No market matches “${esc(q)}”` : cat === "fav" ? "No favourites yet. Star a market to keep it here." : "No markets here."}</div>`;
+  document.querySelectorAll("#mkCats [data-cat]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cat === cat)));
   document.querySelectorAll("#mkHead [data-sort]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sort === sort)));
 }
 // the market list drops down from the coin name (full screen on phones)
@@ -1489,6 +1497,7 @@ $("#mkClose").addEventListener("click", closeMarkets);
 $("#mkScrim").addEventListener("click", closeMarkets);
 window.addEventListener("resize", () => { if (!matchMedia("(max-width:899px)").matches) closeMarkets(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeMarkets(); });
+$("#mkCats").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (b) { S.mkCat = b.dataset.cat; renderMarkets(); } });
 $("#mkHead").addEventListener("click", e => { const b = e.target.closest("[data-sort]"); if (b) { $("#mkSort").value = b.dataset.sort; renderMarkets(); } });
 // order book / trades, and on phones the chart / book / trades switch
 S.bk = "book"; S.trades = null; S.tradeIds = new Set();

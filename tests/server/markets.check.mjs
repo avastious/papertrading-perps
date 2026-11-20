@@ -22,5 +22,20 @@ ok(r.j.state.positions['xyz:XYZ100'] && r.j.state.balance > 0, 'position held af
 r = await call('/api/close', t, { coin: 'xyz:XYZ100' });
 const last = r.j.state.trades[r.j.state.trades.length - 1];
 ok(r.status === 200 && last.realized > 0, 'closed XYZ100 for a profit', `${last && last.realized.toFixed(2)}`);
+
+// every live trade.xyz market (xyz: "*"): S&P 500 and stocks, but not delisted ones
+for (const c of ['xyz:SP500', 'xyz:AAPL', 'xyz:SPCX']) {
+  r = await call('/api/order', t, { coin: c, side: 'buy', size: 500, unit: 'usd', leverage: 5 });
+  ok(r.status === 200 && r.j.state.positions[c], `${c} trades`, (r.j.messages || [r.j.error])[0]);
+  await call('/api/close', t, { coin: c });
+}
+r = await call('/api/order', t, { coin: 'xyz:OLDCO', side: 'buy', size: 500, unit: 'usd', leverage: 2 });
+ok(r.status === 400, 'delisted builder markets are left out', r.j.error);
+r = await call('/api/order', t, { coin: 'xyz:HYPE', side: 'buy', size: 500, unit: 'usd', leverage: 2 });
+ok(r.status === 200 && /HYPE \(xyz\)/.test(r.j.messages[0]), "a builder ticker that clashes with Hyperliquid's own HYPE shows its group", r.j.messages && r.j.messages[0]);
+await call('/api/close', t, { coin: 'xyz:HYPE' });
+r = await call('/api/order', t, { coin: 'xyz:NVDA', side: 'buy', size: 1000, unit: 'usd', leverage: 10 });
+ok(r.status === 200 && r.j.state.positions['xyz:NVDA'] && /Bought [\d.]+ NVDA at/.test(r.j.messages[0]), 'buy NVDA', (r.j.messages || [r.j.error])[0]);
+await call('/api/close', t, { coin: 'xyz:NVDA' });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
