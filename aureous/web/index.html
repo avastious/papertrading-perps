@@ -420,6 +420,21 @@ td.rank{color:var(--muted);width:56px}
 .install-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
 .install-steps b{color:var(--text)}
 
+/* ---------- live trading (Hyperliquid testnet) ---------- */
+.mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--bg);border-radius:var(--r-ctl);padding:3px}
+.mode-switch button{border:0;background:none;border-radius:4px;padding:6px;font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.mode-switch button[aria-pressed=true]{background:var(--raise);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.net-tag{font-size:10px;font-weight:600;letter-spacing:.04em;color:#E8A33D;border:1px solid currentColor;border-radius:3px;padding:0 4px;line-height:1.5}
+.live-banner{display:none;margin:0;font-size:12px;line-height:1.45;color:#E8A33D;background:rgba(232,163,61,.1);border:1px solid rgba(232,163,61,.35);border-radius:var(--r-ctl);padding:7px 10px}
+.live-on .live-banner{display:block}
+.live-only{display:none}.live-on .live-only{display:block}
+.live-on .ticket{box-shadow:inset 3px 0 0 #E8A33D}
+.live-acct .btn{width:100%;padding:9px}
+.live-who{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.live-who a{color:var(--muted)} .live-who a:hover{color:var(--text)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.live-h{margin:12px 14px 4px;font-size:12.5px;font-weight:600;color:var(--muted)}
+
 /* ---------- compact layout setting ---------- */
 [data-density=compact] body{font-size:12.5px}
 [data-density=compact] .topbar{height:44px}
@@ -585,6 +600,11 @@ td.rank{color:var(--muted);width:56px}
 
   <div class="side">
     <form class="ticket" id="ticket" autocomplete="off">
+      <div class="mode-switch" id="modeSwitch" role="group" aria-label="Trading mode" hidden>
+        <button type="button" data-mode="paper" aria-pressed="true">Paper</button>
+        <button type="button" data-mode="live" aria-pressed="false">Live <span class="net-tag">Testnet</span></button>
+      </div>
+      <p class="live-banner">Live on Hyperliquid's testnet: real orders, test money with no value.</p>
       <div class="seg" role="group" aria-label="Direction">
         <button type="button" data-side="buy" class="on">Long</button>
         <button type="button" data-side="sell">Short</button>
@@ -623,11 +643,13 @@ td.rank{color:var(--muted);width:56px}
         <dt>Margin required</dt><dd id="sMargin">–</dd>
         <dt>Est. fee</dt><dd id="sFee">–</dd>
         <dt>Available</dt><dd id="sAvail">–</dd>
+        <dt class="live-only">Testnet price</dt><dd class="live-only" id="sTnPx">–</dd>
       </dl>
       <button type="submit" class="submit long" id="submit">Long</button>
     </form>
 
-    <section class="acct" aria-label="Account">
+    <section class="acct live-acct" id="liveAcct" aria-label="Live account" hidden></section>
+    <section class="acct" id="paperAcct" aria-label="Account">
       <div class="acct-top"><h2>Account</h2><button class="link-btn" id="resetBtn" type="button">Reset account</button></div>
       <div><div class="equity" id="aEquity">–</div><div id="aReturn" style="font-size:12.5px"></div></div>
       <div class="progress" id="msProgress" hidden><div class="row"><span id="msText"></span><span id="msBadges" class="my-badges"></span></div><div class="bar"><i id="msBar" style="width:0"></i></div></div>
@@ -653,7 +675,7 @@ td.rank{color:var(--muted);width:56px}
   <section class="bottom" aria-label="Positions and history">
     <div class="ptabs" id="btabs">
       <button data-t="positions" class="on">Positions</button><button data-t="orders">Open orders</button>
-      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button>
+      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button><button data-t="live" id="liveTab" hidden>Live (testnet)</button>
       <span class="grow"></span>
       <button id="bulkBtn" class="tiny" hidden></button>
     </div>
@@ -1199,7 +1221,8 @@ const LEV_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 35, 40, 45
                    250, 300, 350, 400, 450, 500, 600, 700, 750, 800, 900, 1000].filter(x => x <= MAX_LEV);
 let levExact = null;                                  // a stored leverage that isn't one of the steps (e.g. 33x)
 S.overCap = true;                                     // the site owner's switch: leverage past Hyperliquid's caps (from the server)
-const levCap = m => S.overCap ? MAX_LEV : (m ? m.max_lev : MAX_LEV);
+const levCap = m => (window.AureousLive && AureousLive.on && m) ? Math.min(m.max_lev, AureousLive.maxLev(m.name) || m.max_lev)
+  : S.overCap ? MAX_LEV : (m ? m.max_lev : MAX_LEV);
 function levSteps(){ const cap = levCap(market()); const st = LEV_STEPS.filter(x => x <= cap); if (st[st.length - 1] !== cap) st.push(cap); return st; }
 function getLev(){ const st = levSteps(); return levExact || st[+$("#lev").value] || 1; }
 function setLevSlider(v){
@@ -1208,6 +1231,7 @@ function setLevSlider(v){
   $("#lev").max = st.length - 1; $("#lev").value = i; levExact = st[i] === v ? null : v;
 }
 function setConfig(c){
+  if (c && window.AureousLive) AureousLive.config(c);
   if (!c || typeof c.over_cap !== "boolean" || c.over_cap === S.overCap) return;
   S.overCap = c.over_cap; syncLeverage(); renderHeader(); renderSummary();
 }
@@ -1240,7 +1264,16 @@ function renderSummary(){
   $("#sFee").textContent = n ? usd(n * fee) : "–";
   $("#sAvail").textContent = a ? usd(a.available) : "–";
   const btn = $("#submit");
-  if (locked()) { btn.className = "submit locked"; btn.textContent = S.user && S.authPhase === "blocked" ? (S.emailBlock && S.emailBlock.reason === "disposable_email" ? "Use a real email to trade" : "Confirm your email to trade") : AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
+  if (LIVE()) {
+    const av = AureousLive.available(), b = AureousLive.builder(), lf = .00045 + (b ? b.f / 1e5 : 0);
+    $("#sAvail").textContent = av == null ? "–" : usd(av);
+    const tp = AureousLive.mid(m.name); $("#sTnPx").textContent = tp > 0 ? fpx(tp) : "Not on testnet";
+    $("#sTnPx").title = "Hyperliquid's testnet has its own prices, separate from the real market shown on the chart. Live orders fill at testnet prices.";
+    $("#sFee").textContent = n ? usd(n * lf) : "–";
+    btn.className = "submit " + (!AureousLive.exAgent ? "locked" : S.side === "buy" ? "long" : "short");
+    btn.textContent = AureousLive.buttonText(m);
+  }
+  else if (locked()) { btn.className = "submit locked"; btn.textContent = S.user && S.authPhase === "blocked" ? (S.emailBlock && S.emailBlock.reason === "disposable_email" ? "Use a real email to trade" : "Confirm your email to trade") : AUTH ? "Sign in to trade" : "Sign-in unavailable"; }
   else {
     btn.className = "submit " + (S.side === "buy" ? "long" : "short");
     btn.textContent = `${S.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${S.type === "limit" ? " at limit" : ""}`;
@@ -1253,13 +1286,15 @@ function setType(type){
   S.type = type;
   document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === type));
   $("#pxField").hidden = type !== "limit"; $("#postWrap").hidden = type !== "limit";
-  $("#tpslWrap").hidden = type === "limit"; if (type === "limit") { $("#tpslOn").checked = false; $("#tpslFields").hidden = true; }
+  $("#tpslWrap").hidden = type === "limit" || LIVE(); if (type === "limit") { $("#tpslOn").checked = false; $("#tpslFields").hidden = true; }
   if (type === "limit" && !$("#px").value && market()) $("#px").value = fpx(market().mid || market().mark).replace(/,/g, "");
   renderSummary();
 }
+function LIVE(){ return !!(window.AureousLive && AureousLive.on); }
 async function submitOrder(ev){
   ev.preventDefault();
-  if (locked()) { if (S.user && S.authPhase === "blocked" && S.emailBlock) openVerify(S.emailBlock); else if (AUTH) openAuth(); return; }
+  if (LIVE() && !(AureousLive.user && AureousLive.exAgent)) { if (!AureousLive.user) AureousLive.connect(); else AureousLive.enable(); return; }
+  if (!LIVE() && locked()) { if (S.user && S.authPhase === "blocked" && S.emailBlock) openVerify(S.emailBlock); else if (AUTH) openAuth(); return; }
   const m = market(); if (!m) return;
   const size = num($("#size").value);
   if (!(size > 0)) { toast("Enter a size first.", "error"); $("#size").focus(); return; }
@@ -1273,6 +1308,7 @@ async function submitOrder(ev){
   if ($("#tpslOn").checked) { const tp = num($("#tpIn").value), sl = num($("#slIn").value); if (tp > 0) body.tp = tp; if (sl > 0) body.sl = sl; }
   if (SET.confirm && !(await confirmOrder(body, m))) return;
   const btn = $("#submit"); btn.disabled = true;
+  if (LIVE()) { try { await AureousLive.submit(body, m); } finally { btn.disabled = false; } return; }
   try { await act("/api/order", body); $("#size").value = ""; $("#tpIn").value = ""; $("#slIn").value = ""; renderSummary(); } catch {}
   finally { btn.disabled = false; }
 }
@@ -1285,7 +1321,8 @@ function confirmOrder(body, m){
     if (body.tp) rows.push(["Take profit", fpx(body.tp)]);
     if (body.sl) rows.push(["Stop loss", fpx(body.sl)]);
     if (body.reduce_only) rows.push(["Reduce only", "Yes"]);
-    $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${cname(m.name)}?`;
+    if (LIVE()) rows.unshift(["Where", "Hyperliquid testnet (test money)"]);
+    $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${LIVE() ? " on testnet" : ""}?`;
     $("#cfSum").innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
     $("#cfOk").className = "btn " + (body.side === "buy" ? "primary" : "danger");
     $("#cfNoAsk").checked = false;
@@ -1372,6 +1409,7 @@ function renderBottom(){
   if (!a) return;
   bulk.hidden = true;
   if (S.tab === "board") { renderBoard(); return; }
+  if (S.tab === "live") { if (window.AureousLive) AureousLive.renderBottom(v); return; }
   if (S.tab === "positions") {
     if (locked()) { v.innerHTML = `<div class="empty">Sign in to start trading. Everyone gets $10,000 of paper money, and the leaderboard ranks accounts by value.</div>`; return; }
     if (!a.positions.length) { v.innerHTML = `<div class="empty">No open positions. Pick a market, enter a size and press Long or Short.</div>`; return; }
@@ -1495,6 +1533,7 @@ $("#unitBtn").addEventListener("click", () => {
 });
 $("#chips").addEventListener("click", e => {
   const b = e.target.closest("[data-pct]"); if (!b || !S.acct || !market()) return;
+  if (LIVE()) { const av = AureousLive.available(); if (av > 0) { $("#size").value = sizeFor(av * +b.dataset.pct * getLev() * .97); renderSummary(); } return; }
   // Leave room for the fee (charged on the whole position) and, for market orders, the price impact of
   // eating into the visible order book, which matters a lot at high leverage. Never more than the book shows.
   const m = market(), lev = getLev(), fee = S.acct.fees ? S.acct.fees.taker : .00045;
@@ -2583,6 +2622,7 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView === "clans") loadClans(); } }, 30000);
 })();
 </script>
+<script src="live.js"></script>
 <script type="module" src="auth.js"></script>
 </body>
 </html>

@@ -482,14 +482,43 @@ export class Exchange extends DurableObject {
     if (!this.settingsCache) this.settingsCache = Object.fromEntries(this.sql.exec("SELECT key, value FROM settings").toArray().map(r => [r.key, JSON.parse(r.value)]));
     return key in this.settingsCache ? this.settingsCache[key] : fallback;
   }
-  config() { return {ok: true, over_cap: this.setting("over_cap", true), max_leverage: globalThis.Aureous.MAX_LEVERAGE}; }
+  // Live trading: real orders sent from the trader's own wallet to Hyperliquid. Only Hyperliquid's test network
+  // ("testnet", play money) can be switched on here; real-money trading needs a code change and legal advice first.
+  config() {
+    return {ok: true, over_cap: this.setting("over_cap", true), max_leverage: globalThis.Aureous.MAX_LEVERAGE,
+            live: this.setting("live", "off"), builder: this.setting("builder", ""), builder_fee: this.setting("builder_fee", 50)};
+  }
+  putSetting(key, value) {
+    this.sql.exec("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", key, JSON.stringify(value));
+    this.settingsCache = null; this.adminCache = null;
+  }
   adminSettings(body) {
+    const messages = [];
+    if (body.live !== undefined && !["off", "testnet"].includes(body.live)) return {ok: false, status: 400, error: "Live trading can only be off or on Hyperliquid's testnet."};
+    if (body.builder !== undefined && String(body.builder).trim() && !/^0x[0-9a-fA-F]{40}$/.test(String(body.builder).trim())) return {ok: false, status: 400, error: "The builder address should be a wallet address: 0x followed by 40 letters and numbers."};
+    if (body.builder_fee !== undefined && !(Math.round(Number(body.builder_fee)) >= 0 && Math.round(Number(body.builder_fee)) <= 100)) return {ok: false, status: 400, error: "The builder fee must be between 0% and 0.1% (Hyperliquid's limit for perps)."};
     if (typeof body.over_cap === "boolean") {
-      this.sql.exec("INSERT INTO settings (key, value) VALUES ('over_cap', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", JSON.stringify(body.over_cap));
-      this.settingsCache = null; this.adminCache = null;
+      this.putSetting("over_cap", body.over_cap);
+      messages.push(body.over_cap ? `Leverage up to ${globalThis.Aureous.MAX_LEVERAGE}x is on for every market.` : "Leverage is back to each market's Hyperliquid limit. Positions already open keep their leverage.");
     }
-    const on = this.setting("over_cap", true);
-    return {...this.config(), messages: [on ? `Leverage up to ${globalThis.Aureous.MAX_LEVERAGE}x is on for every market.` : "Leverage is back to each market's Hyperliquid limit. Positions already open keep their leverage."]};
+    if (body.live !== undefined) {
+      if (!["off", "testnet"].includes(body.live)) return {ok: false, status: 400, error: "Live trading can only be off or on Hyperliquid's testnet."};
+      this.putSetting("live", body.live);
+      messages.push(body.live === "testnet" ? "Live trading is on, using Hyperliquid's testnet (play money). Traders see a Paper / Live switch on the order form." : "Live trading is off. The Paper / Live switch is hidden.");
+    }
+    if (body.builder !== undefined) {
+      const b = String(body.builder).trim();
+      if (b && !/^0x[0-9a-fA-F]{40}$/.test(b)) return {ok: false, status: 400, error: "The builder address should be a wallet address: 0x followed by 40 letters and numbers."};
+      this.putSetting("builder", b.toLowerCase());
+      messages.push(b ? "Builder address saved. Live orders now carry the Aureous builder fee." : "Builder address removed. Live orders carry no builder fee.");
+    }
+    if (body.builder_fee !== undefined) {
+      const f = Math.round(Number(body.builder_fee));
+      if (!(f >= 0 && f <= 100)) return {ok: false, status: 400, error: "The builder fee must be between 0% and 0.1% (Hyperliquid's limit for perps)."};
+      this.putSetting("builder_fee", f);
+      messages.push(`Builder fee set to ${(f / 1000).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}% per trade.`);
+    }
+    return {...this.config(), messages: messages.length ? messages : ["Nothing changed."]};
   }
 
   // ------------------------------------------------------------------ clans

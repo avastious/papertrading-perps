@@ -48,6 +48,74 @@ function info(q) {
   if (q.type === 'fundingHistory') return funding.filter(f => f.coin === q.coin && f.time >= q.startTime && f.time <= (q.endTime || 1e18));
   return null;
 }
+// A small stand-in for Hyperliquid's testnet (live trading): /tn/info and /tn/exchange.
+// It doesn't check signatures (tests check those against the official SDK); every request is logged at /tn/log.
+const TN = { meta: [['BTC', 5, 40], ['ETH', 4, 25], ['SOL', 2, 20], ['HYPE', 2, 10]], user: null, agents: {}, builderFee: {}, accounts: {}, log: [], oid: 1 };
+const tnMid = c => px[c] * 1.002;                                  // testnet prices differ a little from mainnet
+const tnAcct = u => TN.accounts[u] || (TN.accounts[u] = { usdc: 0, pos: {}, lev: {}, orders: [], fills: [] });
+function tnState(u) {
+  const a = tnAcct(u); let upnl = 0, ntl = 0, used = 0;
+  const assetPositions = Object.entries(a.pos).filter(([, p]) => p.szi).map(([coin, p]) => {
+    const mid = tnMid(coin), val = Math.abs(p.szi) * mid, pnl = (mid - p.entry) * p.szi, m = val / p.lev;
+    upnl += pnl; ntl += val; used += m;
+    return { type: 'oneWay', position: { coin, szi: String(p.szi), entryPx: String(p.entry), positionValue: String(val), unrealizedPnl: String(pnl),
+      returnOnEquity: String(pnl / (Math.abs(p.szi) * p.entry / p.lev)), liquidationPx: null, leverage: { type: 'cross', value: p.lev }, marginUsed: String(m),
+      maxLeverage: TN.meta.find(x => x[0] === coin)[2], cumFunding: { allTime: '0', sinceOpen: '0', sinceChange: '0' } } };
+  });
+  const av = a.usdc + upnl;
+  return { marginSummary: { accountValue: String(av), totalNtlPos: String(ntl), totalRawUsd: String(a.usdc), totalMarginUsed: String(used) },
+    crossMarginSummary: { accountValue: String(av), totalNtlPos: String(ntl), totalRawUsd: String(a.usdc), totalMarginUsed: String(used) },
+    crossMaintenanceMarginUsed: String(used / 2), withdrawable: String(Math.max(0, av - used)), assetPositions, time: Date.now() };
+}
+function tnInfo(q) {
+  if (q.type === 'meta') return { universe: TN.meta.map(([name, szDecimals, maxLeverage]) => ({ name, szDecimals, maxLeverage })) };
+  if (q.type === 'allMids') return Object.fromEntries(TN.meta.map(([c]) => [c, String(+tnMid(c).toPrecision(6))]));
+  if (q.type === 'clearinghouseState') return tnState(q.user.toLowerCase());
+  if (q.type === 'openOrders') return tnAcct(q.user.toLowerCase()).orders;
+  if (q.type === 'userFills') return tnAcct(q.user.toLowerCase()).fills;
+  if (q.type === 'maxBuilderFee') return TN.builderFee[q.user.toLowerCase() + q.builder.toLowerCase()] || 0;
+  return null;
+}
+function tnFill(u, coin, isBuy, sz, pxl, builder) {
+  const a = tnAcct(u), p = a.pos[coin] || (a.pos[coin] = { szi: 0, entry: 0, lev: a.lev[coin] || 20 });
+  const d = isBuy ? sz : -sz, before = p.szi; let realized = 0;
+  if (before && Math.sign(before) !== Math.sign(d)) { const closed = Math.min(Math.abs(before), sz); realized = (pxl - p.entry) * closed * Math.sign(before); }
+  const after = +(before + d).toFixed(8);
+  if (!before || Math.sign(before) === Math.sign(d)) p.entry = (p.entry * Math.abs(before) + pxl * sz) / Math.abs(after);
+  else if (after && Math.sign(after) !== Math.sign(before)) p.entry = pxl;
+  p.szi = after; p.lev = a.lev[coin] || p.lev;
+  const fee = sz * pxl * 0.00045, bfee = builder ? sz * pxl * builder.f / 1e5 : 0;
+  a.usdc += realized - fee - bfee;
+  a.fills.unshift({ coin, px: String(pxl), sz: String(sz), side: isBuy ? 'B' : 'A', time: Date.now(), dir: (isBuy ? (before < 0 ? 'Close Short' : 'Open Long') : (before > 0 ? 'Close Long' : 'Open Short')),
+    closedPnl: String(realized), fee: String(fee), builderFee: builder ? String(bfee) : undefined, oid: TN.oid, tid: TN.oid });
+}
+function tnExchange(b) {
+  TN.log.push(b);
+  const a = b.action, ok = (type, data) => ({ status: 'ok', response: data === undefined ? { type } : { type, data } });
+  if (a.type === 'approveAgent') { TN.agents[a.agentAddress.toLowerCase()] = TN.user; return ok('default'); }
+  if (a.type === 'approveBuilderFee') { TN.builderFee[TN.user + a.builder.toLowerCase()] = Math.round(parseFloat(a.maxFeeRate) * 1000); return ok('default'); }
+  const u = Object.keys(TN.agents).length ? TN.user : null;     // one test user; it can't recover signers, so any approved agent acts for them
+  if (!u) return { status: 'err', response: 'User or API Wallet 0x0000 does not exist.' };
+  const acct = tnAcct(u);
+  if (!acct.usdc) return { status: 'err', response: 'Must deposit before performing actions. User: ' + u };
+  if (a.type === 'updateLeverage') { const coin = TN.meta[a.asset][0]; acct.lev[coin] = a.leverage; return ok('default'); }
+  if (a.type === 'cancel') { const before = acct.orders.length; acct.orders = acct.orders.filter(o => !a.cancels.some(c => c.o === o.oid)); return ok('cancel', { statuses: [before > acct.orders.length ? 'success' : { error: 'Order was never placed, already canceled, or filled.' }] }); }
+  if (a.type === 'order') {
+    const statuses = a.orders.map(o => {
+      const [coin, szDec] = TN.meta[o.a], sz = +o.s, lim = +o.p, mid = tnMid(coin), tif = o.t.limit.tif;
+      if (sz * mid < 10) return { error: 'Order must have minimum value of $10.' };
+      if (a.builder && (TN.builderFee[u + a.builder.b.toLowerCase()] || 0) < a.builder.f) return { error: 'Builder fee has not been approved.' };
+      const crosses = o.b ? lim >= mid : lim <= mid;
+      if (crosses && tif !== 'Alo') { tnFill(u, coin, o.b, sz, mid, a.builder); return { filled: { totalSz: o.s, avgPx: String(mid), oid: TN.oid++ } }; }
+      if (tif === 'Ioc') return { error: 'Order could not immediately match against any resting orders.' };
+      if (tif === 'Alo' && crosses) return { error: 'Post only order would have immediately matched.' };
+      const oid = TN.oid++; acct.orders.push({ coin, side: o.b ? 'B' : 'A', limitPx: o.p, sz: o.s, oid, timestamp: Date.now(), origSz: o.s });
+      return { resting: { oid } };
+    });
+    return ok('order', { statuses });
+  }
+  return { status: 'err', response: 'Unsupported in the stand-in: ' + a.type };
+}
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'content-type': 'application/json' };
 // Stand-ins for Google's OAuth token endpoint, Firebase's admin API (Identity Toolkit) and Resend (email).
 const fbUsers = new Map();            // uid -> {uid, email, emailVerified, password}
@@ -58,6 +126,10 @@ http.createServer((req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     const send = (o, s = 200) => { res.writeHead(s, cors); res.end(JSON.stringify(o)); };
     if (u.pathname === '/info') return send(info(JSON.parse(body)));
+    if (u.pathname === '/tn/info') return send(tnInfo(JSON.parse(body)));
+    if (u.pathname === '/tn/exchange') return send(tnExchange(JSON.parse(body)));
+    if (u.pathname === '/tn/fund') { TN.user = u.searchParams.get('user').toLowerCase(); tnAcct(TN.user).usdc += +(u.searchParams.get('amount') || 1000); return send({ ok: true }); }
+    if (u.pathname === '/tn/log') return send({ log: TN.log, agents: TN.agents, builderFee: TN.builderFee, accounts: TN.accounts });
     if (u.pathname === '/jwks') { res.writeHead(200, { ...cors, 'cache-control': 'public, max-age=60' }); return res.end(JSON.stringify({ keys: [jwk] })); }
     if (u.pathname === '/token') {
       const q = Object.fromEntries(u.searchParams);

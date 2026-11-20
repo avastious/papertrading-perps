@@ -40,5 +40,25 @@ ok(r.status === 200 && !r.j.state.positions.BTC, 'and it can still be closed');
 
 r = await call('/api/admin/settings', owner, { over_cap: true });
 ok(r.j.over_cap === true && (await call('/api/leverage', ann, { coin: 'ETH', leverage: 1000 })).status === 200, 'back on: 1000x allowed again');
+
+// live trading (Hyperliquid testnet): off by default, owner-only, testnet only, builder address and fee checked
+c = (await call('/api/config')).j;
+ok(c.live === 'off' || c.live === 'testnet', 'config reports live trading', c.live);
+await call('/api/admin/settings', owner, { live: 'off', builder: '', builder_fee: 50 });
+ok((await call('/api/config')).j.live === 'off', 'live trading off');
+ok((await call('/api/admin/settings', ann, { live: 'testnet' })).status === 403, 'only the owner can turn live trading on');
+r = await call('/api/admin/settings', owner, { live: 'mainnet' });
+ok(r.status === 400 && /testnet/.test(r.j.error), 'real-money mainnet cannot be switched on from admin', r.j.error);
+r = await call('/api/admin/settings', owner, { live: 'testnet' });
+ok(r.status === 200 && r.j.live === 'testnet', 'owner turns on live trading on testnet', r.j.messages && r.j.messages[0]);
+r = await call('/api/admin/settings', owner, { builder: 'not-an-address' });
+ok(r.status === 400 && /0x/.test(r.j.error), 'a bad builder address is refused', r.j.error);
+r = await call('/api/admin/settings', owner, { builder_fee: 101 });
+ok(r.status === 400 && /0\.1%/.test(r.j.error), "a fee above Hyperliquid's 0.1% cap is refused", r.j.error);
+r = await call('/api/admin/settings', owner, { builder: '0x1111111111111111111111111111111111111111', builder_fee: 50 });
+ok(r.status === 200 && r.j.builder === '0x1111111111111111111111111111111111111111' && r.j.builder_fee === 50, 'builder address and 0.05% fee saved', r.j.messages && r.j.messages.join(' '));
+c = (await call('/api/config')).j;
+ok(c.live === 'testnet' && c.builder === '0x1111111111111111111111111111111111111111' && c.builder_fee === 50, 'public config carries them for the site');
+await call('/api/admin/settings', owner, { live: 'off' });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -138,6 +138,21 @@ They're always tagged **BOT** on the leaderboard and their profiles show their s
 
 To switch them off, set `"BOTS": "off"` in `wrangler.jsonc` and push. Within a minute they're removed from the database. Set it back to `"on"` and they start again from $10,000.
 
+## Live trading (Hyperliquid testnet)
+
+Off by default. In `/admin` → Settings, **Live trading on Hyperliquid's testnet** adds a **Paper / Live** switch to the order form. In live mode:
+
+- the trader connects their own browser wallet (MetaMask, Rabby, or a wallet app's built-in browser);
+- **Enable live trading** asks the wallet for two signatures, once: a trading key for this browser (it can place trades but never withdraw; it's kept in the browser's local storage, never on our server) and, if set, the Aureous builder fee;
+- orders go straight from the browser to `api.hyperliquid-testnet.xyz`, signed by that key. Market orders are IOC limit orders 5% through the testnet mid; limit orders are GTC (or post-only). Leverage is set on Hyperliquid first and capped at Hyperliquid's own limit (the over-the-cap switch never applies to live trading);
+- positions, orders and fills come from Hyperliquid (**Live (testnet)** tab); test USDC comes from Hyperliquid's testnet faucet. Builder markets (XYZ100, ANTH…) aren't on testnet.
+
+**Builder fee:** set your builder address (a Hyperliquid account holding at least 100 USDC) and a fee of up to 0.1% in the same card. Every live order then carries `builder: {b, f}` and Hyperliquid pays the fee to that address.
+
+**Real money (mainnet)** can't be switched on from admin: `live.js` only talks to testnet, and the server only accepts `off` or `testnet`. Turning on mainnet means changing that code, and should only happen after legal advice (perps are derivatives; offering them to Australians may need an AFS licence).
+
+The signing library is `@nktkas/hyperliquid` with `viem`, bundled into `aureous/web/vendor/hl-live.js` (loaded only when someone switches to live). Rebuild with `scripts/build_live.sh`. Its signatures are checked against Hyperliquid's official Python SDK: see Tests.
+
 ## Real emails, email codes and name rules
 
 **Email/password accounts must confirm a real address before trading.** The server (`worker/index.js`) refuses every request from a `password` sign-in whose token isn't `email_verified` (`code: "verify_email"`), and from addresses on throwaway domains (`code: "disposable_email"`; list in `worker/vendor/disposable-domains.js`, refresh with `scripts/update_disposable.sh`). Google sign-ins are already verified. The site shows a **Confirm your email** window:
@@ -305,6 +320,8 @@ node tests/server/bots.check.mjs         # house bots (fresh server, bots on, wi
 node tests/server/clans.check.mjs        # clans: create, invite, join, leader rules, rankings, moderation
 node tests/server/settings.check.mjs     # the owner's leverage switch
 node tests/server/markets.check.mjs      # builder markets (xyz:XYZ100)
+node tests/server/live.browser.cjs       # live trading end to end with a test wallet (Playwright; site on 8400), then:
+python3 tests/server/live_signatures.py /tmp/live-log.json <wallet>   # every signature recovers to the right signer (pip install hyperliquid-python-sdk)
 node tests/server/email.check.mjs        # real emails, email codes, name rules (needs a .dev.vars pointing email + Firebase admin at the stand-in; see the file's header)
 ```
 

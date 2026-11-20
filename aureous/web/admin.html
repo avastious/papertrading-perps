@@ -76,6 +76,12 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
 .empty{color:var(--muted);padding:16px;text-align:center}
 #toast{position:fixed;right:16px;bottom:16px;background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:5px;padding:10px 14px;font-size:13px;max-width:380px}
 @media (max-width:900px){ .row{grid-template-columns:1fr} .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.set-fields{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:12px}
+.set-fields label{display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.set-fields small{color:var(--muted);font-weight:400}
+.set-fields input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--text);font:inherit;min-width:0}
+.fee-in{display:flex;align-items:center;gap:6px}.fee-in input{flex:1}
+@media (max-width:700px){.set-fields{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -101,6 +107,15 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
   <div class="card" style="margin-top:16px"><h2>Settings</h2>
     <label class="switch-row"><input type="checkbox" id="setOverCap"><span><b>Leverage above Hyperliquid's limits</b>
       <small>On: every market goes up to <span id="maxLevTxt">1000</span>x. Off: each market's Hyperliquid limit (40x on BTC, less on most coins). Positions already open keep their leverage either way; only new orders are affected.</small></span></label>
+    <label class="switch-row"><input type="checkbox" id="setLive"><span><b>Live trading on Hyperliquid's testnet</b>
+      <small>On: traders see a Paper / Live switch and can trade with their own wallet on Hyperliquid's test network, with test money that has no value. Off: paper trading only. Real-money trading can't be turned on here: it needs a code change and legal advice first.</small></span></label>
+    <div class="set-fields">
+      <label><span>Builder address <small>(your Hyperliquid account that collects the Aureous fee; it needs 100 USDC in it)</small></span>
+        <input id="setBuilder" placeholder="0x…" spellcheck="false" autocomplete="off"></label>
+      <label><span>Aureous fee per trade <small>(up to 0.1%)</small></span>
+        <span class="fee-in"><input id="setFee" inputmode="decimal" placeholder="0.05"><span>%</span></span></label>
+      <button class="btn" id="saveBuilder" type="button">Save</button>
+    </div>
   </div>
   <div class="users">
     <div class="tools">
@@ -170,7 +185,12 @@ function render(){
   $("#barsFrom").textContent = new Date(data.signups[0].day).toLocaleDateString(undefined, {day: "numeric", month: "short"});
   $("#markets").innerHTML = data.markets.length ? data.markets.map(m => `<div class="li"><span>${esc(m.coin.replace(/^[a-z][a-z0-9]*:/, ""))}</span><span>${m.trades} trade${m.trades === 1 ? "" : "s"}</span><span>${m.positions} open</span></div>`).join("") : `<div class="muted">No trades yet today.</div>`;
   $("#badges").innerHTML = TIERS.map(tr => `<div class="li"><span>${badge(tr.id)} ${tr.name}</span><span>$${num(tr.at)}</span><span>${num(data.badges[tr.id] || 0)}</span></div>`).join("");
-  if (data.settings) { $("#setOverCap").checked = !!data.settings.over_cap; $("#maxLevTxt").textContent = data.settings.max_leverage || 1000; }
+  if (data.settings) {
+    $("#setOverCap").checked = !!data.settings.over_cap; $("#maxLevTxt").textContent = data.settings.max_leverage || 1000;
+    $("#setLive").checked = data.settings.live === "testnet";
+    if (document.activeElement !== $("#setBuilder")) $("#setBuilder").value = data.settings.builder || "";
+    if (document.activeElement !== $("#setFee")) $("#setFee").value = data.settings.builder_fee != null ? String(data.settings.builder_fee / 1000) : "";
+  }
   const clans = data.clans || [];
   $("#clans").innerHTML = clans.length ? clans.map(c => `<div class="li" style="grid-template-columns:1fr auto auto auto"><span><b>[${esc(c.tag)}]</b> ${esc(c.name)} <span class="muted">led by ${esc(c.leader || "?")}, started ${when(c.created)}</span></span>` +
     `<span>${c.members} member${c.members === 1 ? "" : "s"}</span><span></span><button class="btn" data-close-clan="${esc(c.tag)}" data-name="${esc(c.name)}" style="padding:2px 10px;font-size:12px">Close</button></div>`).join("") : `<div class="muted">No clans yet.</div>`;
@@ -228,6 +248,17 @@ $("#setOverCap").addEventListener("change", async e => {
   if (!on && !confirm("Turn off leverage above Hyperliquid's limits? New orders above each market's limit will be refused. Open positions keep their leverage.")) { e.target.checked = true; return; }
   try { const r = await call("/api/admin/settings", {over_cap: on}); toast(r.messages[0]); await load(); }
   catch (err) { toast(err.message); e.target.checked = !on; }
+});
+$("#setLive").addEventListener("change", async e => {
+  const on = e.target.checked;
+  try { const r = await call("/api/admin/settings", {live: on ? "testnet" : "off"}); toast(r.messages[0]); await load(); }
+  catch (err) { toast(err.message); e.target.checked = !on; }
+});
+$("#saveBuilder").addEventListener("click", async () => {
+  const fee = parseFloat($("#setFee").value || "0");
+  if (!(fee >= 0 && fee <= 0.1)) { toast("The fee must be between 0% and 0.1%."); return; }
+  try { const r = await call("/api/admin/settings", {builder: $("#setBuilder").value.trim(), builder_fee: Math.round(fee * 1000)}); toast(r.messages.join(" ")); await load(); }
+  catch (err) { toast(err.message); }
 });
 $("#clans").addEventListener("click", async e => {
   const b = e.target.closest("[data-close-clan]"); if (!b) return;
