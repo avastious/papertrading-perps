@@ -6,7 +6,9 @@
 // stops, take-profits, limits and liquidations for all open accounts.
 import {DurableObject} from "cloudflare:workers";
 import "../aureous/web/engine.js";
-import {BOTS, BOT_PREFIX, BOT_BY_UID, isBot, decide, describe} from "./bots.js";
+// The house bots were retired: any account left from them ("bot:" user IDs) is deleted by the cron job.
+const BOT_PREFIX = "bot:";
+const isBot = uid => String(uid).startsWith(BOT_PREFIX);
 import {nameProblem, isDisposableEmail} from "./moderation.js";
 import {mailerFor, codeEmail} from "./mailer.js";
 import {GoogleAdmin} from "./google-admin.js";
@@ -91,7 +93,6 @@ export class Exchange extends DurableObject {
     this.board = null;
     this.seen = new Map();       // uid -> last request time (who's online), saved to SQL at most every 5 minutes
     this.adminCache = null;
-    this.botCache = new Map();   // 15-minute candles for the bots, kept 10 minutes
   }
   touch(uid) {
     const now = Date.now(), prev = this.seen.get(uid);
@@ -334,7 +335,6 @@ export class Exchange extends DurableObject {
         private: !!row.private, stats: ex.stats(),
       };
       if (row.clan) { const c = this.sql.exec("SELECT tag, name FROM clans WHERE id = ?", row.clan).toArray()[0]; if (c) out.clan = {tag: c.tag, name: c.name}; }
-      if (isBot(row.uid)) { out.bot = true; const b = BOT_BY_UID.get(row.uid); if (b) out.strategy = describe(b); }
       delete out.stats.equity; delete out.stats.start;
       if (!row.private || self) {
         out.positions = Object.entries(st.positions).map(([coin, p]) => {
@@ -781,66 +781,15 @@ export class Exchange extends DurableObject {
       });
     }
     let bots = null;
-    try { bots = await this.runBots(); } catch (e) { console.error("bots", e.message); }
+    try { bots = await this.removeBots(); } catch (e) { console.error("bots", e.message); }
     return {ok: true, active: rows.length, processed, failed, bots};
   }
 
-  // ------------------------------------------------------------------ bots (see bots.js)
-  async runBots() {
-    if (String(this.env.BOTS || "on").toLowerCase() === "off") {      // switched off: remove them
-      const gone = this.sql.exec(`SELECT uid FROM accounts WHERE uid LIKE '${BOT_PREFIX}%'`).toArray();
-      for (const {uid} of gone) await this.remove(uid);
-      return {off: true, removed: gone.length};
-    }
-    const have = new Set(this.sql.exec(`SELECT uid FROM accounts WHERE uid LIKE '${BOT_PREFIX}%'`).toArray().map(r => r.uid));
-    for (const b of BOTS) {
-      const uid = BOT_PREFIX + b.id;
-      if (have.has(uid)) continue;
-      this.create(uid, null);
-      this.sql.exec("UPDATE accounts SET name = ? WHERE uid = ?", b.name, uid);
-    }
-    const budget = {left: 4};                        // new candle downloads per minute (keeps well inside request limits)
-    let woke = 0, orders = 0, resets = 0;
-    for (const bot of BOTS) {
-      if (Math.random() > bot.wake) continue;
-      woke++;
-      const uid = BOT_PREFIX + bot.id;
-      await this.withLock(uid, async () => {
-        const row = this.row(uid);
-        if (!row) return;
-        try {
-          let ex = this.exchangeFor(row, false);
-          await ex.update();
-          if (!Object.keys(ex.state.positions).length && ex.equity() < 1000) {     // blown up: start again
-            ex = this.exchangeFor(row, true);
-            ex.reset(START_BALANCE);
-            this.persistState(row, ex, true);
-            this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid);
-            resets++;
-            return;
-          }
-          const app = new LocalApp(ex);
-          for (const a of await decide(bot, ex, coin => this.botCandles(coin, budget))) {
-            try { await app.handle(a.path, {}, a.body); orders++; }
-            catch (e) { if (!(e instanceof PaperError)) throw e; }
-          }
-          this.persist(row, ex, false);
-        } catch (e) { console.error("bot", bot.id, e.message); }
-      });
-    }
-    return {woke, orders, resets};
-  }
-  async botCandles(coin, budget) {
-    const hit = this.botCache.get(coin), now = Date.now();
-    if (hit && now - hit.t < 600000) return hit.data;
-    if (budget.left <= 0) return null;
-    budget.left--;
-    try {
-      const raw = await this.client.candles(coin, "15m", now - 100 * 900000, now);
-      const bars = raw.slice(0, -1);                 // completed candles; the live price is added by the bot
-      const data = {close: bars.map(k => +k.c), high: bars.map(k => +k.h), low: bars.map(k => +k.l)};
-      this.botCache.set(coin, {t: now, data});
-      return data;
-    } catch { return null; }
+  // ------------------------------------------------------------------ retired house bots
+  // Deletes any bot account still in the database (with its trades, badges and clan membership).
+  async removeBots() {
+    const gone = this.sql.exec(`SELECT uid FROM accounts WHERE uid LIKE '${BOT_PREFIX}%'`).toArray();
+    for (const {uid} of gone) await this.remove(uid);
+    return {removed: gone.length};
   }
 }

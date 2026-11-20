@@ -121,7 +121,7 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
     <div class="tools">
       <input id="q" placeholder="Search name or ID" aria-label="Search traders">
       <select id="filter" aria-label="Filter traders">
-        <option value="people">People</option><option value="all">People and bots</option><option value="bots">Bots</option><option value="online">Online now</option><option value="24h">Active in last 24 hours</option>
+        <option value="people">Everyone</option><option value="online">Online now</option><option value="24h">Active in last 24 hours</option>
         <option value="new">Joined in last 7 days</option><option value="positions">With open positions</option><option value="private">Trades hidden</option>
       </select>
       <span class="meta" id="meta"></span>
@@ -175,7 +175,7 @@ async function load(){
 function render(){
   $("#gate").hidden = true; $("#dash").hidden = false;
   const t = data.totals;
-  const tiles = [["Online now", num(t.online), "live", "using the site this minute"], ["Traders", num(t.traders), "", `${num(t.private_profiles)} with trades hidden, plus ${num(t.bots || 0)} bots`],
+  const tiles = [["Online now", num(t.online), "live", "using the site this minute"], ["Traders", num(t.traders), "", `${num(t.private_profiles)} with trades hidden`],
     ["New today", num(t.new_today), "", `${num(t.new_7d)} this week`], ["Active today", num(t.active_24h), "", `last 24 hours, ${num(t.active_1h)} in the last hour`],
     ["Trades today", num(t.trades_today), "", `${num(t.trades_7d)} this week`], ["Volume today", usd0(t.volume_today), "", `${num(t.liquidations_today)} liquidations`],
     ["Open positions", num(t.open_positions), "", `across ${num(data.users.filter(u => u.positions && !u.bot).length)} traders`], ["Active this week", num(t.active_7d), "", "signed-in traders"]];

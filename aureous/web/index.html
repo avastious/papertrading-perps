@@ -1801,7 +1801,7 @@ function renderBoard(){
   const v = $("#bview"), b = S.board;
   if (!b) { v.innerHTML = boardSwitch() + `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
   const me = b.me;
-  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades. <span class="bot-tag" style="margin-left:0">BOT</span> accounts are Aureous bots trading simple strategies. Beat them.</span>` +
+  const head = `<div class="board-head"><span>Everyone starts with ${usd(b.start)}. Ranked by account value, including open positions. Click a trader to see their trades.</span>` +
     (me ? `<span>You're <b>#${me.rank}</b> of ${b.total}</span>` : S.user ? "" : `<span>Sign in to join</span>`) + `</div>`;
   const ms = (b.milestones || []).slice(0, 6).map(m => { const t = tierOf(m.tier);
     return `<span class="ms-chip">${badgeSvg(m.tier, 18)}<span><button data-pid="${esc(m.pid)}">${esc(m.name)}</button> reached ${t ? t.name : m.tier} ${ago(m.at)}</span></span>`; }).join("");

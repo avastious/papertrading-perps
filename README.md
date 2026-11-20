@@ -133,11 +133,7 @@ Clans let friends compete. Anyone signed in can start one from the account menu 
 
 ## Bots
 
-20 house bots (`worker/bots.js`) trade on the server so the leaderboard always has someone to beat. Each has $10,000 and one simple, published strategy: trend following, breakouts, mean reversion, contrarian, momentum, a holder, a dip buyer, a funding harvester, a scalper, a short seller, an index and a 40x degen. They use the same engine, live prices, fees, funding and liquidations as everyone else. Every minute the cron job wakes a few of them; a bot that blows up resets to $10,000, and its profile shows the reset.
-
-They're always tagged **BOT** on the leaderboard and their profiles show their strategy. They earn badges but never take the spotlight or appear in the milestone feed. The admin dashboard lists them separately and keeps them out of the traders, sign-up and trading numbers. Nobody can sign in as a bot: user IDs starting `bot:` are refused.
-
-To switch them off, set `"BOTS": "off"` in `wrangler.jsonc` and push. Within a minute they're removed from the database. Set it back to `"on"` and they start again from $10,000.
+The 20 house bots were retired. Any bot account still in the database (user IDs starting `bot:`) is deleted by the cron job within a minute, with its trades, badges and clan membership; nobody can sign in with such an ID.
 
 ## Live trading (Hyperliquid testnet)
 
@@ -313,11 +309,10 @@ Trading server, run locally against stand-ins for Hyperliquid and Google's signi
 ```bash
 node tests/server/mock-hyperliquid.js &
 npx wrangler dev --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
-  --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 --var BOTS:off &
+  --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 &
 node tests/server/api.check.mjs          # sign-in, trading, every-minute job, cheating attempts, leaderboard
 node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, hiding trades (run after api.check on a fresh server)
 node tests/server/admin.check.mjs        # owner-only dashboard (start wrangler dev with --var ADMIN_EMAILS:owner@example.com)
-node tests/server/bots.check.mjs         # house bots (fresh server, bots on, with the ADMIN_EMAILS var above)
 node tests/server/clans.check.mjs        # clans: create, invite, join, leader rules, rankings, moderation
 node tests/server/settings.check.mjs     # the owner's leverage switch
 node tests/server/markets.check.mjs      # builder markets (xyz:XYZ100)
