@@ -4,6 +4,8 @@
 //   GET  /api/account?since=N      your account (created on first visit with $10,000)
 //   POST /api/order|close|cancel|tpsl|leverage|reset   trade (same bodies as the local server)
 //   GET  /api/trader/<id>          public profile: value, badges, open positions and recent trades
+//   GET  /api/calls                public calls with their thesis and live result (?sort=top, ?status=open, ?coin=, ?pid=, ?id=)
+//   POST /api/call                 {coin, thesis}: publicly call a position you hold; POST /api/call/vote {id, vote: 1|-1|0}
 //   POST /api/profile {name}       set your leaderboard name
 //   POST /api/privacy {private}    hide (or show) your positions and trades on your profile
 //   POST /api/delete               delete your account data
@@ -58,6 +60,10 @@ export default {
       const tm = /^\/api\/trader\/([0-9a-f]{12})$/.exec(url.pathname);
       if (tm && req.method === "GET") return reply(await ex.trader(tm[1], user ? user.uid : null));
       if (url.pathname === "/api/config" && req.method === "GET") return reply(await ex.config());
+      if (url.pathname === "/api/calls" && req.method === "GET") {
+        const q = Object.fromEntries(["sort", "status", "coin", "pid", "id"].map(k => [k, url.searchParams.get(k) || undefined]));
+        return reply(await ex.calls(q, user ? user.uid : null));
+      }
       if (url.pathname === "/api/clans" && req.method === "GET") return reply(await ex.clans(user ? user.uid : null));
       const cm = /^\/api\/clan\/([A-Za-z0-9]{2,5})$/.exec(url.pathname);
       if (cm && req.method === "GET") return reply(await ex.clanInfo(cm[1], user ? user.uid : null));
@@ -99,6 +105,10 @@ export default {
           let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
           return reply(await ex.adminSettings(b));
         }
+        if (url.pathname === "/api/admin/call-remove" && req.method === "POST") {
+          let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
+          return reply(await ex.adminCallRemove(b.id));
+        }
         if (url.pathname === "/api/admin/clan-remove" && req.method === "POST") {
           let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
           return reply(await ex.adminClanRemove(b.tag));
@@ -125,6 +135,8 @@ export default {
       if (url.pathname === "/api/profile") return reply(await ex.setName(user.uid, body.name));
       if (url.pathname === "/api/privacy") return reply(await ex.setPrivate(user.uid, body.private === true));
       if (url.pathname === "/api/delete") return reply(await ex.remove(user.uid));
+      if (url.pathname === "/api/call") return reply(await ex.postCall(user.uid, body));
+      if (url.pathname === "/api/call/vote") return reply(await ex.voteCall(user.uid, body));
       const ca = /^\/api\/clan\/(create|join|leave|invite|kick|rename)$/.exec(url.pathname);
       if (ca) return reply(await ex.clanAction(user.uid, {name: user.name}, ca[1], body));
       return reply(await ex.act(user.uid, {name: user.name}, url.pathname, body, +body.since || 0));

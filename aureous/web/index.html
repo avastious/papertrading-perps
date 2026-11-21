@@ -439,6 +439,44 @@ td.rank{color:var(--muted);width:56px}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .live-h{margin:12px 14px 4px;font-size:12.5px;font-weight:600;color:var(--muted)}
 
+/* ---------- calls ---------- */
+.calls-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px}
+.calls-bar .grow{flex:1}
+.calls-note{padding:0 14px 6px;font-size:12.5px;color:var(--muted)}
+.calls{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;padding:4px 14px 14px}
+.call{border:1px solid var(--line);border-radius:var(--r-panel);padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:var(--panel)}
+.call.focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.call-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.call-who{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px}
+.call-time{color:var(--faint);font-size:12px;white-space:nowrap}
+.call-status{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:1px 8px;white-space:nowrap}
+.call-status.open{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.call-status.liq{color:var(--short);border-color:color-mix(in srgb,var(--short) 50%,transparent)}
+.call-trade{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
+.call-chip{border:0;border-radius:var(--r-ctl);padding:6px 10px;font-weight:600;font-size:13px;background:var(--raise)}
+.call-chip.up{color:var(--long);background:var(--long-wash)} .call-chip.down{color:var(--short);background:var(--short-wash)}
+.call-chip span{opacity:.75;font-weight:500;margin-left:2px}
+.call-nums{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.call-nums b{color:var(--text);font-weight:500;margin-left:4px}
+.call-result{text-align:right;display:flex;flex-direction:column}
+.call-result b{font-size:18px;font-weight:600}
+.call-result span{font-size:11.5px;opacity:.85}
+.call-thesis{margin:0;font-size:13.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
+.call-foot{display:flex;align-items:center;gap:6px}
+.call-foot .link-btn{margin-left:auto}
+.vote{background:none;border:1px solid var(--line);border-radius:14px;padding:3px 11px;font-size:12px;color:var(--muted)}
+.vote:hover:not(:disabled){color:var(--text);border-color:var(--faint)}
+.vote.on{color:var(--accent);border-color:var(--accent);background:var(--accent-wash)}
+.vote:disabled{opacity:.55;cursor:default}
+.vote span{font-weight:600;margin-left:3px}
+#callDlg{width:min(520px,calc(100vw - 32px))}
+#callDlg textarea,#callOptText{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-ctl);padding:9px 10px;color:var(--text);font:inherit;font-size:13.5px;line-height:1.5;resize:vertical}
+#callDlg textarea:focus,#callOptText:focus{outline:none;border-color:var(--accent)}
+.cd-meta{display:flex;justify-content:space-between;gap:12px;font-size:12px;line-height:1.45}
+#cdCount{white-space:nowrap}
+#cdTrade{font-weight:600;color:var(--text)}
+@media (max-width:899px){.calls{grid-template-columns:1fr}.calls-bar{gap:10px}}
+
 /* ---------- compact layout setting ---------- */
 [data-density=compact] body{font-size:12.5px}
 [data-density=compact] .topbar{height:44px}
@@ -518,6 +556,7 @@ td.rank{color:var(--muted);width:56px}
     <nav class="site-nav" aria-label="Site">
       <a href="./" aria-current="page">Trade</a>
       <a href="#leaderboard" id="navBoard" hidden>Leaderboard</a>
+      <a href="#calls" id="navCalls" hidden>Calls</a>
       <a href="#clans" id="navClans" hidden>Clans</a>
       <a href="how-it-works.html" class="opt">How it works</a>
       <a href="about.html" class="opt">About</a>
@@ -638,7 +677,10 @@ td.rank{color:var(--muted);width:56px}
         <label><input type="checkbox" id="ro"> Reduce only</label>
         <label id="postWrap" hidden><input type="checkbox" id="post"> Post only</label>
         <label id="tpslWrap"><input type="checkbox" id="tpslOn"> Take profit / stop loss</label>
+        <label id="callOptWrap" hidden><input type="checkbox" id="callOpt"> Call it publicly</label>
       </div>
+      <label class="field" id="callOptField" hidden><span>Why are you taking this trade? <small class="muted">Public, can't be edited</small></span>
+        <textarea id="callOptText" rows="3" maxlength="600" placeholder="Your thesis: what you expect, and what would prove you wrong"></textarea></label>
       <div class="tpsl" id="tpslFields" hidden>
         <label class="field"><span>Take profit at</span><div class="inp"><input id="tpIn" inputmode="decimal" placeholder="Price"></div></label>
         <label class="field"><span>Stop loss at</span><div class="inp"><input id="slIn" inputmode="decimal" placeholder="Price"></div></label>
@@ -680,7 +722,7 @@ td.rank{color:var(--muted);width:56px}
   <section class="bottom" aria-label="Positions and history">
     <div class="ptabs" id="btabs">
       <button data-t="positions" class="on">Positions</button><button data-t="orders">Open orders</button>
-      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button><button data-t="live" id="liveTab" hidden>Live (testnet)</button>
+      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button><button data-t="calls" id="callsTab" hidden>Calls</button><button data-t="live" id="liveTab" hidden>Live (testnet)</button>
       <span class="grow"></span>
       <button id="bulkBtn" class="tiny" hidden></button>
     </div>
@@ -688,6 +730,17 @@ td.rank{color:var(--muted);width:56px}
   </section>
 </div>
 
+<dialog id="callDlg" aria-labelledby="cdTitle">
+  <form id="callForm" class="auth">
+    <h3 id="cdTitle">Make a public call</h3>
+    <p id="cdTrade"></p>
+    <label class="field"><span>Why are you taking this trade?</span>
+      <textarea id="cdThesis" rows="6" maxlength="700" placeholder="What do you expect to happen, by when, and what would prove you wrong?"></textarea></label>
+    <div class="cd-meta"><span class="muted">Everyone can see your call, your entry and how it turns out. It can't be edited or deleted, and it closes when you close the position. No links or contact details.</span><span id="cdCount" class="muted">0 / 600</span></div>
+    <p class="auth-msg" id="cdMsg" hidden></p>
+    <div class="dlg-btns"><button class="btn" type="button" id="cdCancel">Cancel</button><button class="btn primary" id="cdPost" disabled>Post call</button></div>
+  </form>
+</dialog>
 <div class="mk-scrim" id="mkScrim" hidden></div>
 <div class="mbar" id="mbar"><button type="button" class="long" data-mside="buy">Long</button><button type="button" class="short" data-mside="sell">Short</button></div>
 <div id="toasts" aria-live="polite"></div>
@@ -1037,6 +1090,7 @@ function selectCoin(name){
   closeMarkets(); S.trades = null; renderTrades();
   syncLeverage(); renderMarkets(); renderHeader(); renderSummary(); renderBook();
   loadCandles(); refreshBook();
+  if (window.AureousCalls) AureousCalls.coinChanged();
 }
 
 // ---------- chart (TradingView Lightweight Charts) ----------
@@ -1294,7 +1348,7 @@ function setType(type){
   S.type = type;
   document.querySelectorAll("[data-type]").forEach(b => b.classList.toggle("on", b.dataset.type === type));
   $("#pxField").hidden = type !== "limit"; $("#postWrap").hidden = type !== "limit";
-  $("#tpslWrap").hidden = type === "limit" || LIVE(); if (type === "limit") { $("#tpslOn").checked = false; $("#tpslFields").hidden = true; }
+  $("#tpslWrap").hidden = type === "limit" || LIVE(); renderCallOpt(); if (type === "limit") { $("#tpslOn").checked = false; $("#tpslFields").hidden = true; }
   if (type === "limit" && !$("#px").value && market()) $("#px").value = fpx(market().mid || market().mark).replace(/,/g, "");
   renderSummary();
 }
@@ -1317,7 +1371,14 @@ async function submitOrder(ev){
   if (SET.confirm && !(await confirmOrder(body, m))) return;
   const btn = $("#submit"); btn.disabled = true;
   if (LIVE()) { try { await AureousLive.submit(body, m); } finally { btn.disabled = false; } return; }
-  try { await act("/api/order", body); $("#size").value = ""; $("#tpIn").value = ""; $("#slIn").value = ""; renderSummary(); } catch {}
+  const thesis = !$("#callOptWrap").hidden && $("#callOpt").checked && body.type !== "limit" ? $("#callOptText").value.trim() : "";
+  try {
+    await act("/api/order", body); $("#size").value = ""; $("#tpIn").value = ""; $("#slIn").value = ""; renderSummary();
+    if (thesis) {
+      try { const r = await AUTH.postCall(m.name, thesis); toast(r.messages[0], "fill"); $("#callOpt").checked = false; $("#callOptText").value = ""; $("#callOptField").hidden = true; }
+      catch (e) { toast("Your order went through, but the call wasn't posted: " + e.message + " You can post it with Call next to the position.", "error"); }
+    }
+  } catch {}
   finally { btn.disabled = false; }
 }
 
@@ -1417,6 +1478,7 @@ function renderBottom(){
   if (!a) return;
   bulk.hidden = true;
   if (S.tab === "board") { renderBoard(); return; }
+  if (S.tab === "calls") { if (window.AureousCalls) AureousCalls.render(v); return; }
   if (S.tab === "live") { if (window.AureousLive) AureousLive.renderBottom(v); return; }
   if (S.tab === "positions") {
     if (locked()) { v.innerHTML = `<div class="empty">Sign in to start trading. Everyone gets $10,000 of paper money, and the leaderboard ranks accounts by value.</div>`; return; }
@@ -1431,7 +1493,7 @@ function renderBottom(){
           <td title="${p.liq ? "" : "Your whole balance backs this position (cross margin), so it can't be liquidated at any positive price."}">${p.liq ? fpx(p.liq) : "None"}</td>
           <td class="${cls(p.funding)}">${sgnUsd(p.funding)}</td>
           <td><span class="up">${tp}</span> / <span class="down">${sl}</span></td>
-          <td><span class="act"><button data-act="share-pos" data-coin="${esc(p.coin)}" title="Share this position as an image">Share</button><button data-act="tpsl" data-coin="${esc(p.coin)}">TP/SL</button><button data-act="half" data-coin="${esc(p.coin)}" title="Close half at market">50%</button><button data-act="close" data-coin="${esc(p.coin)}" title="Close all at market">Close</button></span></td></tr>`;
+          <td><span class="act">${AUTH && AUTH.postCall ? `<button data-act="call" data-coin="${esc(p.coin)}" title="Post this position publicly with your reasons">Call</button>` : ""}<button data-act="share-pos" data-coin="${esc(p.coin)}" title="Share this position as an image">Share</button><button data-act="tpsl" data-coin="${esc(p.coin)}">TP/SL</button><button data-act="half" data-coin="${esc(p.coin)}" title="Close half at market">50%</button><button data-act="close" data-coin="${esc(p.coin)}" title="Close all at market">Close</button></span></td></tr>`;
       }).join("") + `</tbody></table>`;
   } else if (S.tab === "orders") {
     if (!a.orders.length) { v.innerHTML = `<div class="empty">No open orders. Limit orders and TP/SL triggers show up here.</div>`; return; }
@@ -1593,6 +1655,7 @@ $("#bview").addEventListener("click", e => {
   else if (b.dataset.act === "cancel") act("/api/cancel", {target: b.dataset.id}).then(r => r.messages.forEach(m => toast(m))).catch(() => {});
   else if (b.dataset.act === "tpsl") openTpsl(coin);
   else if (b.dataset.act === "share-pos") sharePosition(coin);
+  else if (b.dataset.act === "call") AureousCalls.openPost(coin);
   else if (b.dataset.act === "share-trade") shareTrade(S.acct.trades[+b.dataset.i]);
 });
 function openTpsl(coin){
@@ -2320,6 +2383,7 @@ function renderTrader(){
       d.trades.map(t => `<tr><td>${tstr(t.ts)}</td><td>${esc(cname(t.coin))}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side === "buy" ? "Buy" : "Sell"}</td><td>${t.sz}</td><td>${fpx(t.px)}</td><td class="${cls(t.realized)}">${Math.abs(t.realized) > 1e-9 ? sgnUsd(t.realized) : "–"}</td><td>${kind[t.kind] || esc(t.kind)}</td></tr>`).join("") +
       `</tbody></table></div>` : `<div class="empty" style="padding:14px">No trades yet.</div>`) + `</div>`;
   }
+  if (window.AureousCalls) html += AureousCalls.profileSection(d);
   $("#trBody").innerHTML = html;
 }
 $("#trClose").addEventListener("click", () => $("#traderDlg").close());
@@ -2550,9 +2614,17 @@ window.AureousUI = {
     if (hashTrader() && api.trader) { openBoard(); openTrader(hashTrader()); }
     if (hashJoin() && api.invitePreview) openJoin(hashJoin());
     if (hashClan() && api.clan) { S.boardView = "clans"; openBoard(); openClan(hashClan()); }
+    if (window.AureousCalls) AureousCalls.enable(api);
+    renderCallOpt();
   },
 };
-function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; }
+function renderNameBtn(){ $("#nameBtn").hidden = !SERVER_ACCOUNTS; renderCallOpt(); }
+function renderCallOpt(){
+  const show = !!(AUTH && AUTH.postCall && S.user && S.type !== "limit" && !LIVE());
+  $("#callOptWrap").hidden = !show;
+  $("#callOptField").hidden = !show || !$("#callOpt").checked;
+}
+$("#callOpt").addEventListener("change", () => { renderCallOpt(); if ($("#callOpt").checked) $("#callOptText").focus(); });
 
 // ---------- confirming your email (email/password accounts) ----------
 S.emailBlock = null; S.vfSentAt = 0;
@@ -2629,9 +2701,11 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
   countdown(); setInterval(countdown, 1000);
   setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView === "clans") loadClans(); } }, 30000);
+  setInterval(() => { if (S.tab === "calls" && document.visibilityState === "visible" && window.AureousCalls) AureousCalls.load(); }, 20000);
 })();
 </script>
 <script src="live.js"></script>
+<script src="calls.js"></script>
 <script type="module" src="auth.js"></script>
 </body>
 </html>

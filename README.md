@@ -131,6 +131,16 @@ Clans let friends compete. Anyone signed in can start one from the account menu 
 - **When people leave:** if the leader leaves or deletes their account, the longest-standing member takes over. When the last member leaves, the clan closes.
 - **Moderation:** the admin dashboard lists every clan and can close offensive ones.
 
+## Calls
+
+Traders can publicly **call** a position they hold, with a written thesis (`worker/calls.js`, `aureous/web/calls.js`):
+
+- **From a position** (Call button) or from the order form (*Call it publicly*, market orders). The call takes the position's real entry and leverage.
+- **Tracked to the result:** open calls show the live move since entry (and the return at their leverage); when the position is closed, flipped, liquidated or reset, the call closes at the exit price. Authors can't edit or delete calls, so records stay honest.
+- **Feed:** the Calls tab (`#calls`, one call at `#call-<id>`) shows the latest or the best this week, optionally open only or this market only. Others can agree or disagree (one vote each, changeable). Calls also show on the trader's profile, even when their trades are hidden.
+- **Rules:** 20–600 characters, filtered for swearing and slurs, no links, handles or contact details, one open call per position, 10 a day. The admin dashboard lists the latest calls with a Remove button.
+- **API:** `GET /api/calls` (public; `sort=top`, `status=open`, `coin`, `pid`, `id`), `POST /api/call {coin, thesis}`, `POST /api/call/vote {id, vote: 1|-1|0}`, `POST /api/admin/call-remove {id}`.
+
 ## Bots
 
 The 20 house bots were retired. Any bot account still in the database (user IDs starting `bot:`) is deleted by the cron job within a minute, with its trades, badges and clan membership; nobody can sign in with such an ID.
@@ -318,6 +328,7 @@ node tests/server/settings.check.mjs     # the owner's leverage switch
 node tests/server/markets.check.mjs      # builder markets (xyz:XYZ100)
 node tests/server/live.browser.cjs       # live trading end to end with a test wallet (Playwright; site on 8400), then:
 python3 tests/server/live_signatures.py /tmp/live-log.json <wallet>   # every signature recovers to the right signer (pip install hyperliquid-python-sdk)
+node tests/server/calls.check.mjs        # public calls: posting rules, live result, votes, closing, removal
 node tests/server/email.check.mjs        # real emails, email codes, name rules (needs a .dev.vars pointing email + Firebase admin at the stand-in; see the file's header)
 ```
 

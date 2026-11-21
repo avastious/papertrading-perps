@@ -104,6 +104,7 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
     <div class="card"><h2>Badges earned</h2><div class="list" id="badges"></div></div>
   </div>
   <div class="card" style="margin-top:16px"><h2>Clans</h2><div class="list" id="clans"></div></div>
+  <div class="card" style="margin-top:16px"><h2>Latest calls</h2><div class="list" id="calls"></div></div>
   <div class="card" style="margin-top:16px"><h2>Settings</h2>
     <label class="switch-row"><input type="checkbox" id="setOverCap"><span><b>Leverage above Hyperliquid's limits</b>
       <small>On: every market goes up to <span id="maxLevTxt">1000</span>x. Off: each market's Hyperliquid limit (40x on BTC, less on most coins). Positions already open keep their leverage either way; only new orders are affected.</small></span></label>
@@ -165,7 +166,7 @@ function renderWho(){
 }
 
 async function load(){
-  try { data = await call("/api/admin/overview"); render(); }
+  try { data = await call("/api/admin/overview"); render(); loadCalls(); }
   catch (e) {
     clearInterval(timer);
     if (e.status === 403) gate("This page is for the site owner", "You're signed in with an account that isn't allowed to see the admin dashboard.", `<button class="btn" id="sw">Sign in with a different account</button>`), $("#sw").onclick = () => backend.signOut();
@@ -259,6 +260,18 @@ $("#saveBuilder").addEventListener("click", async () => {
   if (!(fee >= 0 && fee <= 0.1)) { toast("The fee must be between 0% and 0.1%."); return; }
   try { const r = await call("/api/admin/settings", {builder: $("#setBuilder").value.trim(), builder_fee: Math.round(fee * 1000)}); toast(r.messages.join(" ")); await load(); }
   catch (err) { toast(err.message); }
+});
+// public calls: the owner can remove abusive or misleading ones (authors can't delete their own)
+async function loadCalls(){
+  let list = [];
+  try { list = (await call("/api/calls")).calls; } catch (e) { $("#calls").innerHTML = `<div class="li"><span class="muted">${esc(e.message)}</span></div>`; return; }
+  $("#calls").innerHTML = list.length ? list.slice(0, 40).map(c => `<div class="li" style="grid-template-columns:1fr auto"><span><b>${esc(c.name)}</b> <span class="muted">${c.side === "long" ? "Long" : "Short"} ${esc(c.coin.replace(/^[a-z]+:/, ""))} ${Math.round(c.lev)}x, ${when(c.created)}, ${c.outcome}, ${(c.move * 100).toFixed(2)}%</span><br><span style="white-space:pre-wrap">${esc(c.thesis)}</span></span>` +
+    `<button class="btn sm" data-remove-call="${c.id}">Remove</button></div>`).join("") : `<div class="li"><span class="muted">No calls yet.</span></div>`;
+}
+$("#calls").addEventListener("click", async e => {
+  const b = e.target.closest("[data-remove-call]"); if (!b) return;
+  if (!confirm("Remove this call from the site? Its author isn't told, and it can't be undone.")) return;
+  try { const r = await call("/api/admin/call-remove", {id: +b.dataset.removeCall}); toast(r.messages[0]); loadCalls(); } catch (err) { toast(err.message); }
 });
 $("#clans").addEventListener("click", async e => {
   const b = e.target.closest("[data-close-clan]"); if (!b) return;

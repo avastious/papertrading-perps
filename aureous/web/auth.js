@@ -183,6 +183,9 @@ async function main() {
     clan: tag => call(`/api/clan/${encodeURIComponent(tag)}`, undefined, signedIn),
     invitePreview: code => call(`/api/invite/${encodeURIComponent(code)}`, undefined, false),
     async clanAction(action, body = {}) { const r = await call(`/api/clan/${action}`, body); UI.adoptRemote(r); return r; },
+    calls: (q = {}) => call("/api/calls?" + new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined && v !== null && v !== "")), undefined, signedIn),
+    postCall: (coin, thesis) => call("/api/call", {coin, thesis}),
+    voteCall: (id, vote) => call("/api/call/vote", {id, vote}),
   });
 
   // load the account; email/password accounts that haven't confirmed their (real) email get asked to

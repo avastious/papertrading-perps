@@ -12,6 +12,7 @@ const isBot = uid => String(uid).startsWith(BOT_PREFIX);
 import {nameProblem, isDisposableEmail} from "./moderation.js";
 import {mailerFor, codeEmail} from "./mailer.js";
 import {GoogleAdmin} from "./google-admin.js";
+import {setupCalls, callMethods} from "./calls.js";
 
 const {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, TIERS, SPOTLIGHT_MS} = globalThis.Aureous;
 
@@ -84,6 +85,7 @@ export class Exchange extends DurableObject {
     this.sql.exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
     this.sql.exec(`CREATE TABLE IF NOT EXISTS codes (email TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT NOT NULL, expires INTEGER NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0, sent_at INTEGER NOT NULL, window_start INTEGER NOT NULL, sends INTEGER NOT NULL, PRIMARY KEY (email, purpose))`);
+    setupCalls(this.sql);
     this.sweepNames();
     for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
@@ -137,6 +139,7 @@ export class Exchange extends DurableObject {
   persist(row, ex, histLoaded) {
     this.persistState(row, ex, histLoaded);
     this.checkMilestones(row.uid, ex);
+    this.settleCalls(row.uid, ex);
   }
   // award badges for account value; each new one also starts a 7-day spotlight
   checkMilestones(uid, ex) {
@@ -278,6 +281,9 @@ export class Exchange extends DurableObject {
       this.sql.exec("DELETE FROM accounts WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM milestones WHERE uid = ?", uid);
+      this.sql.exec("DELETE FROM call_votes WHERE call_id IN (SELECT id FROM calls WHERE uid = ?)", uid);
+      this.sql.exec("DELETE FROM calls WHERE uid = ?", uid);
+      this.sql.exec("DELETE FROM call_votes WHERE uid = ?", uid);
       this.board = null; this.adminCache = null; this.seen.delete(uid);
       return {ok: true, messages: ["Account removed."]};
     });
@@ -346,6 +352,7 @@ export class Exchange extends DurableObject {
         out.trades = st.trades.slice(-50).reverse().map(t => ({ts: t.ts, coin: t.coin, side: t.side, sz: t.sz, px: t.px, realized: t.realized, kind: t.kind, lev: t.lev}));
         out.curve = st.equity_curve.slice(-300);
       }
+      out.calls = (await this.calls({pid}, viewerUid)).calls.slice(0, 20);   // calls are public even on a hidden profile
       return out;
     } catch (e) { return fail(e); }
   }
@@ -793,3 +800,4 @@ export class Exchange extends DurableObject {
     return {removed: gone.length};
   }
 }
+Object.assign(Exchange.prototype, callMethods);

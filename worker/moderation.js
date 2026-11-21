@@ -34,3 +34,13 @@ export function isDisposableEmail(email) {
   for (let i = 0; i < parts.length - 1; i++) if (disposable.has(parts.slice(i).join("."))) return true;
   return false;
 }
+
+// Free text people post publicly (call theses): no swearing, slurs or sexual words, and no links or contact
+// details (they invite spam and scams). Returns a message, or null when it's fine.
+const LINK = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|io|xyz|net|org|gg|me|co|app|trade|link|ly|finance)\b|t\.me\/|discord\.gg|@[a-z0-9_]{3,}\b)/i;
+export function textProblem(text) {
+  const s = String(text || "");
+  if (matcher.hasMatch(s)) return "Please keep it clean: no swearing, slurs or sexual words.";   // not squashed: joined-up words would trip it
+  if (LINK.test(s)) return "Links, handles and contact details aren't allowed in calls. Explain your idea in words.";
+  return null;
+}
