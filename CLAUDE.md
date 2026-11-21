@@ -41,6 +41,11 @@ server: `npx wrangler dev --port 8788 --persist-to <empty dir> ...` with the sam
 - Never commit `.dev.vars` or any real key. Real secrets (Resend key, Firebase service account,
   admin emails) live only in Cloudflare → aureous-api → Settings → Variables and Secrets.
 - Pushing `main` deploys the live trading server — run the tests first.
+- Never delete, move or push to the `checkpoint/*` branches. They are the owner's restore points:
+  `checkpoint/2026-11-21-code` (main) and `checkpoint/2026-11-21-site` (gh-pages), a known-good
+  state from before work moved to Claude Code. To restore, make new commits on `main`/`gh-pages`
+  that bring the files back to the checkpoint (e.g. `git checkout checkpoint/2026-11-21-code -- .`),
+  never force-push.
 - Write user-facing text in plain English; the owner isn't a developer, so explain dashboard steps
   click by click with direct links.
 
