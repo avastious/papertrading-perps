@@ -1,0 +1,106 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-20T06:30:00Z"
+ },
+ "title": "Aureous Research logo",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1200,
+   "h": 675,
+   "title": "Primary lockup"
+  },
+  "Marks.dc.html": {
+   "x": 1280,
+   "y": 0,
+   "w": 1200,
+   "h": 560,
+   "title": "Mark directions"
+  },
+  "Lockups.dc.html": {
+   "x": 0,
+   "y": 795,
+   "w": 1200,
+   "h": 675,
+   "title": "Stacked, light and one-colour"
+  },
+  "Avatar.dc.html": {
+   "x": 1280,
+   "y": 795,
+   "w": 1200,
+   "h": 560,
+   "title": "Profile picture and small sizes"
+  },
+  "LinkedInLogo.dc.html": {
+   "x": 0,
+   "y": 1590,
+   "w": 400,
+   "h": 400,
+   "title": "LinkedIn page logo (400 x 400)"
+  },
+  "LinkedInCover.dc.html": {
+   "x": 480,
+   "y": 1590,
+   "w": 1512,
+   "h": 256,
+   "title": "LinkedIn page cover (1512 x 256)"
+  },
+  "SqAureous.dc.html": {
+   "x": 0,
+   "y": 2333,
+   "w": 400,
+   "h": 400,
+   "title": "Aureous logo (400 x 400)"
+  },
+  "CoverAureous.dc.html": {
+   "x": 480,
+   "y": 2333,
+   "w": 1512,
+   "h": 256,
+   "title": "Aureous cover (1512 x 256)"
+  },
+  "SqResearch.dc.html": {
+   "x": 0,
+   "y": 2853,
+   "w": 400,
+   "h": 400,
+   "title": "Aureous Research logo (400 x 400)"
+  },
+  "CoverResearch.dc.html": {
+   "x": 480,
+   "y": 2853,
+   "w": 1512,
+   "h": 256,
+   "title": "Aureous Research cover (1512 x 256)"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Marks.dc.html",
+  "Lockups.dc.html",
+  "Avatar.dc.html",
+  "LinkedInLogo.dc.html",
+  "LinkedInCover.dc.html",
+  "SqAureous.dc.html",
+  "CoverAureous.dc.html",
+  "SqResearch.dc.html",
+  "CoverResearch.dc.html"
+ ],
+ "notes": {
+  "boldset": {
+   "x": 0,
+   "y": 2110,
+   "text": "Bold LinkedIn set (brand-colour square, full-bleed cover)",
+   "kind": "title1",
+   "maxW": 2472
+  }
+ },
+ "designSystems": []
+}
