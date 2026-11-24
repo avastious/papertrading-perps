@@ -105,6 +105,20 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
   </div>
   <div class="card" style="margin-top:16px"><h2>Clans</h2><div class="list" id="clans"></div></div>
   <div class="card" style="margin-top:16px"><h2>Latest calls</h2><div class="list" id="calls"></div></div>
+  <div class="card" style="margin-top:16px" id="postsCard"><h2>Posts from X</h2>
+    <p class="muted" id="poKey" style="margin:0 0 12px;line-height:1.5"></p>
+    <label class="switch-row"><input type="checkbox" id="poOn"><span><b>Show live posts on the trade screen</b>
+      <small>A Posts tab beside the order book shows new posts from the accounts below, checked every minute (every 20 seconds while someone is watching). Reposts and replies are skipped. X charges US$0.005 per post read; a check that finds nothing new costs nothing.</small></span></label>
+    <div class="set-fields" style="align-items:flex-start">
+      <label style="flex:1 1 320px"><span>Accounts to follow <small>(X usernames, links or @names, separated by commas or new lines; up to 40)</small></span>
+        <textarea id="poAccounts" rows="4" spellcheck="false" autocomplete="off" style="width:100%;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:var(--text);font:inherit;font-size:13px;line-height:1.5"></textarea></label>
+      <label><span>Most posts read per day <small id="poCapCost"></small></span>
+        <input id="poCap" inputmode="numeric" style="max-width:120px"></label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" id="poSave" type="button">Save</button><button class="btn" id="poCheck" type="button">Check X now</button></div>
+    <div class="list" id="poStatus" style="margin-top:14px"></div>
+    <div id="poAccts" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
+  </div>
   <div class="card" style="margin-top:16px"><h2>Settings</h2>
     <label class="switch-row"><input type="checkbox" id="setOverCap"><span><b>Leverage above Hyperliquid's limits</b>
       <small>On: every market goes up to <span id="maxLevTxt">1000</span>x. Off: each market's Hyperliquid limit (40x on BTC, less on most coins). Positions already open keep their leverage either way; only new orders are affected.</small></span></label>
@@ -166,7 +180,7 @@ function renderWho(){
 }
 
 async function load(){
-  try { data = await call("/api/admin/overview"); render(); loadCalls(); }
+  try { data = await call("/api/admin/overview"); render(); loadCalls(); loadPosts(); }
   catch (e) {
     clearInterval(timer);
     if (e.status === 403) gate("This page is for the site owner", "You're signed in with an account that isn't allowed to see the admin dashboard.", `<button class="btn" id="sw">Sign in with a different account</button>`), $("#sw").onclick = () => backend.signOut();
@@ -261,6 +275,46 @@ $("#saveBuilder").addEventListener("click", async () => {
   try { const r = await call("/api/admin/settings", {builder: $("#setBuilder").value.trim(), builder_fee: Math.round(fee * 1000)}); toast(r.messages.join(" ")); await load(); }
   catch (err) { toast(err.message); }
 });
+// posts from X: which accounts, the daily cap, and what it's costing (see worker/posts.js)
+let posts = null;
+async function loadPosts(){
+  try { posts = await call("/api/admin/posts"); } catch (e) { $("#poStatus").innerHTML = `<div class="muted">${esc(e.message)}</div>`; return; }
+  renderPosts();
+}
+function renderPosts(){
+  const p = posts; if (!p) return;
+  $("#poKey").innerHTML = p.key ? "The X key is set." :
+    `<b style="color:var(--text)">Not connected to X yet.</b> Add your X API Bearer Token as a secret named <code>X_BEARER_TOKEN</code> in Cloudflare (Workers &amp; Pages → aureous-api → Settings → Variables and Secrets). Until then nothing is read from X and the Posts tab stays hidden.`;
+  $("#poOn").checked = p.on; $("#poOn").disabled = !p.key;
+  if (document.activeElement !== $("#poAccounts")) $("#poAccounts").value = p.accounts.map(a => a.handle).join(", ");
+  if (document.activeElement !== $("#poCap")) $("#poCap").value = p.cap;
+  $("#poCapCost").textContent = `(at most about US$${(p.cap * 0.005).toFixed(2)} a day)`;
+  const li = (a, b) => `<div class="li" style="grid-template-columns:1fr auto"><span>${a}</span><span>${b}</span></div>`;
+  $("#poStatus").innerHTML = [
+    li("Status", p.live ? (p.error ? `<span class="down">Paused: ${esc(p.error)}</span>` : p.capped ? `<span class="down">Daily cap reached; starts again at midnight UTC (10 or 11am in Sydney)</span>` : `<span class="up">Live</span>`) : p.key ? "Off" : "Not connected"),
+    li("Posts read today", `${num(p.today)} of ${num(p.cap)}`),
+    li(`This month (UTC), estimated`, `US$${p.month_cost.toFixed(2)} <span class="muted">(${num(p.month_posts)} posts, ${num(p.month_users)} profiles)</span>`),
+    li("Last checked X", p.last_ok ? when(p.last_ok) : "never"),
+    li("Posts on the site", num(p.stored)),
+  ].join("");
+  const colour = {ok: "var(--long)", "not found": "var(--short)", waiting: "var(--muted)"};
+  $("#poAccts").innerHTML = p.accounts.map(a => `<span class="tag" style="margin:0;padding:2px 8px;font-size:12px" title="${esc(a.status)}"><span style="color:${colour[a.status]}">●</span> ${esc(a.name || a.handle)} <span class="muted">@${esc(a.handle)}</span>${a.status === "not found" ? ' <span class="down">not found</span>' : ""}</span>`).join("");
+}
+async function savePosts(body, btn){
+  if (btn) btn.disabled = true;
+  try { posts = await call("/api/admin/posts", body); renderPosts(); toast(posts.messages.join(" ")); }
+  catch (err) { toast(err.message); }
+  finally { if (btn) btn.disabled = false; }
+}
+$("#poOn").addEventListener("change", e => savePosts({posts_on: e.target.checked}));
+$("#poSave").addEventListener("click", e => {
+  const cap = Math.round(Number($("#poCap").value));
+  if (!(cap >= 10 && cap <= 5000)) { toast("The daily cap must be between 10 and 5,000 posts."); return; }
+  savePosts({posts_accounts: $("#poAccounts").value, posts_cap: cap, refresh: true}, e.target);
+});
+$("#poCheck").addEventListener("click", e => savePosts({refresh: true}, e.target));
+$("#poCap").addEventListener("input", () => { const c = Math.round(Number($("#poCap").value)); $("#poCapCost").textContent = c > 0 ? `(at most about US$${(c * 0.005).toFixed(2)} a day)` : ""; });
+
 // public calls: the owner can remove abusive or misleading ones (authors can't delete their own)
 async function loadCalls(){
   let list = [];

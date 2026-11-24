@@ -186,6 +186,7 @@ async function main() {
     calls: (q = {}) => call("/api/calls?" + new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined && v !== null && v !== "")), undefined, signedIn),
     postCall: (coin, thesis) => call("/api/call", {coin, thesis}),
     voteCall: (id, vote) => call("/api/call/vote", {id, vote}),
+    posts: () => call("/api/posts", undefined, false),
   });
 
   // load the account; email/password accounts that haven't confirmed their (real) email get asked to

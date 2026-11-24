@@ -122,12 +122,54 @@ const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers
 // Stand-ins for Google's OAuth token endpoint, Firebase's admin API (Identity Toolkit) and Resend (email).
 const fbUsers = new Map();            // uid -> {uid, email, emailVerified, password}
 const sentMail = [];                  // emails "sent" through Resend
+// A stand-in for X's API (posts): GET /x/2/users/by and /x/2/tweets/search/recent, like X's v2 API.
+// Tests add posts with POST /x/post {handle, text, entities?}, switch errors on with /x/mode?status=402,
+// and read every request (and how many posts were "charged") at /x/log.
+const X = { users: {}, posts: [], seq: 1900000000000000000n, mode: 0, log: [], charged: 0 };
+const X_TOKEN = 'test-x-token';
+['elonmusk', 'federalreserve', 'NickTimiraos', 'BillAckman', 'saylor', 'KobeissiLetter'].forEach((h, i) =>
+  X.users[h.toLowerCase()] = { id: String(1000 + i), username: h, name: h === 'federalreserve' ? 'Federal Reserve' : h, profile_image_url: `https://pbs.twimg.com/profile_images/${i}/a_normal.jpg`, verified: true });
+function xApi(u, headers) {
+  X.log.push({ path: u.pathname, q: Object.fromEntries(u.searchParams), at: Date.now() });
+  if (headers.authorization !== 'Bearer ' + X_TOKEN) return [401, { title: 'Unauthorized', status: 401, detail: 'Unauthorized' }];
+  if (X.mode) return [X.mode, { title: X.mode === 402 ? 'CreditsDepleted' : 'Error', detail: X.mode === 402 ? 'Your enrolled account does not have any credits' : 'error' }];
+  if (u.pathname === '/x/2/users/by') {
+    const names = (u.searchParams.get('usernames') || '').split(',');
+    const data = [], errors = [];
+    for (const n of names) { const x = X.users[n.toLowerCase()]; if (x) data.push(x); else errors.push({ value: n, detail: `Could not find user with usernames: [${n}].`, title: 'Not Found Error' }); }
+    X.charged += data.length * 2;   // users cost twice a post
+    return [200, { data, ...(errors.length ? { errors } : {}) }];
+  }
+  if (u.pathname === '/x/2/tweets/search/recent') {
+    const q = u.searchParams.get('query') || '', from = new Set([...q.matchAll(/from:(\w+)/g)].map(m => m[1].toLowerCase()));
+    const since = u.searchParams.get('since_id'), start = u.searchParams.get('start_time'), max = +u.searchParams.get('max_results') || 10;
+    if (max < 10 || max > 100) return [400, { title: 'Invalid Request', detail: 'max_results must be 10..100' }];
+    if (q.length > 512) return [400, { title: 'Invalid Request', detail: 'query too long' }];
+    let hits = X.posts.filter(p => from.has(p.handle.toLowerCase()) && (!since || BigInt(p.id) > BigInt(since)) && (!start || Date.parse(p.created_at) >= Date.parse(start)));
+    hits = hits.sort((a, b) => (BigInt(b.id) > BigInt(a.id) ? 1 : -1)).slice(0, max);
+    X.charged += hits.length;
+    const data = hits.map(({ handle, ...t }) => ({ ...t, author_id: X.users[handle.toLowerCase()].id }));
+    return [200, data.length ? { data, meta: { newest_id: data[0].id, oldest_id: data[data.length - 1].id, result_count: data.length } } : { meta: { result_count: 0 } }];
+  }
+  return [404, { title: 'Not Found' }];
+}
 http.createServer((req, res) => {
   let body = ''; req.on('data', c => body += c); req.on('end', () => {
     const u = new URL(req.url, 'http://x');
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     const send = (o, s = 200) => { res.writeHead(s, cors); res.end(JSON.stringify(o)); };
     if (u.pathname === '/info') return send(info(JSON.parse(body)));
+    if (u.pathname.startsWith('/x/2/')) { const [st, o] = xApi(u, req.headers); return send(o, st); }
+    if (u.pathname === '/x/post') {
+      const q = JSON.parse(body || '{}'); X.seq += 1000n;
+      if (q.newUser) X.users[q.handle.toLowerCase()] = { id: String(2000 + Object.keys(X.users).length), username: q.handle, name: q.handle, profile_image_url: '', verified: false };
+      const t = { id: String(X.seq), handle: q.handle, text: q.text, created_at: new Date(q.at || Date.now()).toISOString(), ...(q.entities ? { entities: q.entities } : {}),
+        ...(q.media ? { attachments: { media_keys: ['3_1'] } } : {}), ...(q.reply ? { in_reply_to_user_id: '1' } : {}) };
+      X.posts.push(t); return send({ ok: true, id: t.id });
+    }
+    if (u.pathname === '/x/mode') { X.mode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
+    if (u.pathname === '/x/log') return send({ log: X.log, charged: X.charged, posts: X.posts.length });
+    if (u.pathname === '/x/reset') { X.posts = []; X.log = []; X.charged = 0; X.mode = 0; return send({ ok: true }); }
     if (u.pathname === '/tn/info') return send(tnInfo(JSON.parse(body)));
     if (u.pathname === '/tn/exchange') return send(tnExchange(JSON.parse(body)));
     if (u.pathname === '/tn/fund') { TN.user = u.searchParams.get('user').toLowerCase(); tnAcct(TN.user).usdc += +(u.searchParams.get('amount') || 1000); return send({ ok: true }); }

@@ -27,6 +27,9 @@ manual; this file is the short version plus the things that bite.
   Agent key in localStorage `aureous.live.v1`; builder fee set in the admin dashboard.
 - **Look**: bg #0C0D10, panel #131418, text #ECE8E1, gold #D1A85A, long #26B58A, short #E5575E.
   Cinzel for the wordmark only, IBM Plex Sans everywhere else. Themes/accents in `aureous/web/theme.js`.
+- **Posts from X**: `worker/posts.js` reads X's API (pay-per-use, $0.005/post) on the cron and a 20s DO alarm while
+  someone watches; `aureous/web/posts.js` is the Posts tab. Needs secret `X_BEARER_TOKEN`; account list and daily cap
+  in the admin dashboard. Keep reads cheap: one search for all accounts with since_id, no media/user expansions.
 - Bots were removed for good; the cron job deletes any leftover `bot:` accounts.
 
 ## Testing

@@ -141,6 +141,17 @@ Traders can publicly **call** a position they hold, with a written thesis (`work
 - **Rules:** 20–600 characters, filtered for swearing and slurs, no links, handles or contact details, one open call per position, 10 a day. The admin dashboard lists the latest calls with a Remove button.
 - **API:** `GET /api/calls` (public; `sort=top`, `status=open`, `coin`, `pid`, `id`), `POST /api/call {coin, thesis}`, `POST /api/call/vote {id, vote: 1|-1|0}`, `POST /api/admin/call-remove {id}`.
 
+## Posts from X
+
+A **Posts** tab beside the order book shows live posts on X from people who move markets: the Fed, the Treasury Secretary, CEOs, fund managers, market news accounts (`worker/posts.js`, `aureous/web/posts.js`).
+
+- **How it reads X:** the trading server, never the browser, so one copy serves every visitor and the X key stays secret. Once a minute (every 20 seconds while someone has the feed open) it runs one search for all the accounts, asking only for posts newer than the last one it saw. Reposts and replies are skipped. Posts are kept for 3 days.
+- **What it costs:** X's API is pay-per-use: US$0.005 per post read, US$0.01 per profile read (names and pictures are read once a week). A check that finds nothing new costs nothing. A **daily cap** (default 100 posts, about US$0.50 a day) stops reading when it's reached. The real limit is the **spending limit you set in X's Developer Console**: with no credit left, X refuses and the feed pauses (posts already read stay up).
+- **On the site:** newest first, with the person's name, @handle and picture, links to the post on X, and real addresses instead of t.co links. Cashtags that match an Aureous market (`$NVDA`, `$BTC`, `$SPX`) open that market. **All / <market>** filters to posts about the market you're on (its cashtag or name). New posts flash in; on another tab they show as an unread count. `#posts` opens the tab. The tab is hidden until the X key is set.
+- **Admin:** `/admin` → *Posts from X*: on/off, the accounts (usernames, @names or links, up to 40), the daily cap, **Check X now**, and the status: live or paused (and why), posts read today, an estimate of this month's cost, and which accounts weren't found.
+- **Setup:** an X developer account with pay-per-use credits, then its **Bearer Token** as the Cloudflare secret `X_BEARER_TOKEN` (aureous-api → Settings → Variables and Secrets).
+- **API:** `GET /api/posts` (public), `GET|POST /api/admin/posts {posts_on, posts_accounts, posts_cap, refresh}`.
+
 ## Bots
 
 The 20 house bots were retired. Any bot account still in the database (user IDs starting `bot:`) is deleted by the cron job within a minute, with its trades, badges and clan membership; nobody can sign in with such an ID.
@@ -312,6 +323,7 @@ These work for both the website and the terminal, e.g. `python -m aureous --bala
 ```bash
 pip install pytest && pytest -q          # Python engine + local web API
 node --test tests/engine.test.mjs        # browser/server engine (same cases)
+node --test tests/posts.test.mjs         # X posts: account lists, search queries, post text
 ```
 
 Trading server, run locally against stand-ins for Hyperliquid and Google's signing keys:
@@ -329,6 +341,9 @@ node tests/server/markets.check.mjs      # builder markets (xyz:XYZ100)
 node tests/server/live.browser.cjs       # live trading end to end with a test wallet (Playwright; site on 8400), then:
 python3 tests/server/live_signatures.py /tmp/live-log.json <wallet>   # every signature recovers to the right signer (pip install hyperliquid-python-sdk)
 node tests/server/calls.check.mjs        # public calls: posting rules, live result, votes, closing, removal
+node tests/server/posts.check.mjs        # posts from X: accounts, only-new reads, daily cap, errors, public feed (fresh server with
+                                         #   --var X_API_URL:http://127.0.0.1:8500/x --var X_BEARER_TOKEN:test-x-token; see the file)
+node tests/server/posts.browser.cjs      # the Posts tab on desktop and phone, and the admin card (Playwright; run scripts/dev.sh first)
 node tests/server/email.check.mjs        # real emails, email codes, name rules (needs a .dev.vars pointing email + Firebase admin at the stand-in; see the file's header)
 ```
 

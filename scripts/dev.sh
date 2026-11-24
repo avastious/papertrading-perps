@@ -13,6 +13,7 @@ pgrep -f "[m]ock-hyperliquid" >/dev/null || (nohup node tests/server/mock-hyperl
 pgrep -f "[w]rangler dev" >/dev/null || (nohup npx wrangler dev --test-scheduled \
   --var HL_API_URL:http://127.0.0.1:8500 --var JWKS_URL:http://127.0.0.1:8500/jwks \
   --var ALLOWED_ORIGINS:http://127.0.0.1:8400 --var ADMIN_EMAILS:owner@example.com \
+  --var X_API_URL:http://127.0.0.1:8500/x --var X_BEARER_TOKEN:test-x-token \
   > "$OUT/wrangler.log" 2>&1 &)
 pgrep -f "[h]ttp.server 8400" >/dev/null || (nohup python3 -m http.server 8400 --directory "$OUT/site" > "$OUT/static.log" 2>&1 &)
 for i in $(seq 60); do

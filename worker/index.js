@@ -6,6 +6,7 @@
 //   GET  /api/trader/<id>          public profile: value, badges, open positions and recent trades
 //   GET  /api/calls                public calls with their thesis and live result (?sort=top, ?status=open, ?coin=, ?pid=, ?id=)
 //   POST /api/call                 {coin, thesis}: publicly call a position you hold; POST /api/call/vote {id, vote: 1|-1|0}
+//   GET  /api/posts?after=<id>     public; live posts on X from the accounts the owner follows (see posts.js)
 //   POST /api/profile {name}       set your leaderboard name
 //   POST /api/privacy {private}    hide (or show) your positions and trades on your profile
 //   POST /api/delete               delete your account data
@@ -64,6 +65,7 @@ export default {
         const q = Object.fromEntries(["sort", "status", "coin", "pid", "id"].map(k => [k, url.searchParams.get(k) || undefined]));
         return reply(await ex.calls(q, user ? user.uid : null));
       }
+      if (url.pathname === "/api/posts" && req.method === "GET") return reply(await ex.postsFeed(url.searchParams.get("after") || ""));
       if (url.pathname === "/api/clans" && req.method === "GET") return reply(await ex.clans(user ? user.uid : null));
       const cm = /^\/api\/clan\/([A-Za-z0-9]{2,5})$/.exec(url.pathname);
       if (cm && req.method === "GET") return reply(await ex.clanInfo(cm[1], user ? user.uid : null));
@@ -104,6 +106,11 @@ export default {
         if (url.pathname === "/api/admin/settings" && req.method === "POST") {
           let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
           return reply(await ex.adminSettings(b));
+        }
+        if (url.pathname === "/api/admin/posts" && req.method === "GET") return reply(await ex.postsStatus());
+        if (url.pathname === "/api/admin/posts" && req.method === "POST") {
+          let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
+          return reply(await ex.adminPosts(b));
         }
         if (url.pathname === "/api/admin/call-remove" && req.method === "POST") {
           let b = {}; try { b = JSON.parse(await req.text() || "{}"); } catch {}
