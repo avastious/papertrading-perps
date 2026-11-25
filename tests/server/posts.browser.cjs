@@ -1,4 +1,4 @@
-// Posts tab in a real browser (Playwright): shows posts from the stand-in X, filters to the current market,
+// Posts tab in a real browser (Playwright): shows posts from the stand-in X and Truth Social, filters to the current market,
 // opens markets from cashtags, shows new posts live, works on phones, and the owner's admin card.
 // Run scripts/dev.sh first (site on 8400, server on 8787 with the stand-in X), then:
 //   node tests/server/posts.browser.cjs [screenshot dir]
@@ -27,10 +27,11 @@ async function newContext(browser, opts) {
 }
 
 (async () => {
-  await j(MOCK + '/x/reset');
+  await j(MOCK + '/x/reset'); await j(MOCK + '/ts/reset');
   const owner = (await j(`${MOCK}/token?uid=posts-owner&name=Owner&email=owner@example.com&verified=1`)).token;
   const admin = (path, body) => fetch(API + path, { method: body ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + owner, 'Content-Type': 'application/json' }, body: body && JSON.stringify(body) }).then(r => r.json());
   const RUN = Math.random().toString(36).slice(2, 6);   // marks this run's posts (the server keeps earlier ones)
+  const TSRUN = Math.random().toString(36).slice(2, 6);  // the same for the Truth Social post
   const seed = [
     ['NickTimiraos', 'Officials are split on whether another cut is needed this year; several want more evidence that inflation is cooling. https://t.co/w1', 48,
       { urls: [{ url: 'https://t.co/w1', expanded_url: 'https://www.wsj.com/economy/central-banking/example', display_url: 'wsj.com/economy/centra…' }] }],
@@ -42,8 +43,10 @@ async function newContext(browser, opts) {
     ['BillAckman', 'Long-term holders of quality businesses get paid. Nvidia is a good example: patience beats trading.', 5],
   ];
   for (const [handle, text, minsAgo, entities] of seed) await j(MOCK + '/x/post', { handle, text: text + ' #' + RUN, at: Date.now() - minsAgo * 60000, entities, media: !!(entities && entities.urls.some(u => u.media_key)) });
-  let st = await admin('/api/admin/posts', { posts_accounts: 'NickTimiraos, KobeissiLetter, saylor, federalreserve, BillAckman, elonmusk', posts_cap: 100, posts_on: true, refresh: true });
-  ok(st.ok && /5 new posts/.test(st.messages.join(' ')), 'server read the seeded posts', st.messages && st.messages.join(' '));
+  await j(MOCK + '/ts/post', { handle: 'realDonaldTrump', html: `<p>Interest rates should be MUCH lower. The Fed is way behind! TS-${TSRUN}</p>`, at: Date.now() - 40 * 60000 });
+  let st = await admin('/api/admin/posts', { posts_accounts: 'NickTimiraos, KobeissiLetter, saylor, federalreserve, BillAckman, elonmusk', truth_accounts: 'realDonaldTrump',
+    posts_cap: 100, posts_on: true, x_on: true, truth_on: true, refresh: true });
+  ok(st.ok && /5 new posts/.test(st.messages.join(' ')) && /Truth Social: 1 new post/.test(st.messages.join(' ')), 'server read the seeded posts', st.messages && st.messages.join(' '));
 
   const browser = await chromium.launch();
   // ---------------- desktop
@@ -65,7 +68,16 @@ async function newContext(browser, opts) {
   ok(await page.$eval('#poLive', e => e.textContent.trim()) === 'Live', 'Live indicator is on');
   const fed = await page.$('#postsList .po:has-text("balance sheet")');
   ok(fed && await fed.$('a[href^="https://www.federalreserve.gov/"]') && await fed.$('.po-extra a') && !(await fed.innerText()).includes('t.co'), 'links show real addresses; photos become a Photo button');
-  ok(await page.$eval('#postsList .po-x', a => a.href.startsWith('https://x.com/') && a.target === '_blank'), 'each post links to it on X');
+  ok(await page.$eval('#postsList .po-x.po-xx', a => a.href.startsWith('https://x.com/') && a.target === '_blank'), 'each X post links to it on X');
+  const ts = await page.$(`#postsList .po:has-text("TS-${TSRUN}")`);
+  ok(ts && /^https:\/\/truthsocial\.com\/@realDonaldTrump\/posts\/\d+$/.test(await ts.$eval('.po-x', a => a.href)) && (await ts.$eval('.po-who', a => a.href)) === 'https://truthsocial.com/@realDonaldTrump'
+     && /Donald J\. Trump/.test(await ts.innerText()), 'Truth Social posts show, linking to Truth Social');
+  ok(await page.isVisible('#poSrc'), 'with both sites, an All / X / Truth filter shows');
+  await page.click('#poSrc [data-src=ts]');
+  const onlyTs = await page.$$eval('#postsList .po .po-x', els => els.map(e => e.classList.contains('po-ts')));
+  ok(onlyTs.length >= 1 && onlyTs.every(Boolean), '"Truth" shows only Truth Social posts', `${onlyTs.length} posts`);
+  if (OUT) await page.locator('.book').screenshot({ path: OUT + '/posts-truth.png' });
+  await page.click('#poSrc [data-src=""]');
   if (OUT) await page.screenshot({ path: OUT + '/posts-desktop.png' });
   if (OUT) await page.locator('.book').screenshot({ path: OUT + '/posts-panel.png' });
 
@@ -118,6 +130,8 @@ async function newContext(browser, opts) {
   const status = await page.textContent('#poStatus').catch(() => '');
   ok(/Live/.test(status) && /Posts read today\s*\d+ of 100/.test(status), 'admin shows status and posts read today', status.replace(/\s+/g, ' ').slice(0, 120));
   ok(/not found/.test(await page.textContent('#poAccts')) === false, 'every account was found');
+  const tsStatus = await page.textContent('#tsStatus').catch(() => '');
+  ok(/Live/.test(tsStatus) && /Donald J\. Trump/.test(await page.textContent('#tsAccts')) && await page.inputValue('#tsAccounts') === 'realDonaldTrump', 'admin shows Truth Social status and accounts', tsStatus.replace(/\s+/g, ' ').slice(0, 80));
   await page.fill('#poAccounts', 'NickTimiraos, saylor, not-a-handle!');
   await page.click('#poSave');
   await sleep(800);

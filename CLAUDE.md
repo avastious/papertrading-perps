@@ -31,6 +31,9 @@ Read `docs/HANDOFF.md` first: what the original claude.ai chat built, decided an
 - **Posts from X**: `worker/posts.js` reads X's API (pay-per-use, $0.005/post) on the cron and a 20s DO alarm while
   someone watches; `aureous/web/posts.js` is the Posts tab. Needs secret `X_BEARER_TOKEN`; account list and daily cap
   in the admin dashboard. Keep reads cheap: one search for all accounts with since_id, no media/user expansions.
+- **Posts from Truth Social**: same tab, same files. Free public Mastodon-style API on truthsocial.com (no key), one
+  request per account with since_id, at most every 30s; default account realDonaldTrump. Local servers must get
+  `--var TRUTH_API_URL:http://127.0.0.1:8500/ts` or they read the real site.
 - Bots were removed for good; the cron job deletes any leftover `bot:` accounts.
 
 ## Testing

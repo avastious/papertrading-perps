@@ -153,6 +153,30 @@ function xApi(u, headers) {
   }
   return [404, { title: 'Not Found' }];
 }
+// A stand-in for Truth Social's public API (Mastodon style): GET /ts/api/v1/accounts/lookup?acct= and
+// /ts/api/v1/accounts/:id/statuses. Tests add statuses with POST /ts/post {handle, html, reply?, reblog?, media?, at?},
+// switch errors on with /ts/mode?status=403, read requests at /ts/log, and clear with /ts/reset.
+const TS = { users: { realdonaldtrump: { id: '107780257626128497', username: 'realDonaldTrump', display_name: 'Donald J. Trump', avatar: '', verified: true },
+                      whitehouse: { id: '108000000000000001', username: 'WhiteHouse', display_name: 'The White House', avatar: '', verified: true } },
+             posts: [], log: [], mode: 0, seq: 114000000000000000n };
+function tsApi(u) {
+  TS.log.push({ path: u.pathname, q: Object.fromEntries(u.searchParams) });
+  if (TS.mode) return [TS.mode, { error: 'stand-in error ' + TS.mode }];
+  if (u.pathname === '/ts/api/v1/accounts/lookup') {
+    const a = TS.users[(u.searchParams.get('acct') || '').toLowerCase()];
+    return a ? [200, a] : [404, { error: 'Record not found' }];
+  }
+  const m = /^\/ts\/api\/v1\/accounts\/(\d+)\/statuses$/.exec(u.pathname);
+  if (m) {
+    const a = Object.values(TS.users).find(x => x.id === m[1]); if (!a) return [404, { error: 'Record not found' }];
+    const since = u.searchParams.get('since_id'), limit = +u.searchParams.get('limit') || 20;
+    const noReplies = u.searchParams.get('exclude_replies') === 'true', noReblogs = u.searchParams.get('exclude_reblogs') === 'true';
+    const list = TS.posts.filter(p => p.account.id === a.id && (!since || BigInt(p.id) > BigInt(since)) && !(noReplies && p.in_reply_to_id) && !(noReblogs && p.reblog))
+      .sort((x, y) => (BigInt(y.id) > BigInt(x.id) ? 1 : -1)).slice(0, limit);
+    return [200, list];
+  }
+  return [404, { error: 'Not found' }];
+}
 http.createServer((req, res) => {
   let body = ''; req.on('data', c => body += c); req.on('end', () => {
     const u = new URL(req.url, 'http://x');
@@ -170,6 +194,17 @@ http.createServer((req, res) => {
     if (u.pathname === '/x/mode') { X.mode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
     if (u.pathname === '/x/log') return send({ log: X.log, charged: X.charged, posts: X.posts.length });
     if (u.pathname === '/x/reset') { X.posts = []; X.log = []; X.charged = 0; X.mode = 0; return send({ ok: true }); }
+    if (u.pathname.startsWith('/ts/api/')) { const [st, o] = tsApi(u); return send(o, st); }
+    if (u.pathname === '/ts/post') {
+      const q = JSON.parse(body || '{}'); TS.seq += 1000n;
+      const a = TS.users[q.handle.toLowerCase()];
+      const t = { id: String(TS.seq), created_at: new Date(q.at || Date.now()).toISOString(), content: q.html, account: a, url: `https://truthsocial.com/@${a.username}/${TS.seq}`,
+        in_reply_to_id: q.reply ? '1' : null, reblog: q.reblog ? { id: '2' } : null, media_attachments: q.media ? [{ id: '9', type: 'image' }] : [], quote_id: null };
+      TS.posts.push(t); return send({ ok: true, id: t.id });
+    }
+    if (u.pathname === '/ts/mode') { TS.mode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
+    if (u.pathname === '/ts/log') return send({ log: TS.log });
+    if (u.pathname === '/ts/reset') { TS.posts = []; TS.log = []; TS.mode = 0; return send({ ok: true }); }
     if (u.pathname === '/tn/info') return send(tnInfo(JSON.parse(body)));
     if (u.pathname === '/tn/exchange') return send(tnExchange(JSON.parse(body)));
     if (u.pathname === '/tn/fund') { TN.user = u.searchParams.get('user').toLowerCase(); tnAcct(TN.user).usdc += +(u.searchParams.get('amount') || 1000); return send({ ok: true }); }

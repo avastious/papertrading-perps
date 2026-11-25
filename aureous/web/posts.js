@@ -1,10 +1,10 @@
-// Posts: live posts on X from market-moving people, in a "Posts" tab beside the order book.
-// The trading server reads X (see worker/posts.js); this file only shows what it serves at /api/posts.
+// Posts: live posts on X and Truth Social from market-moving people, in a "Posts" tab beside the order book.
+// The trading server reads both (see worker/posts.js); this file only shows what it serves at /api/posts.
 // Cashtags that match an Aureous market ($NVDA, $BTC) open that market. "This market" shows only posts
 // that mention the market you're looking at. Uses the page's helpers ($, S, esc, cname, selectCoin, setBookTab).
 (function () {
   "use strict";
-  const P = window.AureousPosts = {api: null, on: false, list: [], ids: new Set(), unread: 0, here: false, updated: 0, at: 0, err: null};
+  const P = window.AureousPosts = {api: null, on: false, list: [], ids: new Set(), unread: 0, here: false, src: "", updated: 0, at: 0, err: null};
   const FAST = 15000, SLOW = 60000;
   const ALIAS = {SPX: "xyz:SP500", ES: "xyz:SP500", NDX: "xyz:XYZ100", NQ: "xyz:XYZ100", WTI: "xyz:CL", OIL: "xyz:CL", XAU: "xyz:GOLD",
                  XAG: "xyz:SILVER", BRK: "xyz:BRKB", BRKB: "xyz:BRKB", GOOG: "xyz:GOOGL", NATGAS: "xyz:NATGAS", PEPE: "kPEPE", BONK: "kBONK", SHIB: "kSHIB"};
@@ -12,6 +12,8 @@
                  "xyz:SP500": ["S&P 500", "S&P", "SPX"], "xyz:XYZ100": ["Nasdaq"], "xyz:GOLD": ["gold"], "xyz:CL": ["oil", "crude"], "xyz:BRENTOIL": ["oil", "brent"]};
   const VAGUE = new Set(["strategy", "block", "meta", "visa", "circle", "snap", "oracle", "arm", "silver", "copper"]);
   const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.75 3h3.07l-6.71 7.67L22 21h-6.18l-4.84-6.33L5.44 21H2.37l7.18-8.2L2 3h6.34l4.37 5.78L17.75 3Zm-1.08 16.17h1.7L7.4 4.74H5.58l11.09 14.43Z"/></svg>';
+  const TS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 4h18v4.2h-6.9V20H9.9V8.2H3z"/></svg>';
+  const SRC = {x: {name: "X", icon: X_ICON}, ts: {name: "Truth Social", icon: TS_ICON}};
   const TICK = '<svg class="po-ok" viewBox="0 0 24 24" aria-label="Verified"><path fill="currentColor" d="M12 1.6 14.6 4l3.5-.3.8 3.4 3 1.9-1.4 3.2 1.4 3.2-3 1.9-.8 3.4-3.5-.3L12 22.4 9.4 20l-3.5.3-.8-3.4-3-1.9 1.4-3.2L2.1 8.6l3-1.9.8-3.4 3.5.3L12 1.6Zm-1.3 13.9 6-6-1.4-1.4-4.6 4.6-2.3-2.3-1.4 1.4 3.7 3.7Z"/></svg>';
 
   // ------------------------------------------------------------------ setup
@@ -91,12 +93,13 @@
   const ago = ms => { const s = Math.max(0, (Date.now() - ms) / 1000);
     return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`; };
   const when = ms => new Date(ms).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"});
-  const postUrl = p => `https://x.com/${encodeURIComponent(p.author.handle)}/status/${p.id}`;
+  const postUrl = p => p.url || `https://x.com/${encodeURIComponent(p.author.handle)}/status/${p.id}`;
+  const whoUrl = p => p.author.url || `https://x.com/${encodeURIComponent(p.author.handle)}`;
   function text(p) {
     return p.segs.map(s => {
       if (typeof s === "string") return esc(s);
       if (s.u) return `<a href="${esc(s.u)}" target="_blank" rel="noopener nofollow ugc">${esc(s.d)}</a>`;
-      if (s.m) return `<a href="https://x.com/${encodeURIComponent(s.m)}" target="_blank" rel="noopener nofollow">@${esc(s.m)}</a>`;
+      if (s.m && p.src !== "ts") return `<a href="https://x.com/${encodeURIComponent(s.m)}" target="_blank" rel="noopener nofollow">@${esc(s.m)}</a>`;
       if (s.c) { const c = coinFor(s.c);
         return c ? `<button type="button" class="po-tag${c === S.coin ? " on" : ""}" data-coin="${esc(c)}" title="Open ${esc(cname(c))}">$${esc(s.c)}</button>` : `<span class="po-cash">$${esc(s.c)}</span>`; }
       return "";
@@ -106,13 +109,14 @@
     const a = p.author, init = esc((a.name || a.handle).trim().charAt(0).toUpperCase());
     const av = a.avatar ? `<img class="po-av" src="${esc(a.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-init="${init}">`
                         : `<span class="po-av">${init}</span>`;
-    const extras = [p.media ? `<a href="${postUrl(p)}" target="_blank" rel="noopener">Photo</a>` : "", p.quote ? `<a href="${postUrl(p)}" target="_blank" rel="noopener">Quoting a post</a>` : ""].filter(Boolean).join("");
+    const src = SRC[p.src] || SRC.x;
+    const extras = [p.media ? `<a href="${esc(postUrl(p))}" target="_blank" rel="noopener">Photo</a>` : "", p.quote ? `<a href="${esc(postUrl(p))}" target="_blank" rel="noopener">Quoting a post</a>` : ""].filter(Boolean).join("");
     return `<article class="po${P.newIds && P.newIds.has(p.id) ? " new" : ""}">
-      <a class="po-avl" href="https://x.com/${encodeURIComponent(a.handle)}" target="_blank" rel="noopener" tabindex="-1">${av}</a>
+      <a class="po-avl" href="${esc(whoUrl(p))}" target="_blank" rel="noopener" tabindex="-1">${av}</a>
       <div class="po-main">
-        <div class="po-head"><a class="po-who" href="https://x.com/${encodeURIComponent(a.handle)}" target="_blank" rel="noopener"><b>${esc(a.name)}</b>${a.verified ? TICK : ""}<span>@${esc(a.handle)}</span></a>
-          <a class="po-time" href="${postUrl(p)}" target="_blank" rel="noopener" title="${esc(when(p.at))}"><time datetime="${new Date(p.at).toISOString()}">${ago(p.at)}</time></a>
-          <a class="po-x" href="${postUrl(p)}" target="_blank" rel="noopener" aria-label="Open this post on X">${X_ICON}</a></div>
+        <div class="po-head"><a class="po-who" href="${esc(whoUrl(p))}" target="_blank" rel="noopener"><b>${esc(a.name)}</b>${a.verified ? TICK : ""}<span>@${esc(a.handle)}</span></a>
+          <a class="po-time" href="${esc(postUrl(p))}" target="_blank" rel="noopener" title="${esc(when(p.at))}"><time datetime="${new Date(p.at).toISOString()}">${ago(p.at)}</time></a>
+          <a class="po-x po-${p.src === "ts" ? "ts" : "xx"}" href="${esc(postUrl(p))}" target="_blank" rel="noopener" aria-label="Open this post on ${src.name}" title="On ${src.name}">${src.icon}</a></div>
         <p class="po-text">${text(p)}</p>${extras ? `<div class="po-extra">${extras}</div>` : ""}
       </div></article>`;
   }
@@ -121,13 +125,17 @@
     const stale = P.updated && Date.now() - P.updated > 5 * 60000;
     $("#poLive").className = "po-live" + (stale || P.err ? " off" : "");
     $("#poLive").lastChild.textContent = P.err ? " Offline" : stale ? " Paused" : " Live";
-    $("#poLive").title = P.err ? P.err : P.updated ? "Checked X " + ago(P.updated).replace(/^now$/, "just now") + (/\d/.test(ago(P.updated)) ? " ago" : "") : "";
+    $("#poLive").title = P.err ? P.err : P.updated ? "Checked " + ago(P.updated).replace(/^now$/, "just now") + (/\d/.test(ago(P.updated)) ? " ago" : "") : "";
     document.querySelectorAll("#poFilter [data-here]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.here === "1") === P.here)));
+    const srcs = new Set(P.list.map(p => p.src || "x"));
+    $("#poSrc").hidden = srcs.size < 2;                  // only worth showing when both sources have posts
+    if (srcs.size < 2) P.src = "";
+    document.querySelectorAll("#poSrc [data-src]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.src === P.src)));
     $("#poHere").textContent = S.coin ? cname(S.coin) : "This market";
-    const list = P.here ? P.list.filter(p => mentions(p, S.coin)) : P.list;
+    const list = P.list.filter(p => (!P.src || (p.src || "x") === P.src) && (!P.here || mentions(p, S.coin)));
     const top = el.scrollTop, oldH = el.scrollHeight, oldFirst = el.dataset.first;
     if (!P.list.length) el.innerHTML = `<div class="po-empty">${P.err ? esc(P.err) : "No posts in the last few days yet. New ones appear here as they're posted."}</div>`;
-    else if (!list.length) el.innerHTML = `<div class="po-empty">Nothing about ${esc(cname(S.coin))} lately from the accounts Aureous follows.<button type="button" class="po-all" data-here="0">Show all posts</button></div>`;
+    else if (!list.length) el.innerHTML = `<div class="po-empty">Nothing${P.here ? " about " + esc(cname(S.coin)) : ""} lately${P.src ? " on " + SRC[P.src].name : ""} from the accounts Aureous follows.<button type="button" class="po-all" data-here="0" data-src="">Show all posts</button></div>`;
     else el.innerHTML = list.map(card).join("");
     el.dataset.first = list[0] ? list[0].id : "";
     // reading further down: keep your place when new posts arrive on top
@@ -141,8 +149,8 @@
     if (img.tagName === "IMG" && img.classList.contains("po-av")) img.replaceWith(Object.assign(document.createElement("span"), {className: "po-av", textContent: img.dataset.init || ""}));
   }, true);
   $("#bkPosts").addEventListener("click", e => {
-    const h = e.target.closest("[data-here]");
-    if (h) { P.here = h.dataset.here === "1"; render(); return; }
+    const h = e.target.closest("[data-here],[data-src]");
+    if (h) { if (h.dataset.here !== undefined) P.here = h.dataset.here === "1"; if (h.dataset.src !== undefined) P.src = h.dataset.src; render(); return; }
     const t = e.target.closest(".po-tag[data-coin]");
     if (t && S.mk[t.dataset.coin]) {
       selectCoin(t.dataset.coin);

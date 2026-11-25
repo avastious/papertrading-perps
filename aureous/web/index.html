@@ -231,6 +231,10 @@ button{cursor:pointer}
 .po-x{margin-left:auto;color:var(--faint);flex:none;display:grid;place-items:center;width:18px;height:18px;align-self:center}
 .po-x svg{width:12px;height:12px}
 .po-x:hover{color:var(--text)}
+.po-x.po-ts svg{width:11px;height:11px}
+.po-src[hidden]{display:none}
+.po-src{margin-left:auto}
+.po-src button{padding:3px 7px}
 .po-text{margin:3px 0 0;font-size:12.5px;line-height:1.48;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere}
 .po-text a{color:var(--accent);text-decoration:none}
 .po-text a:hover{text-decoration:underline}
@@ -687,9 +691,10 @@ td.rank{color:var(--muted);width:56px}
     </div>
     <div class="bk-pane" id="bkPosts" hidden>
       <div class="po-bar"><div class="po-filter" id="poFilter" role="group" aria-label="Which posts"><button type="button" data-here="0" aria-pressed="true">All</button><button type="button" data-here="1" aria-pressed="false" id="poHere">This market</button></div>
+        <div class="po-filter po-src" id="poSrc" role="group" aria-label="Which site" hidden><button type="button" data-src="" aria-pressed="true">All</button><button type="button" data-src="x" aria-pressed="false" title="Only posts on X">X</button><button type="button" data-src="ts" aria-pressed="false" title="Only posts on Truth Social">Truth</button></div>
         <span class="po-live" id="poLive"><i></i> Live</span></div>
       <div class="po-list" id="postsList" aria-live="polite"></div>
-      <div class="po-note">Posts on X from people who move markets. Not advice.</div>
+      <div class="po-note">Posts on X and Truth Social from people who move markets. Not advice.</div>
     </div>
   </section>
 

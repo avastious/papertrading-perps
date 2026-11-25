@@ -105,17 +105,29 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
   </div>
   <div class="card" style="margin-top:16px"><h2>Clans</h2><div class="list" id="clans"></div></div>
   <div class="card" style="margin-top:16px"><h2>Latest calls</h2><div class="list" id="calls"></div></div>
-  <div class="card" style="margin-top:16px" id="postsCard"><h2>Posts from X</h2>
-    <p class="muted" id="poKey" style="margin:0 0 12px;line-height:1.5"></p>
+  <div class="card" style="margin-top:16px" id="postsCard"><h2>Posts from X and Truth Social</h2>
     <label class="switch-row"><input type="checkbox" id="poOn"><span><b>Show live posts on the trade screen</b>
-      <small>A Posts tab beside the order book shows new posts from the accounts below, checked every minute (every 20 seconds while someone is watching). Reposts and replies are skipped. X charges US$0.005 per post read; a check that finds nothing new costs nothing.</small></span></label>
+      <small>A Posts tab beside the order book shows new posts from the accounts below, checked every minute (every 20 to 30 seconds while someone is watching). Reposts and replies are skipped. Turning this off stops reading both sites and hides the tab.</small></span></label>
+    <h3 style="margin:18px 0 6px;font-size:14px">Truth Social <span class="muted" style="font-weight:400">· free, no key needed</span></h3>
+    <label class="switch-row"><input type="checkbox" id="tsOn"><span><b>Read Truth Social</b>
+      <small>Reads the public posts of the accounts below straight from truthsocial.com. Costs nothing.</small></span></label>
     <div class="set-fields" style="align-items:flex-start">
-      <label style="flex:1 1 320px"><span>Accounts to follow <small>(X usernames, links or @names, separated by commas or new lines; up to 40)</small></span>
+      <label style="flex:1 1 320px"><span>Truth Social accounts <small>(usernames, links or @names; up to 20)</small></span>
+        <textarea id="tsAccounts" rows="2" spellcheck="false" autocomplete="off" style="width:100%;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:var(--text);font:inherit;font-size:13px;line-height:1.5"></textarea></label>
+    </div>
+    <div class="list" id="tsStatus" style="margin-top:10px"></div>
+    <div id="tsAccts" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
+    <h3 style="margin:22px 0 6px;font-size:14px">X <span class="muted" style="font-weight:400">· pay per post read</span></h3>
+    <p class="muted" id="poKey" style="margin:0 0 12px;line-height:1.5"></p>
+    <label class="switch-row"><input type="checkbox" id="xOn"><span><b>Read X</b>
+      <small>X charges US$0.005 per post read; a check that finds nothing new costs nothing. The daily cap below keeps it in check.</small></span></label>
+    <div class="set-fields" style="align-items:flex-start">
+      <label style="flex:1 1 320px"><span>X accounts <small>(X usernames, links or @names, separated by commas or new lines; up to 40)</small></span>
         <textarea id="poAccounts" rows="4" spellcheck="false" autocomplete="off" style="width:100%;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:var(--text);font:inherit;font-size:13px;line-height:1.5"></textarea></label>
       <label><span>Most posts read per day <small id="poCapCost"></small></span>
         <input id="poCap" inputmode="numeric" style="max-width:120px"></label>
     </div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" id="poSave" type="button">Save</button><button class="btn" id="poCheck" type="button">Check X now</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" id="poSave" type="button">Save</button><button class="btn" id="poCheck" type="button">Check now</button></div>
     <div class="list" id="poStatus" style="margin-top:14px"></div>
     <div id="poAccts" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
   </div>
@@ -275,7 +287,7 @@ $("#saveBuilder").addEventListener("click", async () => {
   try { const r = await call("/api/admin/settings", {builder: $("#setBuilder").value.trim(), builder_fee: Math.round(fee * 1000)}); toast(r.messages.join(" ")); await load(); }
   catch (err) { toast(err.message); }
 });
-// posts from X: which accounts, the daily cap, and what it's costing (see worker/posts.js)
+// posts from X and Truth Social: which accounts, X's daily cap, and what X is costing (see worker/posts.js)
 let posts = null;
 async function loadPosts(){
   try { posts = await call("/api/admin/posts"); } catch (e) { $("#poStatus").innerHTML = `<div class="muted">${esc(e.message)}</div>`; return; }
@@ -284,20 +296,31 @@ async function loadPosts(){
 function renderPosts(){
   const p = posts; if (!p) return;
   $("#poKey").innerHTML = p.key ? "The X key is set." :
-    `<b style="color:var(--text)">Not connected to X yet.</b> Add your X API Bearer Token as a secret named <code>X_BEARER_TOKEN</code> in Cloudflare (Workers &amp; Pages → aureous-api → Settings → Variables and Secrets). Until then nothing is read from X and the Posts tab stays hidden.`;
-  $("#poOn").checked = p.on; $("#poOn").disabled = !p.key;
+    `<b style="color:var(--text)">Not connected to X yet.</b> Add your X API Bearer Token as a secret named <code>X_BEARER_TOKEN</code> in Cloudflare (Workers &amp; Pages → aureous-api → Settings → Variables and Secrets). Until then nothing is read from X; Truth Social works without it.`;
+  $("#poOn").checked = p.on;
+  $("#xOn").checked = p.x_on !== false; $("#xOn").disabled = !p.key;
+  const t = p.truth || {accounts: []};
+  $("#tsOn").checked = !!t.on;
+  if (document.activeElement !== $("#tsAccounts")) $("#tsAccounts").value = t.accounts.map(a => a.handle).join(", ");
   if (document.activeElement !== $("#poAccounts")) $("#poAccounts").value = p.accounts.map(a => a.handle).join(", ");
   if (document.activeElement !== $("#poCap")) $("#poCap").value = p.cap;
   $("#poCapCost").textContent = `(at most about US$${(p.cap * 0.005).toFixed(2)} a day)`;
   const li = (a, b) => `<div class="li" style="grid-template-columns:1fr auto"><span>${a}</span><span>${b}</span></div>`;
   $("#poStatus").innerHTML = [
-    li("Status", p.live ? (p.error ? `<span class="down">Paused: ${esc(p.error)}</span>` : p.capped ? `<span class="down">Daily cap reached; starts again at midnight UTC (10 or 11am in Sydney)</span>` : `<span class="up">Live</span>`) : p.key ? "Off" : "Not connected"),
+    li("Status", p.x_live ? (p.error ? `<span class="down">Paused: ${esc(p.error)}</span>` : p.capped ? `<span class="down">Daily cap reached; starts again at midnight UTC (10 or 11am in Sydney)</span>` : `<span class="up">Live</span>`) : !p.key ? "Not connected" : "Off"),
     li("Posts read today", `${num(p.today)} of ${num(p.cap)}`),
     li(`This month (UTC), estimated`, `US$${p.month_cost.toFixed(2)} <span class="muted">(${num(p.month_posts)} posts, ${num(p.month_users)} profiles)</span>`),
     li("Last checked X", p.last_ok ? when(p.last_ok) : "never"),
-    li("Posts on the site", num(p.stored)),
+    li("Posts on the site (both sites)", num(p.stored)),
+  ].join("");
+  $("#tsStatus").innerHTML = [
+    li("Status", t.live ? (t.error ? `<span class="down">Paused: ${esc(t.error)}</span>` : `<span class="up">Live</span>`) : "Off"),
+    li("Last checked Truth Social", t.last_ok ? when(t.last_ok) : "never"),
+    li("Truth Social posts on the site", num(t.stored || 0)),
   ].join("");
   const colour = {ok: "var(--long)", "not found": "var(--short)", waiting: "var(--muted)"};
+  const tag = a => `<span class="tag" style="margin:0;padding:2px 8px;font-size:12px" title="${esc(a.status)}"><span style="color:${colour[a.status]}">●</span> ${esc(a.name || a.handle)} <span class="muted">@${esc(a.handle)}</span>${a.status === "not found" ? ' <span class="down">not found</span>' : ""}</span>`;
+  $("#tsAccts").innerHTML = t.accounts.map(tag).join("");
   $("#poAccts").innerHTML = p.accounts.map(a => `<span class="tag" style="margin:0;padding:2px 8px;font-size:12px" title="${esc(a.status)}"><span style="color:${colour[a.status]}">●</span> ${esc(a.name || a.handle)} <span class="muted">@${esc(a.handle)}</span>${a.status === "not found" ? ' <span class="down">not found</span>' : ""}</span>`).join("");
 }
 async function savePosts(body, btn){
@@ -307,10 +330,12 @@ async function savePosts(body, btn){
   finally { if (btn) btn.disabled = false; }
 }
 $("#poOn").addEventListener("change", e => savePosts({posts_on: e.target.checked}));
+$("#xOn").addEventListener("change", e => savePosts({x_on: e.target.checked}));
+$("#tsOn").addEventListener("change", e => savePosts({truth_on: e.target.checked}));
 $("#poSave").addEventListener("click", e => {
   const cap = Math.round(Number($("#poCap").value));
   if (!(cap >= 10 && cap <= 5000)) { toast("The daily cap must be between 10 and 5,000 posts."); return; }
-  savePosts({posts_accounts: $("#poAccounts").value, posts_cap: cap, refresh: true}, e.target);
+  savePosts({posts_accounts: $("#poAccounts").value, truth_accounts: $("#tsAccounts").value, posts_cap: cap, refresh: true}, e.target);
 });
 $("#poCheck").addEventListener("click", e => savePosts({refresh: true}, e.target));
 $("#poCap").addEventListener("input", () => { const c = Math.round(Number($("#poCap").value)); $("#poCapCost").textContent = c > 0 ? `(at most about US$${(c * 0.005).toFixed(2)} a day)` : ""; });

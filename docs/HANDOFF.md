@@ -28,7 +28,7 @@ decided and left open, so nothing depends on remembering it. CLAUDE.md has the r
 7. Bots removed for good.
 8. Public calls: post a position with a thesis; tracked to the result; agree/disagree votes.
 9. Posts from X (Nov 24): live Posts tab beside the order book. Built and published, **not switched on yet**
-   (needs the `X_BEARER_TOKEN` secret; see README "Posts from X").
+   (needs the `X_BEARER_TOKEN` secret; see README "Posts from X and Truth Social"). Truth Social (Nov 25) needs no key and goes live when main is deployed.
 10. Brand: logo, gold coin, LinkedIn logo/cover for Aureous and "Aureous Research" (`brand/`). The design
     canvas is a claude.ai artifact: https://claude.ai/artifact/KWHeDjYD8iyEGuGheXFB6F (source in `brand/canvas/`).
 
