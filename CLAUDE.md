@@ -3,6 +3,7 @@
 Aureous (aureous.trade) is a paper-trading site for Hyperliquid perpetuals, plus an optional live mode on
 Hyperliquid testnet. Owner: Billy Storrs (billystorrs15@gmail.com), Sydney time. README.md is the full
 manual; this file is the short version plus the things that bite.
+Read `docs/HANDOFF.md` first: what the original claude.ai chat built, decided and left open.
 
 ## How it's put together
 
