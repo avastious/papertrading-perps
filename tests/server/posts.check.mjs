@@ -2,7 +2,8 @@
 // Needs a fresh server started with the stand-in X:
 //   npx wrangler dev --port 8788 --persist-to <empty dir> --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
 //     --var JWKS_URL:http://127.0.0.1:8500/jwks --var ADMIN_EMAILS:owner@example.com \
-//     --var X_API_URL:http://127.0.0.1:8500/x --var X_BEARER_TOKEN:test-x-token --var TRUTH_API_URL:http://127.0.0.1:8500/ts
+//     --var X_API_URL:http://127.0.0.1:8500/x --var X_BEARER_TOKEN:test-x-token --var TRUTH_API_URL:http://127.0.0.1:8500/ts \
+//     --var TRUMP_FEED_URL:http://127.0.0.1:8500/ts/feed
 //   API=http://127.0.0.1:8788 node tests/server/posts.check.mjs
 const API = process.env.API || 'http://127.0.0.1:8787', MOCK = process.env.MOCK || 'http://127.0.0.1:8500';
 let pass = 0, fail = 0;
@@ -100,50 +101,70 @@ await call('/api/admin/posts', owner, { refresh: true });
 ok((await searches()).length === n1, 'turned off: nothing is read from X');
 await call('/api/admin/posts', owner, { posts_on: true });
 
-// ---------------- Truth Social (free, no key): on by default with realDonaldTrump
+// ---------------- Truth Social (free, no key): on by default with realDonaldTrump, whose posts come from the
+// trumpstruth.org feed (stand-in /ts/feed); other accounts from truthsocial.com's API (stand-in /ts/api)
 r = await call('/api/admin/posts', owner);
-ok(r.j.truth && r.j.truth.on && r.j.truth.live && r.j.truth.accounts.map(a => a.handle).join() === 'realDonaldTrump', 'Truth Social is on by default, following realDonaldTrump', JSON.stringify(r.j.truth && r.j.truth.accounts));
+ok(r.j.truth && r.j.truth.on && r.j.truth.live && r.j.truth.via_archive && r.j.truth.accounts.map(a => a.handle).join() === 'realDonaldTrump', 'Truth Social is on by default, following realDonaldTrump', JSON.stringify(r.j.truth && r.j.truth.accounts));
 r = await call('/api/admin/posts', owner, { truth_accounts: 'bad-name' });
 ok(r.status === 400 && /Truth Social username/.test(r.j.error), 'a bad Truth Social username is refused');
 r = await call('/api/admin/posts', user, { truth_on: false });
 ok(r.status === 403, 'only the owner can change Truth Social');
 const tpost = (handle, html, extra = {}) => mock('/ts/post', { handle, html, ...extra });
+const tlogs = async () => (await mock('/ts/log')).log;
 await tpost('realDonaldTrump', '<p>Too old to show</p>', { at: Date.now() - 4 * 86400000 });
-await tpost('realDonaldTrump', '<p>The Fed should CUT RATES NOW! $SPY to the moon. <a href="https://truthsocial.com/@WhiteHouse" class="u-url mention">@<span>WhiteHouse</span></a></p>', { at: Date.now() - 2 * 3600000, media: true });
-await tpost('realDonaldTrump', '<p>a reply</p>', { reply: true });
+const trumpId = (await tpost('realDonaldTrump', '<p>The Fed should CUT RATES NOW! $SPY to the moon. <a href="https://truthsocial.com/@WhiteHouse" class="u-url mention">@<span>WhiteHouse</span></a></p>', { at: Date.now() - 2 * 3600000, media: true })).id;
 await tpost('realDonaldTrump', '<p>a repost</p>', { reblog: true });
+await tpost('WhiteHouse', '<p>a reply</p>', { reply: true });
 r = await call('/api/admin/posts', owner, { truth_accounts: 'https://truthsocial.com/@realDonaldTrump, @WhiteHouse nosuchtruth', refresh: true });
 ok(r.status === 200 && r.j.truth.accounts.map(a => a.handle).join() === 'realDonaldTrump,WhiteHouse,nosuchtruth', 'Truth Social accounts saved from links and @names');
-ok(/Checked Truth Social: 1 new post\b/.test(r.j.messages.join(' ')), 'only the recent post is read (no replies, reposts or old posts)', r.j.messages.join(' '));
-ok(r.j.truth.accounts.find(a => a.handle === 'nosuchtruth').status === 'not found' && r.j.truth.accounts[0].name === 'Donald J. Trump', 'unknown Truth Social accounts are flagged; names are read');
+ok(/Checked Truth Social: 1 new post\b/.test(r.j.messages.join(' ')), 'only the recent post is read (no reposts, replies or old posts)', r.j.messages.join(' '));
+ok(r.j.truth.accounts.find(a => a.handle === 'nosuchtruth').status === 'not found' && r.j.truth.accounts[0].name === 'Donald J. Trump' && r.j.truth.accounts[1].name === 'The White House',
+   'unknown Truth Social accounts are flagged; names are read');
 r = await call('/api/posts');
 let tp = r.j.posts.find(p => p.src === 'ts');
-ok(tp && tp.author.handle === 'realDonaldTrump' && tp.author.name === 'Donald J. Trump' && tp.media && /^https:\/\/truthsocial\.com\/@realDonaldTrump\/posts\/\d+$/.test(tp.url) && tp.author.url === 'https://truthsocial.com/@realDonaldTrump',
-   'Truth Social posts are in the feed with links to Truth Social', tp && tp.url);
-ok(tp && tp.segs.some(s => s.c === 'SPY') && tp.segs.some(s => s.u === 'https://truthsocial.com/@WhiteHouse' && s.d === '@WhiteHouse') && !JSON.stringify(tp.segs).includes('<'), 'Truth Social text: cashtags, mention links, no HTML', JSON.stringify(tp && tp.segs));
+ok(tp && tp.id === 'ts:' + trumpId && tp.author.handle === 'realDonaldTrump' && tp.author.name === 'Donald J. Trump' && tp.media && tp.url === `https://truthsocial.com/@realDonaldTrump/posts/${trumpId}` && tp.author.url === 'https://truthsocial.com/@realDonaldTrump',
+   "Trump's posts (from the archive feed) are in the feed with links to Truth Social", tp && tp.url);
+ok(tp && tp.segs.some(s => s.c === 'SPY') && tp.segs.some(s => s.u === 'https://truthsocial.com/@WhiteHouse' && s.d === '@WhiteHouse') && !JSON.stringify(tp.segs).includes('<') && !JSON.stringify(tp.segs).includes('View image'),
+   'Truth Social text: cashtags, mention links, no HTML, pictures as a marker', JSON.stringify(tp && tp.segs));
 ok(r.j.posts.some(p => p.src === 'x' && /^https:\/\/x\.com\//.test(p.url)), 'X posts carry their x.com link too');
-// live while the feed is open
+// live while the feed is open, from both routes
+const seen = new Set(r.j.posts.map(p => p.id));      // (the archive feed's times are whole seconds, so compare ids, not order)
 await tpost('WhiteHouse', '<p>President signs executive order on crypto. $BTC</p>');
-got = null;
-const topId = r.j.posts[0].id;
-for (let i = 0; i < 70 && !got; i++) { await sleep(1000); r = await call(`/api/posts?after=${encodeURIComponent(topId)}`); if (r.j.posts.length) got = r.j.posts; }
-ok(got && got.length === 1 && got[0].src === 'ts' && got[0].author.handle === 'WhiteHouse', 'a new Truth Social post shows up while the feed is open', got ? '' : 'never arrived');
-const tlog = (await mock('/ts/log')).log.filter(l => l.path.endsWith('/statuses'));
-const trumpCalls = tlog.filter(l => l.path.includes('/107780257626128497/'));
-ok(trumpCalls.length > 1 && trumpCalls.slice(-1)[0].q.since_id && tlog.every(l => l.q.exclude_replies === 'true' && l.q.exclude_reblogs === 'true'), 'later checks ask only for newer posts, no replies or reposts');
-// errors keep the feed
+await tpost('realDonaldTrump', '<p>Stock market at ALL TIME HIGH!</p>');
+got = [];
+for (let i = 0; i < 80 && got.length < 2; i++) { await sleep(1000); r = await call('/api/posts'); got = r.j.posts.filter(p => !seen.has(p.id)); }
+ok(got.length === 2 && got.every(p => p.src === 'ts') && got.some(p => p.author.handle === 'WhiteHouse') && got.some(p => p.author.handle === 'realDonaldTrump'), 'new Truth Social posts show up while the feed is open', got.map(p => p.author.handle).join());
+await call('/api/admin/posts', owner, { refresh: true });     // one more check, now that every account has posts
+const log = await tlogs(), feeds = log.filter(l => l.path === '/ts/feed'), whCalls = log.filter(l => l.path.includes('/108000000000000001/'));
+ok(feeds.length > 1 && feeds.slice(1).every(l => l.inm), 'the archive feed is asked "only if changed" after the first read');
+ok(whCalls.some(l => l.q.since_id) && log.filter(l => l.path.endsWith('/statuses')).every(l => l.q.exclude_replies === 'true' && l.q.exclude_reblogs === 'true'), 'other accounts: only newer posts, no replies or reposts');
+// a post deleted on Truth Social disappears
+await mock('/ts/remove?id=' + trumpId);
+await call('/api/admin/posts', owner, { refresh: true });
+r = await call('/api/posts');
+ok(!r.j.posts.some(p => p.id === 'ts:' + trumpId), 'a post removed from Truth Social is removed here too');
+// truthsocial.com blocking us doesn't stop Trump's posts
 await mock('/ts/mode?status=403');
 r = await call('/api/admin/posts', owner, { refresh: true });
-ok(/refused/i.test(r.j.truth.error || '') && /Checked Truth Social: .*refused/.test(r.j.messages.join(' ')), 'Truth Social refusing is reported plainly', r.j.truth.error);
-r = await call('/api/posts');
-ok(r.j.posts.filter(p => p.src === 'ts').length === 2, 'Truth Social posts already read stay on the site');
+ok(/Accounts other than Trump: .*refused/i.test(r.j.truth.error || '') && /Checked Truth Social: .*refused/.test(r.j.messages.join(' ')), 'Truth Social refusing is reported plainly', r.j.truth.error);
+await tpost('realDonaldTrump', '<p>Tariffs are working. $SPY</p>');
+r = await call('/api/admin/posts', owner, { refresh: true });
+ok(/1 new post/.test(r.j.messages.join(' ')), "while truthsocial.com refuses, Trump's posts still arrive", r.j.messages.join(' '));
 await mock('/ts/mode?status=0');
+await mock('/ts/feedmode?status=500');
+r = await call('/api/admin/posts', owner, { refresh: true });
+ok(/trumpstruth\.org error 500/.test(r.j.truth.error || ''), 'a broken archive feed is reported plainly', r.j.truth.error);
+r = await call('/api/posts');
+ok(r.j.posts.filter(p => p.src === 'ts').length === 3, 'Truth Social posts already read stay on the site', `${r.j.posts.filter(p => p.src === 'ts').length}`);
+await mock('/ts/feedmode?status=0');
+r = await call('/api/admin/posts', owner, { refresh: true });
+ok(!r.j.truth.error, 'and it recovers', r.j.truth.error);
 // switches: X off leaves Truth Social; Truth Social off hides its posts
 r = await call('/api/admin/posts', owner, { x_on: false });
 const nx = (await searches()).length;
 await call('/api/admin/posts', owner, { refresh: true });
 r = await call('/api/posts');
-ok((await searches()).length === nx && r.j.on && r.j.posts.length === 2 && r.j.posts.every(p => p.src === 'ts'), 'X off: nothing read from X, Truth Social still shows', `${r.j.posts.length} posts`);
+ok((await searches()).length === nx && r.j.on && r.j.posts.length === 3 && r.j.posts.every(p => p.src === 'ts'), 'X off: nothing read from X, Truth Social still shows', `${r.j.posts.length} posts`);
 await call('/api/admin/posts', owner, { x_on: true, truth_on: false });
 r = await call('/api/posts');
 ok(r.j.posts.length && r.j.posts.every(p => p.src === 'x'), 'Truth Social off hides its posts');

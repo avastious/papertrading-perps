@@ -156,9 +156,29 @@ function xApi(u, headers) {
 // A stand-in for Truth Social's public API (Mastodon style): GET /ts/api/v1/accounts/lookup?acct= and
 // /ts/api/v1/accounts/:id/statuses. Tests add statuses with POST /ts/post {handle, html, reply?, reblog?, media?, at?},
 // switch errors on with /ts/mode?status=403, read requests at /ts/log, and clear with /ts/reset.
+// GET /ts/feed stands in for trumpstruth.org's RSS feed of realDonaldTrump's posts (ETag / If-None-Match like the real one);
+// /ts/feedmode?status=500 breaks it, /ts/remove?id= marks a post removed.
 const TS = { users: { realdonaldtrump: { id: '107780257626128497', username: 'realDonaldTrump', display_name: 'Donald J. Trump', avatar: '', verified: true },
                       whitehouse: { id: '108000000000000001', username: 'WhiteHouse', display_name: 'The White House', avatar: '', verified: true } },
-             posts: [], log: [], mode: 0, seq: 114000000000000000n };
+             posts: [], log: [], mode: 0, feedMode: 0, seq: 114000000000000000n };
+function tsFeed(req) {
+  TS.log.push({ path: '/ts/feed', inm: req.headers['if-none-match'] || null });
+  if (TS.feedMode) return [TS.feedMode, 'error', {}];
+  const xmlEsc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const items = TS.posts.filter(p => p.account.username === 'realDonaldTrump' && !p.in_reply_to_id).sort((x, y) => (BigInt(y.id) > BigInt(x.id) ? 1 : -1)).slice(0, 100).map((p, i) => `
+    <item>
+      <title><![CDATA[Post]]></title><link>https://www.trumpstruth.org/statuses/${40000 + i}</link>
+      <description><![CDATA[${p.content}${p.media_attachments.length ? '<p><a href="https://truth-archive.example/a.jpg">View image</a></p>' : ''}${p.reblog ? '<p>Reposted <a href="https://www.trumpstruth.org/statuses/1">Someone</a></p><blockquote><p>theirs</p></blockquote>' : ''}]]></description>
+      <dc:creator>Donald J. Trump</dc:creator><pubDate>${new Date(p.created_at).toUTCString()}</pubDate>
+      <truth:originalUrl>https://truthsocial.com/@realDonaldTrump/${p.id}</truth:originalUrl><truth:originalId>${p.id}</truth:originalId>
+      <archive:postType>${p.reblog ? 'repost' : 'original'}</archive:postType><archive:removed>${p.removed ? 'true' : 'false'}</archive:removed>
+      ${p.media_attachments.length ? '<media:content url="https://truth-archive.example/a.jpg" medium="image"></media:content>' : ''}
+    </item>`).join('');
+  const body = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:truth="https://truthsocial.com/ns" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:archive="https://www.trumpstruth.org/rss-extensions"><channel><title>${xmlEsc("Trump's Truth")}</title>${items}</channel></rss>`;
+  const etag = '"' + crypto.createHash('sha1').update(body).digest('hex').slice(0, 16) + '"';
+  if (req.headers['if-none-match'] === etag) return [304, '', { etag }];
+  return [200, body, { etag, 'content-type': 'application/rss+xml' }];
+}
 function tsApi(u) {
   TS.log.push({ path: u.pathname, q: Object.fromEntries(u.searchParams) });
   if (TS.mode) return [TS.mode, { error: 'stand-in error ' + TS.mode }];
@@ -194,6 +214,9 @@ http.createServer((req, res) => {
     if (u.pathname === '/x/mode') { X.mode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
     if (u.pathname === '/x/log') return send({ log: X.log, charged: X.charged, posts: X.posts.length });
     if (u.pathname === '/x/reset') { X.posts = []; X.log = []; X.charged = 0; X.mode = 0; return send({ ok: true }); }
+    if (u.pathname === '/ts/feed') { const [st, b, h] = tsFeed(req); res.writeHead(st, { ...cors, ...h }); return res.end(st === 304 ? '' : b); }
+    if (u.pathname === '/ts/feedmode') { TS.feedMode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
+    if (u.pathname === '/ts/remove') { const p = TS.posts.find(x => x.id === u.searchParams.get('id')); if (p) p.removed = true; return send({ ok: !!p }); }
     if (u.pathname.startsWith('/ts/api/')) { const [st, o] = tsApi(u); return send(o, st); }
     if (u.pathname === '/ts/post') {
       const q = JSON.parse(body || '{}'); TS.seq += 1000n;
@@ -204,7 +227,7 @@ http.createServer((req, res) => {
     }
     if (u.pathname === '/ts/mode') { TS.mode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
     if (u.pathname === '/ts/log') return send({ log: TS.log });
-    if (u.pathname === '/ts/reset') { TS.posts = []; TS.log = []; TS.mode = 0; return send({ ok: true }); }
+    if (u.pathname === '/ts/reset') { TS.posts = []; TS.log = []; TS.mode = 0; TS.feedMode = 0; return send({ ok: true }); }
     if (u.pathname === '/tn/info') return send(tnInfo(JSON.parse(body)));
     if (u.pathname === '/tn/exchange') return send(tnExchange(JSON.parse(body)));
     if (u.pathname === '/tn/fund') { TN.user = u.searchParams.get('user').toLowerCase(); tnAcct(TN.user).usdc += +(u.searchParams.get('amount') || 1000); return send({ ok: true }); }

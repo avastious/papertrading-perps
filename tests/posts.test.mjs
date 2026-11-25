@@ -1,7 +1,7 @@
 // Unit tests for the X and Truth Social posts helpers (worker/posts.js): account lists, search queries and post text.
 import test from "node:test";
 import assert from "node:assert/strict";
-import {parseAccounts, queryGroups, segments, htmlSegments, DEFAULT_ACCOUNTS} from "../worker/posts.js";
+import {parseAccounts, queryGroups, segments, htmlSegments, parseArchiveFeed, DEFAULT_ACCOUNTS} from "../worker/posts.js";
 
 test("account lists accept @names, links and plain names, without duplicates", () => {
   assert.deepEqual(parseAccounts("@elonmusk, https://x.com/federalreserve?s=20\nhttps://twitter.com/saylor/ ELONMUSK").list, ["elonmusk", "federalreserve", "saylor"]);
@@ -49,4 +49,30 @@ test("Truth Social HTML becomes safe pieces: paragraphs, links, mentions, cashta
   assert.equal(segs[8], "\nThank you!'s \u{1F1FA}\u{1F1F8}");
   assert.deepEqual(htmlSegments('<p><script>alert(1)</script><a href="javascript:alert(1)">click</a> <img src=x onerror=alert(1)>hi</p>'), ["alert(1)click hi"]);
   assert.deepEqual(htmlSegments(""), []);
+});
+
+test("trumpstruth.org's feed becomes posts: text, pictures as a marker, quotes, reposts and removals flagged", () => {
+  // shaped like the real feed at https://www.trumpstruth.org/feed (Nov 2026)
+  const item = (id, type, desc, extra = "") => `<item><title><![CDATA[Post]]></title><link>https://www.trumpstruth.org/statuses/1</link>
+    <description><![CDATA[${desc}]]></description><dc:creator>Donald J. Trump</dc:creator><pubDate>Wed, 25 Nov 2026 01:02:33 +0000</pubDate>
+    <truth:originalUrl>https://truthsocial.com/@realDonaldTrump/${id}</truth:originalUrl><truth:originalId>${id}</truth:originalId>
+    <archive:postType>${type}</archive:postType><archive:removed>${extra === "removed" ? "true" : "false"}</archive:removed>${extra === "removed" ? "" : extra}</item>`;
+  const xml = `<?xml version="1.0"?><rss version="2.0"><channel><title>x</title>
+    ${item("117674380753944672", "original", '<p>Stocks are UP! $SPY <a href="https://vimeo.com/1249782646/7e27022b54" rel="nofollow"><span class="invisible">https://</span><span class="ellipsis">vimeo.com/1249782646/7e27022b5</span><span class="invisible">4</span></a></p>')}
+    ${item("117674363024208708", "original", '<p></p><p><a href="https://truth-archive.us-iad-1.linodeobjects.com/attachments/1/a.png">View image</a></p>', '<media:content url="https://truth-archive.us-iad-1.linodeobjects.com/attachments/1/a.png" medium="image"></media:content>')}
+    ${item("117665529427047942", "quote", '<p><span><br />RT: https://truthsocial.com/users/realDonaldTrump/statuses/117665528575591688</span></p><p>So true!</p><p>Quoted <a href="https://www.trumpstruth.org/statuses/43713">Donald J. Trump</a></p><blockquote><p>the quoted words</p></blockquote>',
+      '<archive:reference type="quote" originalId="117665528575591688"><media:content url="https://x/v.mov" medium="video"></media:content></archive:reference>')}
+    ${item("117674361691359583", "repost", '<p>RT someone</p>')}
+    ${item("117600000000000000", "original", "<p>deleted</p>", "removed")}
+  </channel></rss>`;
+  const [a, b, c, d, e] = parseArchiveFeed(xml);
+  assert.equal(a.id, "117674380753944672");
+  assert.equal(a.at, Date.parse("2026-11-25T01:02:33Z"));
+  assert.deepEqual(a.segs, ["Stocks are UP! ", {c: "SPY"}, " ", {u: "https://vimeo.com/1249782646/7e27022b54", d: "vimeo.com/1249782646/7e27022b5…"}]);
+  assert.ok(!a.media && a.name === "Donald J. Trump" && a.type === "original");
+  assert.deepEqual(b.segs, []); assert.ok(b.media);
+  assert.deepEqual(c.segs, ["So true!"]); assert.equal(c.quote, "117665528575591688"); assert.ok(!c.media, "the quoted post's video isn't this post's");
+  assert.equal(d.type, "repost");
+  assert.ok(e.removed);
+  assert.deepEqual(parseArchiveFeed("<html>not a feed</html>"), []);
 });

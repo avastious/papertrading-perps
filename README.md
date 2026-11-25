@@ -145,7 +145,7 @@ Traders can publicly **call** a position they hold, with a written thesis (`work
 
 A **Posts** tab beside the order book shows live posts on X and Truth Social from people who move markets: the President, the Fed, the Treasury Secretary, CEOs, fund managers, market news accounts (`worker/posts.js`, `aureous/web/posts.js`).
 
-- **Truth Social** is free and needs no key: the trading server reads the public posts of the accounts you choose (default `realDonaldTrump`, up to 20) straight from truthsocial.com's public API, at most every 30 seconds, asking only for posts newer than the last one it saw. Replies and reposts are skipped. It works even with no X key, so the Posts tab shows as soon as this is deployed. If Truth Social starts refusing automated reads, the admin card says so and the feed pauses (posts already read stay up); if it ever asks for sign-in, a Truth Social access token can be saved as the secret `TRUTH_TOKEN`. `TRUTH_API_URL` points it at the stand-in for tests.
+- **Truth Social** is free and needs no key, and works even with no X key. truthsocial.com refuses requests from servers like ours (checked Nov 25: every request got "403 refused"), so **Trump's posts come from [trumpstruth.org](https://www.trumpstruth.org)'s public RSS feed**, an archive of his Truth Social posts that updates within seconds. It's read at most every 30 seconds and asked "only if changed", reposts are skipped, and posts he deletes are removed here too. Links still go to the post on Truth Social. Other Truth Social accounts (up to 20 in all) are read from truthsocial.com's public API, which will probably be refused; the admin card shows that as a problem without stopping Trump's posts. If Truth Social ever lets signed-in reads through, a Truth Social access token can be saved as the secret `TRUTH_TOKEN`. For tests, `TRUMP_FEED_URL` and `TRUTH_API_URL` point both at the stand-in.
 
 - **How it reads X:** the trading server, never the browser, so one copy serves every visitor and the X key stays secret. Once a minute (every 20 seconds while someone has the feed open) it runs one search for all the accounts, asking only for posts newer than the last one it saw. Reposts and replies are skipped. Posts are kept for 3 days.
 - **What it costs:** X's API is pay-per-use: US$0.005 per post read, US$0.01 per profile read (names and pictures are read once a week). A check that finds nothing new costs nothing. A **daily cap** (default 100 posts, about US$0.50 a day) stops reading when it's reached. The real limit is the **spending limit you set in X's Developer Console**: with no credit left, X refuses and the feed pauses (posts already read stay up).
@@ -334,7 +334,7 @@ Trading server, run locally against stand-ins for Hyperliquid and Google's signi
 node tests/server/mock-hyperliquid.js &
 npx wrangler dev --test-scheduled --var HL_API_URL:http://127.0.0.1:8500 \
   --var JWKS_URL:http://127.0.0.1:8500/jwks --var ALLOWED_ORIGINS:http://127.0.0.1:8400 \
-  --var TRUTH_API_URL:http://127.0.0.1:8500/ts &      # keep Truth Social on the stand-in too
+  --var TRUTH_API_URL:http://127.0.0.1:8500/ts --var TRUMP_FEED_URL:http://127.0.0.1:8500/ts/feed &   # Truth Social on the stand-in too
 node tests/server/api.check.mjs          # sign-in, trading, every-minute job, cheating attempts, leaderboard
 node tests/server/milestones.check.mjs   # badges, spotlight, public profiles, hiding trades (run after api.check on a fresh server)
 node tests/server/admin.check.mjs        # owner-only dashboard (start wrangler dev with --var ADMIN_EMAILS:owner@example.com)
@@ -346,7 +346,7 @@ python3 tests/server/live_signatures.py /tmp/live-log.json <wallet>   # every si
 node tests/server/calls.check.mjs        # public calls: posting rules, live result, votes, closing, removal
 node tests/server/posts.check.mjs        # posts from X and Truth Social: accounts, only-new reads, daily cap, errors, switches, feed
                                          #   (fresh server with --var X_API_URL:http://127.0.0.1:8500/x --var X_BEARER_TOKEN:test-x-token
-                                         #    --var TRUTH_API_URL:http://127.0.0.1:8500/ts; see the file)
+                                         #    --var TRUTH_API_URL:http://127.0.0.1:8500/ts --var TRUMP_FEED_URL:http://127.0.0.1:8500/ts/feed; see the file)
 node tests/server/posts.browser.cjs      # the Posts tab on desktop and phone, and the admin card (Playwright; run scripts/dev.sh first)
 node tests/server/email.check.mjs        # real emails, email codes, name rules (needs a .dev.vars pointing email + Firebase admin at the stand-in; see the file's header)
 ```

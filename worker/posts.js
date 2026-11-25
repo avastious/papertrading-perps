@@ -20,10 +20,15 @@ const KEEP_MS = 3 * 86400000, KEEP_ROWS = 400, FEED_SIZE = 60, PROFILE_MS = 7 * 
 const MIN_GAP = 15000, VIEWER_MS = 120000, ALARM_MS = 20000, QUERY_MAX = 480;
 const HANDLE_RE = /^[A-Za-z0-9_]{1,15}$/;
 
-// Truth Social: a Mastodon-style public API (no key, no cost). One request per account per check, asking only for
-// statuses newer than the last one seen; at most every 30s. TRUTH_API_URL overrides https://truthsocial.com for tests;
-// an optional TRUTH_TOKEN secret is sent if Truth Social ever starts asking for sign-in.
+// Truth Social: free, no key, at most every 30s.
+// - Trump's posts come from trumpstruth.org's public RSS feed (an archive of his Truth Social posts, refreshed about
+//   every 15s), because truthsocial.com refuses requests from servers like ours. Asked with If-None-Match, so an
+//   unchanged feed costs almost nothing. TRUMP_FEED_URL overrides it for tests.
+// - Any other account is read from truthsocial.com's Mastodon-style public API, one request per account asking only
+//   for newer statuses. TRUTH_API_URL overrides https://truthsocial.com for tests; an optional TRUTH_TOKEN secret is
+//   sent if Truth Social ever lets signed-in reads through.
 export const DEFAULT_TRUTH = ["realDonaldTrump"];
+const ARCHIVE_HANDLE = "realdonaldtrump", ARCHIVE_ID = "ts:archive:realDonaldTrump";
 export const MAX_TRUTH = 20;
 const TRUTH_GAP = 30000, TRUTH_HANDLE_RE = /^[A-Za-z0-9_]{1,30}$/;
 
@@ -132,6 +137,28 @@ export function htmlSegments(html) {
   if (typeof out[out.length - 1] === "string") out[out.length - 1] = out[out.length - 1].replace(/\s+$/, "");
   if (typeof out[0] === "string") out[0] = out[0].replace(/^\s+/, "");
   return out.filter(x => x !== "");
+}
+
+// trumpstruth.org's RSS feed -> posts. Reposts are dropped (as on X); the quoted part of a quote post becomes the
+// "Quoting a post" marker; "View image/video" links become the Photo marker; removed posts are flagged.
+export function parseArchiveFeed(xml) {
+  const tag = (it, name) => { const m = new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(it); return m ? m[1].trim() : ""; };
+  const out = [];
+  for (const [, item] of String(xml || "").matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const own = item.split("<archive:reference")[0];
+    const id = tag(own, "truth:originalId");
+    if (!/^\d{1,25}$/.test(id)) continue;
+    const d = /<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/.exec(own);
+    let html = d ? d[1] : entity(tag(own, "description")), media = /<media:content/.test(own);
+    html = html.replace(/<p>\s*(Quoted|Reposted)\s+<a[\s\S]*$/i, "").replace(/<blockquote[\s\S]*?<\/blockquote>/gi, "")
+      .replace(/RT:?\s*https:\/\/truthsocial\.com\/[^\s<]*/g, "")
+      .replace(/<a[^>]*>\s*View (image|video)\s*<\/a>/gi, () => { media = true; return ""; });
+    const q = /<archive:reference[^>]*type="quote"[^>]*originalId="(\d+)"/.exec(item);
+    out.push({id, at: Date.parse(tag(own, "pubDate")) || 0, type: tag(own, "archive:postType") || "original",
+              removed: tag(own, "archive:removed") === "true", name: entity(tag(own, "dc:creator")).replace(/^<!\[CDATA\[|\]\]>$/g, ""),
+              segs: htmlSegments(html), media, quote: q ? q[1] : null});
+  }
+  return out;
 }
 
 const day = t => new Date(t).toISOString().slice(0, 10), month = t => new Date(t).toISOString().slice(0, 7);
@@ -278,57 +305,113 @@ export const postsMethods = {
   async fetchTruth(force) {
     const now = Date.now(), st = this.truthState();
     if (!force && now - (st.lastRun || 0) < TRUTH_GAP) return {skipped: "recent"};
-    if (!force && st.pausedUntil && now < st.pausedUntil) return {skipped: "paused"};
     st.lastRun = now;
-    let added = 0;
-    try {
-      const handles = this.truthAccounts(), lower = new Set(handles.map(h => h.toLowerCase()));
-      st.missing = st.missing.filter(h => lower.has(h.toLowerCase()));
-      const known = new Map(this.sql.exec("SELECT id, handle, updated FROM x_users WHERE src = 'ts'").toArray().map(r => [r.handle.toLowerCase(), r]));
-      for (const h of handles) {
-        if (st.missing.some(m => m.toLowerCase() === h.toLowerCase())) continue;
-        let u = known.get(h.toLowerCase());
-        if (!u || now - u.updated > PROFILE_MS) {         // look the account up: its id, name and picture
-          let a;
-          try { a = await this.truthGet("/api/v1/accounts/lookup", {acct: h}); }
-          catch (e) { if (e.status === 404) { st.missing.push(h); continue; } throw e; }
-          if (!a || !a.id) { st.missing.push(h); continue; }
-          const id = "ts:" + a.id, avatar = /^https:\/\//.test(a.avatar || "") && !/missing\.png/.test(a.avatar) ? String(a.avatar) : "";
-          this.sql.exec(`INSERT INTO x_users (id, handle, name, avatar, verified, updated, src) VALUES (?, ?, ?, ?, ?, ?, 'ts')
-            ON CONFLICT(id) DO UPDATE SET handle = excluded.handle, name = excluded.name, avatar = excluded.avatar, verified = excluded.verified, updated = excluded.updated`,
-            id, String(a.username || h), stripTags(String(a.display_name || a.username || h)).slice(0, 60) || h, avatar, a.verified ? 1 : 0, now);
-          u = {id, handle: String(a.username || h), updated: now};
-        }
-        const acct = u.id.slice(3), since = st.since[acct];
-        const params = {exclude_replies: "true", exclude_reblogs: "true", limit: "20"};
-        if (since) params.since_id = since;
-        const list = await this.truthGet(`/api/v1/accounts/${encodeURIComponent(acct)}/statuses`, params);
-        if (!Array.isArray(list)) throw new Error("Truth Social sent something that isn't a list of posts.");
-        let top = since;
-        for (const t of list) {
-          if (!t || !t.id) continue;
-          const tid = String(t.id);
-          if (newer(tid, top)) top = tid;
-          if (t.reblog || t.in_reply_to_id) continue;
-          const created = Date.parse(t.created_at) || now;
-          if (created < now - KEEP_MS) continue;
-          const segs = htmlSegments(t.content || ""), media = (t.media_attachments || []).length > 0;
-          if (!segs.length && !media) continue;
-          const quote = t.quote_id || (t.quote && t.quote.id);
-          const res = this.sql.exec(`INSERT OR IGNORE INTO posts (id, author, created, segs, media, quote, fetched, src) VALUES (?, ?, ?, ?, ?, ?, ?, 'ts')`,
-            "ts:" + tid, u.id, created, JSON.stringify(segs), media ? 1 : 0, quote ? String(quote) : null, now);
-          added += res.rowsWritten ? 1 : 0;
-        }
-        if (top) st.since[acct] = top;
+    const handles = this.truthAccounts(), lower = new Set(handles.map(h => h.toLowerCase()));
+    st.missing = st.missing.filter(h => lower.has(h.toLowerCase()));
+    let added = 0, ok = false;
+    const errors = [];
+    // Trump, from the archive feed
+    st.archive = st.archive || {};
+    if (lower.has(ARCHIVE_HANDLE) && (force || !(st.archive.pausedUntil > now))) {
+      try { added += await this.fetchTrumpArchive(st.archive, now); ok = true; st.archive.error = null; st.archive.pausedUntil = 0; }
+      catch (e) {
+        st.archive.error = e.message; st.archive.pausedUntil = now + (e.status === 429 ? 5 * 60000 : 120000);
+        console.error("truth archive", e.message);
       }
-      st.lastOk = Date.now(); st.error = null; st.pausedUntil = 0;
-    } catch (e) {
-      st.error = e.message; st.errorAt = Date.now();
-      st.pausedUntil = Date.now() + (e.status === 429 ? 5 * 60000 : e.status === 401 || e.status === 403 ? 15 * 60000 : 120000);
-      console.error("truth", e.message);
     }
+    if (lower.has(ARCHIVE_HANDLE) && st.archive.error) errors.push(st.archive.error);
+    // everyone else, straight from truthsocial.com
+    const others = handles.filter(h => h.toLowerCase() !== ARCHIVE_HANDLE);
+    st.direct = st.direct || {};
+    if (others.length && (force || !(st.direct.pausedUntil > now))) {
+      try { added += await this.fetchTruthDirect(st, others, now); ok = true; st.direct.error = null; st.direct.pausedUntil = 0; }
+      catch (e) {
+        st.direct.error = (lower.has(ARCHIVE_HANDLE) ? "Accounts other than Trump: " : "") + e.message;
+        st.direct.pausedUntil = now + (e.status === 429 ? 5 * 60000 : e.status === 401 || e.status === 403 ? 15 * 60000 : 120000);
+        console.error("truth", e.message);
+      }
+    }
+    if (others.length && st.direct.error) errors.push(st.direct.error);
+    if (ok) st.lastOk = Date.now();
+    st.error = errors.join(" ") || null;
+    if (st.error) st.errorAt = Date.now();
     this.putSetting("truth_state", st);
     return {added, error: st.error || undefined};
+  },
+
+  async fetchTrumpArchive(ast, now) {
+    const url = this.env.TRUMP_FEED_URL || "https://www.trumpstruth.org/feed";
+    const headers = {Accept: "application/rss+xml, application/xml;q=0.9", "User-Agent": "Aureous/1.0 (+https://aureous.trade)"};
+    if (ast.etag) headers["If-None-Match"] = ast.etag;
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 10000);
+    let r, xml;
+    try { r = await fetch(url, {headers, signal: ctl.signal}); xml = r.status === 200 ? await r.text() : ""; }
+    catch (e) { throw new Error("Couldn't reach trumpstruth.org (Trump's posts)" + (e.name === "AbortError" ? ", timed out." : ".")); }
+    finally { clearTimeout(timer); }
+    if (r.status === 304) return 0;
+    if (r.status !== 200 || !/<rss[\s>]/.test(xml)) {
+      const err = new Error(r.status === 200 ? "trumpstruth.org sent something that isn't its usual feed (Trump's posts)." :
+        `trumpstruth.org ${r.status === 429 ? "says too many requests" : "error " + r.status} (Trump's posts); trying again shortly.`);
+      err.status = r.status; throw err;
+    }
+    const items = parseArchiveFeed(xml);
+    let added = 0, top = ast.top || null;
+    const name = (items.find(i => i.name) || {}).name || "Donald J. Trump";
+    this.sql.exec(`INSERT INTO x_users (id, handle, name, avatar, verified, updated, src) VALUES (?, 'realDonaldTrump', ?, '', 1, ?, 'ts')
+      ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated = excluded.updated`, ARCHIVE_ID, name.slice(0, 60), now);
+    for (const it of items) {
+      if (it.removed) { if (this.sql.exec("DELETE FROM posts WHERE id = ?", "ts:" + it.id).rowsWritten) this.postsCache = null; continue; }
+      if (newer(it.id, top)) top = it.id;
+      if ((ast.top && !newer(it.id, ast.top)) || it.type === "repost" || it.at < now - KEEP_MS || (!it.segs.length && !it.media && !it.quote)) continue;
+      const res = this.sql.exec(`INSERT OR IGNORE INTO posts (id, author, created, segs, media, quote, fetched, src) VALUES (?, ?, ?, ?, ?, ?, ?, 'ts')`,
+        "ts:" + it.id, ARCHIVE_ID, it.at || now, JSON.stringify(it.segs), it.media ? 1 : 0, it.quote, now);
+      added += res.rowsWritten ? 1 : 0;
+    }
+    ast.top = top;
+    ast.etag = r.headers.get("ETag") || null;
+    return added;
+  },
+
+  async fetchTruthDirect(st, handles, now) {
+    let added = 0;
+    const known = new Map(this.sql.exec("SELECT id, handle, updated FROM x_users WHERE src = 'ts' AND id != ?", ARCHIVE_ID).toArray().map(r => [r.handle.toLowerCase(), r]));
+    for (const h of handles) {
+      if (st.missing.some(m => m.toLowerCase() === h.toLowerCase())) continue;
+      let u = known.get(h.toLowerCase());
+      if (!u || now - u.updated > PROFILE_MS) {         // look the account up: its id, name and picture
+        let a;
+        try { a = await this.truthGet("/api/v1/accounts/lookup", {acct: h}); }
+        catch (e) { if (e.status === 404) { st.missing.push(h); continue; } throw e; }
+        if (!a || !a.id) { st.missing.push(h); continue; }
+        const id = "ts:" + a.id, avatar = /^https:\/\//.test(a.avatar || "") && !/missing\.png/.test(a.avatar) ? String(a.avatar) : "";
+        this.sql.exec(`INSERT INTO x_users (id, handle, name, avatar, verified, updated, src) VALUES (?, ?, ?, ?, ?, ?, 'ts')
+          ON CONFLICT(id) DO UPDATE SET handle = excluded.handle, name = excluded.name, avatar = excluded.avatar, verified = excluded.verified, updated = excluded.updated`,
+          id, String(a.username || h), stripTags(String(a.display_name || a.username || h)).slice(0, 60) || h, avatar, a.verified ? 1 : 0, now);
+        u = {id, handle: String(a.username || h), updated: now};
+      }
+      const acct = u.id.slice(3), since = st.since[acct];
+      const params = {exclude_replies: "true", exclude_reblogs: "true", limit: "20"};
+      if (since) params.since_id = since;
+      const list = await this.truthGet(`/api/v1/accounts/${encodeURIComponent(acct)}/statuses`, params);
+      if (!Array.isArray(list)) throw new Error("Truth Social sent something that isn't a list of posts.");
+      let top = since;
+      for (const t of list) {
+        if (!t || !t.id) continue;
+        const tid = String(t.id);
+        if (newer(tid, top)) top = tid;
+        if (t.reblog || t.in_reply_to_id) continue;
+        const created = Date.parse(t.created_at) || now;
+        if (created < now - KEEP_MS) continue;
+        const segs = htmlSegments(t.content || ""), media = (t.media_attachments || []).length > 0;
+        if (!segs.length && !media) continue;
+        const quote = t.quote_id || (t.quote && t.quote.id);
+        const res = this.sql.exec(`INSERT OR IGNORE INTO posts (id, author, created, segs, media, quote, fetched, src) VALUES (?, ?, ?, ?, ?, ?, ?, 'ts')`,
+          "ts:" + tid, u.id, created, JSON.stringify(segs), media ? 1 : 0, quote ? String(quote) : null, now);
+        added += res.rowsWritten ? 1 : 0;
+      }
+      if (top) st.since[acct] = top;
+    }
+    return added;
   },
 
   // GET /api/posts?after=<id>: the newest posts (or only those newer than `after`), for the site to show.
@@ -386,6 +469,7 @@ export const postsMethods = {
     return {
       ok: true, key: !!this.postsToken(), on: this.postsMaster(), live: this.postsOn(), x_on: this.setting("x_on", true) !== false, x_live: this.xOn(),
       truth: {on: this.setting("truth_on", true) !== false, live: this.truthOn(), last_ok: ts.lastOk || 0, error: ts.error || null, error_at: ts.errorAt || 0,
+        via_archive: this.truthAccounts().some(h => h.toLowerCase() === ARCHIVE_HANDLE),
         stored: this.sql.exec("SELECT COUNT(*) AS n FROM posts WHERE src = 'ts'").one().n,
         accounts: this.truthAccounts().map(h => { const u = tsUsers.get(h.toLowerCase());
           return {handle: h, name: u ? u.name : null, status: tsMissing.has(h.toLowerCase()) ? "not found" : u ? "ok" : "waiting"}; })},
@@ -444,7 +528,7 @@ export const postsMethods = {
     }
     if (body.refresh) {
       const r = await this.fetchPosts(true);
-      const say = (name, x) => x.skipped === "off" ? null : x.error ? `Checked ${name}: ${x.error}` : `Checked ${name}: ${x.added} new post${x.added === 1 ? "" : "s"}.`;
+      const say = (name, x) => x.skipped === "off" ? null : `Checked ${name}: ${x.added ? `${x.added} new post${x.added === 1 ? "" : "s"}.` : x.error ? "" : "0 new posts."}${x.error ? (x.added ? " " : "") + x.error : ""}`;
       if (r.skipped === "off") messages.push("Posts are off, or there's nothing to read (no X key and Truth Social off).");
       else messages.push(...[say("X", r.x), say("Truth Social", r.truth)].filter(Boolean));
     }

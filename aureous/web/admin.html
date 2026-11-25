@@ -110,7 +110,7 @@ dialog::backdrop{background:rgba(5,8,12,.65)}
       <small>A Posts tab beside the order book shows new posts from the accounts below, checked every minute (every 20 to 30 seconds while someone is watching). Reposts and replies are skipped. Turning this off stops reading both sites and hides the tab.</small></span></label>
     <h3 style="margin:18px 0 6px;font-size:14px">Truth Social <span class="muted" style="font-weight:400">· free, no key needed</span></h3>
     <label class="switch-row"><input type="checkbox" id="tsOn"><span><b>Read Truth Social</b>
-      <small>Reads the public posts of the accounts below straight from truthsocial.com. Costs nothing.</small></span></label>
+      <small>Costs nothing. Trump's posts come from <a href="https://www.trumpstruth.org" target="_blank" rel="noopener">trumpstruth.org</a>, a public archive of his Truth Social posts that updates within seconds, because Truth Social blocks servers like ours. Other accounts are read from truthsocial.com directly, which may be refused.</small></span></label>
     <div class="set-fields" style="align-items:flex-start">
       <label style="flex:1 1 320px"><span>Truth Social accounts <small>(usernames, links or @names; up to 20)</small></span>
         <textarea id="tsAccounts" rows="2" spellcheck="false" autocomplete="off" style="width:100%;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:var(--text);font:inherit;font-size:13px;line-height:1.5"></textarea></label>
@@ -314,7 +314,8 @@ function renderPosts(){
     li("Posts on the site (both sites)", num(p.stored)),
   ].join("");
   $("#tsStatus").innerHTML = [
-    li("Status", t.live ? (t.error ? `<span class="down">Paused: ${esc(t.error)}</span>` : `<span class="up">Live</span>`) : "Off"),
+    li("Status", !t.live ? "Off" : t.last_ok && Date.now() - t.last_ok < 5 * 60000 ? `<span class="up">Live</span>` : t.error ? `<span class="down">Paused</span>` : "Starting…"),
+    ...(t.live && t.error ? [li("Problem", `<span class="down">${esc(t.error)}</span>`)] : []),
     li("Last checked Truth Social", t.last_ok ? when(t.last_ok) : "never"),
     li("Truth Social posts on the site", num(t.stored || 0)),
   ].join("");
