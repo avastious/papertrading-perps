@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works | Aureous</title>
+<meta name="description" content="How Aureous fills orders, charges fees and funding, handles liquidation and ranks the leaderboard.">
+<meta property="og:title" content="How it works | Aureous">
+<meta property="og:description" content="How Aureous fills orders, charges fees and funding, handles liquidation and ranks the leaderboard.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Aureous">
+<meta property="og:url" content="https://aureous.trade/how-it-works.html">
+<meta property="og:image" content="https://aureous.trade/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@aureoustrade">
+<meta name="twitter:image" content="https://aureous.trade/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15.5' fill='%23131418'/%3E%3Ccircle cx='16' cy='16' r='14.2' fill='none' stroke='%23D1A85A' stroke-width='1.6'/%3E%3Ctext x='16' y='22.4' font-family='Georgia,serif' font-size='17' text-anchor='middle' fill='%23D1A85A'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0C0D10">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="theme.js?v=4db7af7"></script>
+<link rel="stylesheet" href="site.css?v=4db7af7">
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="./" aria-label="Aureous home"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="16" r="12.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-dasharray="0 2.58" stroke-linecap="round"/><text x="16" y="21.3" text-anchor="middle" font-family="Cinzel,Georgia,serif" font-weight="600" font-size="14.5" fill="currentColor">A</text></svg><span class="wordmark">Aureous</span></a>
+  <nav aria-label="Site"><a href="./">Trade</a><a href="replay.html">Replay</a><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html" aria-current="page">How it works</a><a href="about.html">About</a></nav>
+  <a class="btn primary" href="./">Start trading</a>
+</header>
+<main>
+<h1>How Aureous works</h1>
+<p class="lede">Everything you need to start, and exactly how the simulation treats your orders.</p>
+
+<h2>Getting started</h2>
+<ol class="steps">
+  <li><b>Sign in</b>with Google or an email address. Your account opens with $10,000 of paper money.</li>
+  <li><b>Pick a market</b>by clicking the market name above the chart (BTC to start). Search or sort the list, and star the ones you trade most to keep them at the top.</li>
+  <li><b>Choose a direction and size</b>in the order panel. Long if you think the price will rise, short if you think it will fall. By default you enter your <b>margin</b>, the part of your own money you're putting in, and leverage multiplies it: $1,000 at 20x opens a $20,000 position. Tap the box next to the size to enter the position value or a number of coins instead. Max uses everything available, leaving room for the fee.</li>
+  <li><b>Protect the trade</b>with a take-profit and a stop-loss. They're drawn on the chart and fire automatically.</li>
+  <li><b>Watch it and close it</b>from the Positions tab, all at once or half at a time. Your result counts towards the leaderboard straight away.</li>
+</ol>
+
+<h2>Questions</h2>
+<details><summary>Is any real money involved?</summary><div><p>No. Every balance is pretend, nothing is sent to Hyperliquid, and you never connect a wallet. There's nothing to deposit and nothing to win or lose.</p></div></details>
+<details><summary>Where do prices come from?</summary><div><p>Live from Hyperliquid's public market data: mark prices, order books, candles and funding rates. They're the same numbers you'd see on Hyperliquid itself, give or take a second or two.</p></div></details>
+<details><summary>How are my orders filled?</summary><div>
+  <p><strong>Market orders</strong> fill against the real order book at that moment, level by level, so bigger orders get a worse average price, as they would on the real exchange. Like Hyperliquid, a market order won't fill more than 5% away from the mark price. If the book is too thin, you get a partial fill.</p>
+  <p><strong>Limit orders</strong> that would cross the book fill immediately as taker orders. Otherwise they rest and fill at your price once the market reaches it. Post-only orders that would cross are rejected.</p>
+</div></details>
+<details><summary>What fees do I pay?</summary><div><p>Hyperliquid's base rates: 0.045% of the order's value when you take liquidity (market orders and crossing limits), and 0.015% when you provide it (resting limit orders).</p></div></details>
+<details><summary>How do leverage and margin work?</summary><div><p>All positions share one balance (cross margin). Leverage is set per market, from 1x to 1000x, and decides how much margin a position ties up: a $5,000 position at 10x uses $500. Hyperliquid caps each market (40x on BTC, less on most coins), but because this is paper money Aureous lets you go further. Higher leverage leaves more of your balance free, but it doesn't change your profit or loss per dollar of position.</p></div></details>
+<details><summary>When do I get liquidated?</summary><div><p>Each market has a maintenance margin of half its initial margin at Hyperliquid's maximum leverage. For a 40x market that's 1.25% of the position's value. Above that maximum, a position's maintenance margin is half the margin you put up: at 1000x that's 0.05%, so a 0.05% move against you, about $40 on BTC, closes it. The opening fee alone (0.045% of the position) is then almost half your margin, so very high leverage is mostly a fast way to get liquidated. If your account's equity falls below the total maintenance margin of your positions, every position is closed at the mark price. The Positions tab shows the price where that would happen, if there is one.</p></div></details>
+<details><summary>What is funding?</summary><div><p>Every hour, one side of each market pays the other to keep the perpetual's price close to the underlying asset. When the rate is positive, longs pay shorts; when it's negative, shorts pay longs. Aureous uses Hyperliquid's actual hourly rates, so holding a position for days can cost or earn real (paper) money.</p></div></details>
+<details><summary>Do stops and limits work when I close the page?</summary><div><p>Yes. The Aureous server checks every account once a minute and fills any take-profits, stop-losses and limit orders that have been reached, settles funding and handles liquidations. Because the check runs once a minute, a fast move can fill a stop at a worse price than you set, much like a real market gapping through it.</p></div></details>
+<details><summary>How does the leaderboard work?</summary><div><p>Everyone starts with $10,000. Accounts are ranked by current value: cash balance plus the profit or loss of open positions at the mark price. The board refreshes every 20 seconds or so. Choose the name others see from the account menu; your email is never shown.</p></div></details>
+<details><summary>Why do I have to confirm my email?</summary><div><p>To keep the leaderboard to real people, accounts made with an email and password have to confirm the address before trading: we email a 6-digit code (or a link) to enter. Throwaway "temporary inbox" addresses can't be used. Accounts that sign in with Google are already confirmed.</p></div></details>
+<details><summary>I forgot my password</summary><div><p>Press <b>Sign in</b>, then <b>Forgot password?</b>, and enter your email. We'll email you a 6-digit code (or a link); enter it with your new password, of at least 8 characters, and you're signed straight in. Codes expire after 10 minutes and work once. If the email doesn't arrive within a minute or two, check your spam folder.</p></div></details>
+<details><summary>What names are allowed?</summary><div><p>Leaderboard names, clan names and clan tags are checked automatically: no swearing, slurs or sexual words (including spaced-out or l33t-speak spellings), and nothing that looks like an official Aureous account, such as "Aureous Admin". If a name breaks the rules it's refused; existing names that break them are changed to "Trader" and a number, and you can pick a new one.</p></div></details>
+<details><summary>Can I draw on the chart?</summary><div><p>Yes. The toolbar down the left edge of the chart has a trend line, ray, extended line, horizontal and vertical lines, a rectangle, Fibonacci retracement, a measure tool (price change, percentage and time between two points) and text. Pick a tool, then click once for a horizontal or vertical line or text, or twice for the others. The magnet snaps points to a candle's open, high, low or close.</p><p>Click a drawing to select it: drag it or its handles to move it, change its colour, or press Delete. Ctrl+Z (Cmd+Z on a Mac) undoes. Drawings are saved for each market in your browser and stay in place when you change timeframe. Shortcuts: Alt+T trend line, Alt+H horizontal line, Alt+V vertical line, Alt+R rectangle, Alt+F Fibonacci, Alt+M measure, Esc to stop drawing.</p></div></details>
+<details><summary>What's the Posts tab?</summary><div><p>Beside the order book, <b>Posts</b> shows new posts on X from people whose words move markets: central bankers, officials, company bosses, well-known investors and market news accounts. It updates on its own, so you can see news land and watch the price react.</p><p>Tap a cashtag like <b>$NVDA</b> or <b>$BTC</b> to open that market, or switch the filter to the market you're on to see only posts about it. Each post links to the original on X.</p><p>These are other people's posts, shown as they wrote them. Aureous doesn't write, check or endorse them, and they aren't financial advice.</p></div></details>
+<details><summary>How close am I to being liquidated?</summary><div><p>Every open position shows how far the price can move against it before it's liquidated, for example <b>"2.1% away"</b>: amber under 10%, red under 3%. The same number is on the liquidation line on the chart. Before you place an order, the order form shows where the new position would be liquidated, and if that's less than 3% away Aureous asks you to confirm first. Because all your positions share one balance, opening or losing on one moves the liquidation price of the others too.</p></div></details>
+<details><summary>Can I get an alert when a price is hit?</summary><div><p>Yes. Press the bell at the top (or <b>Alert</b> above the chart), enter a price and press <b>Add alert</b>. You can also turn on a <b>liquidation warning</b> for when any position gets within, say, 5% of its liquidation price. Alerts are checked every minute even when the site is closed. They show on the site, as a notification on your device if you allow it, and by email if you tick <b>Also email me</b> (at most 10 alert emails a day). Up to 20 price alerts can wait at once.</p></div></details>
+<details><summary>What's the "Next big release" countdown?</summary><div><p>It counts down to the next US economic release that tends to move every market: Fed rate decisions, inflation (CPI and PCE), the jobs report, GDP. Click it for the week's calendar with forecasts, in your own time zone. The calendar comes from Forex Factory's weekly calendar, and Fed meeting dates from the Federal Reserve.</p></div></details>
+<details><summary>What are the dots on the chart?</summary><div><p>News. A gold dot marks a post from Donald Trump, the Fed or the Treasury; a grey dot a post that mentions the market you're looking at; a square a big economic release (labelled CPI, Jobs, Fed and so on). Hover over one to read it. Posts are kept for 3 days, so the dots cover recent days. The <b>News</b> button above the chart hides or shows them.</p></div></details>
+<details><summary>What is the monthly season?</summary><div><p>Alongside the all-time leaderboard, <b>This month</b> ranks traders by their return since the 1st of the month, so a newcomer has the same chance as someone who's been trading for a year. Make a trade to join. When the month ends, the top 3 win a gold, silver or bronze trophy that stays on their profile and next to their name, and everyone starts the next season at 0%. Resetting your account restarts your season from $10,000.</p></div></details>
+<details><summary>Can I follow other traders?</summary><div><p>Yes. Open a trader's profile and press <b>Follow</b>. You'll get a notification whenever they open a new position (with the market, direction, leverage and entry price), as long as they haven't hidden their trades. Everyone you follow is listed under <b>Leaderboard → Following</b>. Profiles show how many followers a trader has.</p></div></details>
+<details><summary>What's the Journal?</summary><div><p>The <b>Journal</b> tab under the chart sums up your trading: win rate, average win and average loss, profit factor, longs against shorts, your best and worst markets and your average leverage, with a plain-English note on what stands out. You can also write a private note on any trade (why you took it, what you'd do differently). Notes are only visible to you.</p></div></details>
+<details><summary>Can I practise on a past day?</summary><div><p>Yes, on the <a href="replay.html">Replay</a> page. Pick a market and a day, press Play and trade as the day unfolds, sped up, with $10,000 of practice money. It uses that day's real prices; inside each candle the price runs from the open through the low and high to the close, so stops and liquidations trigger as they would have. Recent days replay minute by minute; older days with bigger candles, because Hyperliquid only keeps the most recent 5,000 candles of each size. Replays never touch your account or the leaderboard.</p></div></details>
+<details><summary>What are calls?</summary><div><p>A call is a position you hold, posted publicly with your reasons. Press <b>Call</b> next to an open position (or tick <b>Call it publicly</b> on the order form) and write your thesis: what you expect to happen and what would prove you wrong.</p><p>Your real entry price and leverage go with it, and the result updates live until you close the position, when the call closes at your exit price. Calls can't be edited or deleted, so everyone's record is honest. Other traders can agree or disagree, and you can sort calls by the best results of the week. They're shown in the <b>Calls</b> tab and on your profile, even if your trades are hidden.</p><p>Calls are opinions about paper trades, not financial advice. Links, handles and contact details aren't allowed.</p></div></details>
+<details><summary>What is Live mode?</summary><div><p>When it's switched on, a <b>Paper / Live</b> switch appears on the order form. Live mode trades on Hyperliquid's <b>test network</b> with your own crypto wallet (such as Rabby or MetaMask): the orders are real Hyperliquid orders, but the money is test USDC with no value, which you can claim from Hyperliquid's testnet faucet.</p><p>Aureous never holds your money or your wallet's keys. The first time, your wallet approves a trading key for your browser that can place trades but can never withdraw. Live trades don't count on the Aureous leaderboard, and testnet prices are separate from the real market on the chart.</p></div></details>
+<details><summary>Can I trade Anthropic?</summary><div><p>Yes, two ways, both pre-IPO markets run by other teams on Hyperliquid. Anthropic isn't a listed company yet, so these follow where traders think it's worth, not a stock exchange price. Search "anthropic" in the markets list.</p><ul><li><b>ANTH</b> (run by Entropy) is priced as Anthropic's valuation in billions of dollars: 1,950 means $1.95 trillion.</li><li><b>ANT</b> (run by trade.xyz) is priced per share.</li></ul><p>Their order books are thin, so prices can jump and big market orders fill at worse prices. Aureous can allow more leverage than these teams do; the order form warns you when you go past their limit.</p></div></details>
+<details><summary>Can I trade stocks and the S&amp;P 500?</summary><div><p>Yes. Aureous lists every market run by trade.xyz on Hyperliquid: big US and international stocks (Apple, Nvidia, Tesla, Microsoft, SpaceX and many more), indices like the S&amp;P 500 (<b>SP500</b>) and Nasdaq 100 (<b>XYZ100</b>), plus gold, oil and other commodities. Open the market list and pick <b>Stocks, indices &amp; more</b>, or search a company name.</p><p>These are perpetual contracts that follow the price, not real shares, and they trade 24/7, so prices can move while the stock market is closed. Leverage is up to whatever trade.xyz allows for each one (50x on the S&amp;P 500, usually 10x to 20x on stocks), or more when Aureous's leverage switch is on. Everything else works as on any other market: one account balance, the same fees and the same liquidation rules.</p></div></details>
+<details><summary>Can I put my own picture or video behind my PnL card?</summary><div><p>Yes. Press Share on a position, trade or profile, then <b>Use my image or video</b>. The whole picture shows by default. Use Zoom to fill more of the card, drag the picture to choose which part shows, and use Darken to keep the numbers readable. With an image you download a picture. With a video you can download a video up to 15 seconds long with your card over it (MP4 in Chrome, Edge and Safari), with the video's sound unless you switch it off, ready to post on X. Your file stays on your device.</p></div></details>
+<details><summary>What are clans?</summary><div><p>Clans let you trade against your friends. Start one from the account menu with a name and a short tag, then send your friends the invite link. Everyone still trades their own $10,000. The clan page ranks members against each other, and the Clans view of the leaderboard ranks clans by their members' average account value. A clan needs at least 2 members to be ranked, and it can have up to 50.</p><p>You can be in one clan at a time. The leader can rename the clan, make a new invite link (the old one stops working) and remove members. If the leader leaves, the longest-standing member takes over. When the last member leaves, the clan closes.</p></div></details>
+
+<details><summary>Can I see other traders' positions?</summary><div><p>Yes. Click any name on the leaderboard to open their profile: account value, best value, win rate, badges, open positions and their last 50 trades. Profit and loss on open positions updates live. Traders can hide their positions and trades from the account menu; their summary and badges stay visible.</p></div></details>
+<details><summary>What are badges?</summary><div>
+  <p>Badges mark account-value milestones. Each is named after a Roman coin:</p>
+  <ul>
+    <li><strong>Sestertius</strong> at $20,000</li>
+    <li><strong>Denarius</strong> at $50,000</li>
+    <li><strong>Aureus</strong> at $100,000</li>
+    <li><strong>Solidus</strong> at $250,000</li>
+    <li><strong>Imperium</strong> at $1,000,000</li>
+  </ul>
+  <p>Account value includes open positions, so a badge counts the moment your value crosses the line. The server checks at least once a minute and whenever you trade. Badges are permanent, even after a reset. Your account panel shows a progress bar towards the next one.</p>
+</div></details>
+<details><summary>What do badges unlock?</summary><div>
+  <p>Every new badge puts you in the <strong>spotlight for 7 days</strong>: your row on the leaderboard is highlighted, and you're listed under recent milestones.</p>
+  <p>Some unlocks are permanent:</p>
+  <ul>
+    <li>Reaching Denarius ($50,000) unlocks the <strong>Tyrian purple</strong> accent colour in settings.</li>
+    <li>Reaching Aureus ($100,000) turns your name gold on the leaderboard.</li>
+  </ul>
+  <p>Unlocks are cosmetic, so they never change how trades are filled.</p>
+</div></details>
+<details><summary>Can I start again?</summary><div><p>Yes. "Reset account" closes everything, clears your history and puts your account back to $10,000. Your leaderboard position starts over from there. Badges you've earned stay, and your profile shows how many times you've reset.</p></div></details>
+<details><summary>How do I delete my account?</summary><div><p>Open the account menu (your name, top right) and choose Delete account. After you confirm it's you, your trading data is removed from the Aureous server and your login is deleted.</p></div></details>
+<details><summary>Can I change how it looks?</summary><div><p>Yes. The gear icon in the app opens settings for a light or dark theme, accent colour, price colours (including a colour-blind option and red-for-up), a more compact layout, order confirmations, and whether to show the order book. Settings are saved in your browser.</p></div></details>
+<details><summary>Does it work on my phone?</summary><div><p>Yes. The layout stacks on small screens, and your account follows you once you're signed in.</p></div></details>
+<details><summary>Where does the simulation differ from the real exchange?</summary><div><ul>
+  <li>Resting limit orders fill completely once the price reaches them; your place in the queue isn't modelled.</li>
+  <li>Liquidation closes positions at the mark price, with no liquidation fee or partial liquidation.</li>
+  <li>There's no isolated margin, no fee discounts and no builder-deployed markets.</li>
+  <li>Orders you place yourself are filled at once; orders that wait for a price are checked once a minute.</li>
+</ul></div></details>
+<details><summary>Is this financial advice?</summary><div><p>No. Aureous is a practice tool. Results with paper money don't predict results with real money, where emotions, liquidity and risk all behave differently.</p></div></details>
+</main>
+<footer class="site-foot">
+  <nav aria-label="Footer"><a href="./">Trade</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="https://x.com/aureoustrade" rel="me">X @aureoustrade</a></nav>
+  <span class="note">Paper trading only. Not financial advice. Not affiliated with Hyperliquid.</span>
+</footer>
+</body>
+</html>

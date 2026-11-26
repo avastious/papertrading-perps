@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replay a past day | Aureous</title>
+<meta name="description" content="Practise trading on a past day's real Hyperliquid prices, sped up. Long, short, leverage, stops and liquidation work just like the live site.">
+<meta property="og:title" content="Replay a past day | Aureous">
+<meta property="og:description" content="Practise trading on a past day's real prices, sped up.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Aureous">
+<meta property="og:url" content="https://aureous.trade/replay.html">
+<meta property="og:image" content="https://aureous.trade/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icons/icon-32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0C0D10">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="theme.js?v=4db7af7"></script>
+<link rel="stylesheet" href="site.css?v=4db7af7">
+<style>
+body{font-size:14px;line-height:1.45}
+main.rp{max-width:none;width:100%;margin:0}
+.rp{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;padding:12px clamp(10px,2vw,20px) 24px;flex:1}
+.rp-bar{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px}
+.rp-bar label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.box input,.box select{width:100%}
+.rp input,.rp select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:inherit;font-size:14px;min-width:0}
+.rp-bar .grow{flex:1}
+.rp-intro{font-size:12.5px;color:var(--muted);max-width:52ch;margin:0}
+.btn{cursor:pointer;font:inherit;font-weight:600;font-size:14px}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.long{background:var(--long);border-color:var(--long);color:#fff} .btn.short{background:var(--short);border-color:var(--short);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.rp-chart{background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;display:flex;flex-direction:column;min-height:460px;position:relative}
+.rp-play{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.rp-play .btn{padding:6px 12px;font-size:13px}
+.rp-clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;margin-left:auto}
+.rp-prog{height:3px;background:var(--line-soft)} .rp-prog i{display:block;height:100%;width:0;background:var(--accent)}
+#chart{flex:1;min-height:400px}
+.rp-msg{position:absolute;inset:50px 0 0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px;pointer-events:none}
+.rp-side{display:flex;flex-direction:column;gap:12px}
+.box{background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.box h2{margin:0;font-size:14px;font-weight:600}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.box label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+dl{display:grid;grid-template-columns:1fr auto;gap:5px 10px;margin:0;font-size:13px} dt{color:var(--muted)} dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.equity{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.up{color:var(--long)} .down{color:var(--short)} .muted{color:var(--muted)}
+.liqd{font-size:11px;margin-left:4px} .liqd.warn{color:#E0A63A} .liqd.danger{color:var(--short);font-weight:600}
+.log{max-height:220px;overflow:auto;font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+.log div{border-left:2px solid var(--line);padding-left:8px} .log .fill{border-color:var(--long)} .log .liquidation,.log .error{border-color:var(--short)}
+.result{border:1px solid var(--accent);background:var(--accent-wash)}
+.result b{font-size:22px}
+.note{font-size:12px;color:var(--faint);margin:0}
+@media (max-width:860px){ .rp{grid-template-columns:1fr} .rp-chart{min-height:380px} #chart{min-height:330px} }
+</style>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="./" aria-label="Aureous home"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="16" r="12.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-dasharray="0 2.58" stroke-linecap="round"/><text x="16" y="21.3" text-anchor="middle" font-family="Cinzel,Georgia,serif" font-weight="600" font-size="14.5" fill="currentColor">A</text></svg><span class="wordmark">Aureous</span></a>
+  <nav aria-label="Site"><a href="./">Trade</a><a href="replay.html" aria-current="page">Replay</a><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html">How it works</a></nav>
+  <a class="btn primary" href="./">Back to live trading</a>
+</header>
+<main class="rp">
+  <form class="rp-bar" id="setup">
+    <label>Market<select id="market" aria-label="Market"><option>BTC</option></select></label>
+    <label>Day<input type="date" id="day" required></label>
+    <button class="btn primary" id="load">Load day</button>
+    <button class="btn" type="button" id="random" title="A random day from the last month">Surprise me</button>
+    <span class="grow"></span>
+    <p class="rp-intro">Practise on a real past day, sped up. You get $10,000 of practice money; nothing here touches your Aureous account or the leaderboard.</p>
+  </form>
+  <section class="rp-chart" aria-label="Replay chart">
+    <div class="rp-play">
+      <button class="btn" type="button" id="play" disabled>Play</button>
+      <button class="btn" type="button" id="step" disabled title="One candle forward">Step</button>
+      <label class="muted" style="display:flex;gap:6px;align-items:center;font-size:12.5px">Speed<select id="speed" aria-label="Speed">
+        <option value="1000">1 candle a second</option><option value="400" selected>Fast</option><option value="120">Faster</option><option value="30">Fastest</option></select></label>
+      <span class="rp-clock" id="clock">Pick a market and a day</span>
+    </div>
+    <div class="rp-prog"><i id="prog"></i></div>
+    <div id="chart"></div>
+    <div class="rp-msg" id="msg">Pick a market and a day, then press Load day.</div>
+  </section>
+  <aside class="rp-side">
+    <div class="box" id="ticket">
+      <h2>Trade</h2>
+      <label>Margin (practice money)<input id="margin" inputmode="decimal" value="1000"></label>
+      <label>Leverage<select id="lev"></select></label>
+      <div class="row"><label>Take profit at<input id="tp" inputmode="decimal" placeholder="Optional"></label><label>Stop loss at<input id="sl" inputmode="decimal" placeholder="Optional"></label></div>
+      <div class="seg"><button class="btn long" type="button" data-side="buy" disabled>Long</button><button class="btn short" type="button" data-side="sell" disabled>Short</button></div>
+      <button class="btn" type="button" id="close" disabled>Close position</button>
+    </div>
+    <div class="box">
+      <h2>Practice account</h2>
+      <div class="equity" id="eq">$10,000.00</div>
+      <dl id="acct"></dl>
+    </div>
+    <div class="box result" id="result" hidden></div>
+    <div class="box"><h2>What happened</h2><div class="log" id="log"><div class="muted" style="border:0;padding:0">Your fills, stops and liquidations show here.</div></div></div>
+    <p class="note">Prices are Hyperliquid's real candles for that day. Inside each candle the price moves from the open to the low and high and on to the close, so stops and liquidations trigger as they would have. Fees and funding work like the live site.</p>
+  </aside>
+</main>
+<script src="lightweight-charts.js?v=4db7af7"></script>
+<script src="engine.js?v=4db7af7"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const A = window.Aureous, LC = window.LightweightCharts;
+const hl = new A.HyperliquidClient();
+const STEP = {"1m": 6e4, "5m": 3e5, "15m": 9e5, "1h": 36e5};
+const DAY = 864e5, START = 10000;
+let C = window.AureousSettings ? AureousSettings.apply() : {long: "#26B58A", short: "#E5575E", accent: "#D1A85A", muted: "#9B978F", line: "#272A31", lineSoft: "#1E2026", panel: "#131418"};
+const R = {meta: null, candles: [], i: 0, from: 0, coin: null, interval: "1m", timer: null, clock: 0, sub: 0, ex: null, app: null, funding: []};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const usd = x => (x < 0 ? "-$" : "$") + Math.abs(x).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const sgn = x => (x > 0 ? "+" : "") + usd(x);
+const decs = x => { const a = Math.abs(x); if (!a) return 2; if (a >= 1) return Math.max(0, 5 - (Math.floor(Math.log10(a)) + 1)); return Math.min(8, 4 - Math.floor(Math.log10(a))); };
+const fpx = x => x == null || !isFinite(x) ? "–" : x.toLocaleString("en-US", {minimumFractionDigits: decs(x), maximumFractionDigits: decs(x)});
+const num = v => { const n = parseFloat(String(v).replace(/[,$\s]/g, "")); return isFinite(n) ? n : NaN; };
+const cls = x => x > 0 ? "up" : x < 0 ? "down" : "";
+const toChart = ms => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
+const store = {get(k, d) { try { const v = localStorage.getItem("aureous.replay." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+               set(k, v) { try { localStorage.setItem("aureous.replay." + k, JSON.stringify(v)); } catch {} }};
+
+// ------------------------------------------------------------------ a price feed that replays the past
+// Stands in for Hyperliquid inside the engine: one market whose price is wherever the replay has got to,
+// a deep book around it (fills at the replay price plus a tiny spread), and that day's real funding.
+class ReplayClient {
+  constructor(info) { this.info = info; this.px = 0; this.open = 0; }
+  async metaAndCtxs() {
+    const p = String(this.px);
+    return [{universe: [{name: this.info.name, szDecimals: this.info.szDecimals, maxLeverage: this.info.maxLeverage}]},
+            [{markPx: p, midPx: p, oraclePx: p, funding: "0", openInterest: "0", dayNtlVlm: "0", prevDayPx: String(this.open || this.px)}]];
+  }
+  async l2Book() {
+    const lv = s => [...Array(10)].map((_, i) => ({px: String(this.px * (1 + s * 0.0001 * (i + 1))), sz: "1e12", n: 1}));
+    return {levels: [lv(-1), lv(1)]};
+  }
+  async fundingHistory(coin, start, end) { return R.funding.filter(f => +f.time >= start && +f.time <= end); }
+}
+
+// ------------------------------------------------------------------ chart
+const chart = LC.createChart($("#chart"), {autoSize: true,
+  layout: {background: {type: "solid", color: C.panel}, textColor: C.muted, fontFamily: getComputedStyle(document.body).fontFamily, fontSize: 11},
+  grid: {vertLines: {color: C.lineSoft}, horzLines: {color: C.lineSoft}}, rightPriceScale: {borderColor: C.line, scaleMargins: {top: .1, bottom: .1}},
+  timeScale: {borderColor: C.line, timeVisible: true, secondsVisible: false, rightOffset: 12, barSpacing: 7}, crosshair: {mode: LC.CrosshairMode.Normal}});
+const series = chart.addSeries(LC.CandlestickSeries, {upColor: C.long, downColor: C.short, wickUpColor: C.long, wickDownColor: C.short, borderVisible: false});
+let lines = [];
+const bar = k => ({time: toChart(k[0]), open: k[1], high: k[2], low: k[3], close: k[4]});
+
+// ------------------------------------------------------------------ setup
+async function loadMarkets() {
+  try {
+    const [meta, ctxs] = await hl.metaAndCtxs();
+    R.meta = new Map(meta.universe.map((u, i) => [u.name, {...u, vol: +((ctxs[i] || {}).dayNtlVlm || 0)}]));
+    const list = [...R.meta.values()].filter(u => !u.isDelisted).sort((a, b) => b.vol - a.vol);
+    const want = new URLSearchParams(location.search).get("coin") || store.get("coin", "BTC");
+    $("#market").innerHTML = list.map(u => `<option value="${esc(u.name)}"${u.name === want ? " selected" : ""}>${esc(A.displayName(u.name))}${A.MARKET_LABELS[u.name] ? " · " + esc(A.MARKET_LABELS[u.name]) : ""}</option>`).join("");
+  } catch (e) { msg("Couldn't reach Hyperliquid for the market list. Try again shortly."); }
+}
+const isoDay = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+function initDay() {
+  const y = Date.now() - DAY;
+  $("#day").max = isoDay(y); $("#day").min = isoDay(Date.now() - 200 * DAY);
+  $("#day").value = new URLSearchParams(location.search).get("day") || isoDay(y);
+}
+// Hyperliquid keeps the latest 5,000 candles of each size, so older days are replayed with bigger candles
+function intervalFor(startMs) {
+  const age = Date.now() - startMs;
+  return age < 3.2 * DAY ? "1m" : age < 16 * DAY ? "5m" : age < 50 * DAY ? "15m" : "1h";
+}
+function msg(t) { $("#msg").hidden = !t; $("#msg").textContent = t || ""; }
+async function loadDay(e) {
+  if (e) e.preventDefault();
+  stop();
+  const coin = $("#market").value, [y, m, d] = $("#day").value.split("-").map(Number);
+  if (!coin || !y) return;
+  const from = new Date(y, m - 1, d).getTime(), to = from + DAY;
+  if (to > Date.now()) { msg("Pick a day that's already over."); return; }
+  const interval = intervalFor(from), step = STEP[interval], pre = 60 * step;
+  msg("Loading that day's prices…"); $("#load").disabled = true;
+  try {
+    const raw = await hl.candles(coin, interval, from - pre, to - 1);
+    const all = raw.map(k => [+k.t, +k.o, +k.h, +k.l, +k.c]).filter(k => k[0] >= from - pre && k[0] < to);
+    const day = all.filter(k => k[0] >= from);
+    if (day.length < 10) { msg(`Hyperliquid has no ${A.displayName(coin)} prices for that day. Try a more recent day or another market.`); return; }
+    R.funding = await hl.fundingHistory(coin, from, to).catch(() => []);
+    Object.assign(R, {coin, interval, candles: all, from: all.length - day.length, i: all.length - day.length, sub: 0});
+    store.set("coin", coin);
+    history.replaceState(null, "", `?coin=${encodeURIComponent(coin)}&day=${$("#day").value}`);
+    // a fresh practice account on the replay clock
+    const info = R.meta.get(coin) || {name: coin, szDecimals: 3, maxLeverage: 20};
+    const client = new ReplayClient(info);
+    R.client = client; client.open = day[0][1]; client.px = day[0][1];
+    R.clock = day[0][0];
+    R.ex = new A.PaperExchange(client, {storage: null, refreshMs: 0, now: () => R.clock, overCap: true, curveMs: step});
+    R.ex.state = R.ex.newState(START); R.ex.state.last_funding_ms = R.clock;
+    R.app = new A.LocalApp(R.ex);
+    await R.ex.refresh(true);
+    $("#lev").innerHTML = [1, 2, 3, 5, 10, 20, 25, 50, 100, 200].map(x => `<option value="${x}"${x === 10 ? " selected" : ""}>${x}x</option>`).join("");
+    series.setData(all.slice(0, R.i + 1).map(bar));
+    series.applyOptions({priceFormat: {type: "price", precision: decs(day[0][4]), minMove: Math.pow(10, -decs(day[0][4]))}});
+    chart.timeScale().fitContent();
+    $("#log").innerHTML = ""; $("#result").hidden = true;
+    msg("");
+    enable(true);
+    render();
+    log("event", `${A.displayName(coin)} on ${new Date(from).toLocaleDateString(undefined, {weekday: "long", day: "numeric", month: "long", year: "numeric"})}, ${interval === "1m" ? "1-minute" : interval === "5m" ? "5-minute" : interval === "15m" ? "15-minute" : "1-hour"} candles. Press Play.`);
+  } catch (err) { msg("Couldn't load that day: " + err.message); }
+  finally { $("#load").disabled = false; }
+}
+function enable(on) {
+  ["#play", "#step", "#close"].forEach(s => $(s).disabled = !on);
+  document.querySelectorAll("[data-side]").forEach(b => b.disabled = !on);
+}
+
+// ------------------------------------------------------------------ playback
+// Each candle is played as open -> low/high -> close (low first on up candles), checking stops each time.
+function path(k) { return k[4] >= k[1] ? [k[1], k[3], k[2], k[4]] : [k[1], k[2], k[3], k[4]]; }
+async function advance() {
+  if (!R.ex || R.i >= R.candles.length - 1) { finish(); return false; }
+  R.i++;
+  const k = R.candles[R.i], step = STEP[R.interval], pts = path(k);
+  const shown = [k[0], k[1], k[1], k[1], k[1]];
+  for (let j = 0; j < pts.length; j++) {
+    R.clock = k[0] + Math.round(step * (j + 1) / (pts.length + 1));
+    R.client.px = pts[j];
+    shown[2] = Math.max(shown[2], pts[j]); shown[3] = Math.min(shown[3], pts[j]); shown[4] = pts[j];
+    await R.ex.refresh(true);
+    for (const e of await R.ex.update()) log(e.includes("LIQUIDATED") ? "liquidation" : "event", e);
+  }
+  R.clock = k[0] + step - 1;
+  series.update(bar(k));
+  render();
+  if (R.i >= R.candles.length - 1) finish();
+  return true;
+}
+function play() {
+  if (R.timer) { stop(); return; }
+  if (!R.ex || R.i >= R.candles.length - 1) return;
+  $("#play").textContent = "Pause";
+  const tick = async () => { if (!R.timer) return; const more = await advance(); if (more && R.timer) R.timer = setTimeout(tick, +$("#speed").value); };
+  R.timer = setTimeout(tick, 0);
+}
+function stop() { clearTimeout(R.timer); R.timer = null; $("#play").textContent = "Play"; }
+function finish() {
+  stop(); $("#play").disabled = true; $("#step").disabled = true;
+  if (!R.ex || !$("#result").hidden) return;
+  const eq = R.ex.equity(), ret = eq / START - 1, key = `${R.coin}|${$("#day").value}`;
+  const best = store.get("best", {}), prev = best[key];
+  if (prev == null || ret > prev) { best[key] = ret; store.set("best", best); }
+  $("#result").hidden = false;
+  $("#result").innerHTML = `<h2>Day over</h2><b class="${cls(ret)}">${sgn(eq - START)} (${(ret * 100).toFixed(2)}%)</b>` +
+    `<span class="muted">${Object.keys(R.ex.state.positions).length ? "Open positions are valued at the day's last price. " : ""}${prev != null ? `Your best on this day before: ${(prev * 100).toFixed(2)}%.` : ""}</span>` +
+    `<div class="seg"><button class="btn" type="button" id="again">Try this day again</button><button class="btn primary" type="button" id="another">Another day</button></div>`;
+}
+
+// ------------------------------------------------------------------ trading
+async function order(side) {
+  if (!R.ex) return;
+  const margin = num($("#margin").value), lev = +$("#lev").value;
+  if (!(margin > 0)) { log("error", "Enter the margin to use."); return; }
+  const body = {coin: R.coin, side, type: "market", size: Math.round(margin * lev * 100) / 100, unit: "usd", leverage: lev};
+  const tp = num($("#tp").value), sl = num($("#sl").value);
+  if (tp > 0) body.tp = tp; if (sl > 0) body.sl = sl;
+  try {
+    const r = await R.app.handle("/api/order", {}, body);
+    (r.messages || []).forEach(m => log("fill", m)); (r.warnings || []).forEach(m => log("error", m));
+    $("#tp").value = ""; $("#sl").value = "";
+  } catch (e) { log("error", e.message); }
+  render();
+}
+async function closeAll() {
+  if (!R.ex || !R.ex.state.positions[R.coin]) return;
+  try { const r = await R.app.handle("/api/close", {}, {coin: R.coin}); (r.messages || []).forEach(m => log("fill", m)); } catch (e) { log("error", e.message); }
+  render();
+}
+function log(kind, text) {
+  const el = document.createElement("div"); el.className = kind;
+  el.innerHTML = `<span class="muted">${new Date(R.clock || Date.now()).toLocaleTimeString(undefined, {hour: "2-digit", minute: "2-digit"})}</span> ${esc(text)}`;
+  $("#log").prepend(el);
+}
+function render() {
+  const ex = R.ex; if (!ex) return;
+  const st = ex.state, p = st.positions[R.coin], eq = ex.equity(), mark = R.client.px;
+  $("#eq").innerHTML = `${usd(eq)} <span class="${cls(eq - START)}" style="font-size:14px">${((eq / START - 1) * 100).toFixed(2)}%</span>`;
+  const rows = [["Price", fpx(mark)], ["Balance", usd(st.balance)]];
+  if (p) {
+    const liq = ex.liqPrice(R.coin), d = liq ? Math.abs(mark - liq) / mark : null, lvl = d == null ? "" : d < .03 ? "danger" : d < .1 ? "warn" : "";
+    rows.push(["Position", `<span class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${ex.leverage(R.coin)}x</span>`], ["Entry", fpx(p.entry)],
+      ["Unrealized PnL", `<span class="${cls(ex.upnl(R.coin))}">${sgn(ex.upnl(R.coin))}</span>`],
+      ["Liquidation", liq ? `${fpx(liq)}<span class="liqd ${lvl}">${(d * 100).toFixed(1)}% away</span>` : "None"]);
+  } else rows.push(["Position", "None"]);
+  const trades = st.trades.filter(t => Math.abs(t.realized) > 1e-9);
+  rows.push(["Closed trades", String(trades.length)], ["Fees", usd(st.trades.reduce((s, t) => s + t.fee, 0))]);
+  $("#acct").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  $("#close").disabled = !p;
+  // lines on the chart
+  lines.forEach(l => series.removePriceLine(l)); lines = [];
+  const add = (price, color, title) => lines.push(series.createPriceLine({price, color, title, lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true}));
+  if (p) { add(p.entry, C.accent, "Entry"); const liq = ex.liqPrice(R.coin); if (liq) add(liq, C.short, "Liquidation"); }
+  for (const o of st.orders) if (o.trigger_px) add(o.trigger_px, o.type === "tp" ? C.long : C.short, o.type === "tp" ? "Take profit" : "Stop loss");
+  const k = R.candles[R.i], total = R.candles.length - 1 - R.from;
+  $("#clock").textContent = k ? new Date(R.clock).toLocaleString(undefined, {weekday: "short", hour: "2-digit", minute: "2-digit"}) + ` · candle ${R.i - R.from} of ${total}` : "";
+  $("#prog").style.width = total ? ((R.i - R.from) / total * 100).toFixed(1) + "%" : "0";
+}
+
+// ------------------------------------------------------------------ events
+$("#setup").addEventListener("submit", loadDay);
+$("#random").addEventListener("click", () => { $("#day").value = isoDay(Date.now() - (1 + Math.floor(Math.random() * 30)) * DAY); loadDay(); });
+$("#play").addEventListener("click", play);
+$("#step").addEventListener("click", () => { stop(); advance(); });
+$("#close").addEventListener("click", closeAll);
+document.querySelectorAll("[data-side]").forEach(b => b.addEventListener("click", () => order(b.dataset.side)));
+$("#result").addEventListener("click", e => {
+  if (e.target.id === "again") loadDay();
+  if (e.target.id === "another") $("#random").click();
+});
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input,select,textarea")) return;
+  if (e.key === " ") { e.preventDefault(); if (!$("#play").disabled) play(); }
+  if (e.key === "ArrowRight" && !$("#step").disabled) { stop(); advance(); }
+});
+initDay();
+loadMarkets().then(() => { if (new URLSearchParams(location.search).get("day")) loadDay(); });
+</script>
+</body>
+</html>
