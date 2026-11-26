@@ -47,6 +47,7 @@
     if (!showing) P.unread += fresh.length;
     P.newIds = new Set(fresh.map(p => p.id));
     P.list = r.posts; P.ids = new Set(r.posts.map(p => p.id));
+    if (fresh.length || !P.drawn) { P.drawn = true; if (typeof drawNews === "function") drawNews(); }
     badge();
     if (showing) render();
   }
@@ -88,6 +89,7 @@
     const re = reCache.get(coin);
     return !!re && p.segs.some(s => typeof s === "string" && re.test(s));
   }
+  P.mentions = mentions;                               // used by the news markers on the chart
 
   // ------------------------------------------------------------------ view
   const ago = ms => { const s = Math.max(0, (Date.now() - ms) / 1000);

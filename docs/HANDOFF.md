@@ -46,8 +46,9 @@ decided and left open, so nothing depends on remembering it. CLAUDE.md has the r
   liquidation price was about 78 earlier that day. 2–2.5% away is correct at 20x (checked with the engine),
   and with cross margin it moves when the position grows or the balance drops. He was asked to check Trade
   history for extra sells or losing trades that day. If there were none, investigate `liqPrice` in
-  `aureous/web/engine.js` and the worker's copy of the state. Offered: show distance-to-liquidation %
-  on positions and warn before opening a trade under ~3% away.
+  `aureous/web/engine.js` and the worker's copy of the state. Distance-to-liquidation % on positions and
+  a warning before opening a trade under 3% away were built on Nov 26 (with alerts, calendar, seasons,
+  following, journal and replay; see README "Trader tools").
 - **X posts:** waiting on Billy to create the X developer app, add credits (auto-recharge off, spending
   limit set), and save the Bearer Token as the `X_BEARER_TOKEN` secret. Default accounts are a starting
   list he can edit in /admin.

@@ -187,6 +187,16 @@ async function main() {
     postCall: (coin, thesis) => call("/api/call", {coin, thesis}),
     voteCall: (id, vote) => call("/api/call/vote", {id, vote}),
     posts: () => call("/api/posts", undefined, false),
+    // alerts, following, journal notes, seasons and the economic calendar (worker/extras.js)
+    isSignedIn: () => signedIn,
+    alerts: () => call("/api/alerts"),
+    alertsAction: body => call("/api/alerts", body),
+    follow: (pid, on) => call("/api/follow", {pid, on}),
+    following: () => call("/api/following"),
+    notes: () => call("/api/notes"),
+    setNote: (key, text) => call("/api/note", {key, text}),
+    season: () => call("/api/season", undefined, signedIn),
+    calendar: () => call("/api/calendar", undefined, false),
   });
 
   // load the account; email/password accounts that haven't confirmed their (real) email get asked to

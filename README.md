@@ -154,6 +154,20 @@ A **Posts** tab beside the order book shows live posts on X and Truth Social fro
 - **Setup:** an X developer account with pay-per-use credits, then its **Bearer Token** as the Cloudflare secret `X_BEARER_TOKEN` (aureous-api → Settings → Variables and Secrets).
 - **API:** `GET /api/posts` (public; each post has `src` "x" or "ts" and its `url`), `GET|POST /api/admin/posts {posts_on, x_on, truth_on, posts_accounts, truth_accounts, posts_cap, refresh}`.
 
+## Trader tools (alerts, calendar, news on the chart, seasons, following, journal, replay)
+
+Server side in `worker/extras.js` (tables `alerts`, `follows`, `notes`, `season_start`, `seasons`, `cal_events`; column `accounts.trophies`), run by the every-minute cron job; site side in `aureous/web/alerts.js`, `calendar.js`, `journal.js`, `replay.html` and `index.html`.
+
+- **Distance to liquidation:** each position shows "2.1% away" (amber under 10%, red under 3%), also on the chart's liquidation line. The order form shows where the new trade would be liquidated (the engine's own sums on a copy of the account), and anything under 3% away asks for confirmation even when confirmations are off.
+- **Alerts** (bell icon, or Alert above the chart): price alerts (up to 20 waiting; direction worked out from the current price; fire once) and a liquidation warning ("within 5%", once per position until it's well clear again). Checked every minute; they arrive as site notifications, browser notifications if allowed, and email if ticked (needs email set up, see "Real emails"; at most 10 alert emails per trader per day and within the hourly email cap).
+- **Economic calendar:** the price bar counts down to the next high-impact US release; click for the week. Read about once an hour from Forex Factory's free weekly feed (`https://nfs.faireconomy.media/ff_calendar_thisweek.json`, US High/Medium only, plain-English names), plus the Fed's published meeting dates (`FOMC` in extras.js: add next year's dates when the Fed publishes them).
+- **News on the chart:** dots where Trump, the Fed or the Treasury posted (gold), posts about this market (grey), and released economic events (squares). Hover to read; the News button hides them.
+- **Monthly season:** Leaderboard → This month ranks by return since the season began (`/api/season`). Seasons run calendar month to month (UTC). The first starts when this is first deployed; started with under 7 days of the month left, it runs to the end of the next month. At the end the top 3 get a gold/silver/bronze trophy (profile and next to their name). A reset restarts that trader's season from $10,000. Only traders who've traded or hold a position are ranked.
+- **Following:** Follow on a profile; followers get a notification (click it to open the profile) when the trader opens a new position, unless the trader hides their trades. Leaderboard → Following lists them; profiles show the follower count.
+- **Journal** (bottom tab): win rate, average win/loss, profit factor, longs vs shorts, best/worst market, average leverage, a plain-English observation, and a private note on any trade (stored on the server; in the browser without an account).
+- **Replay** (`replay.html`): practise on a past day's real candles with $10,000 practice money, using the real engine on a replay clock with a stand-in price feed (each candle runs open → low/high → close, so stops and liquidations trigger). 1-minute candles for the last 3 days, then 5m/15m/1h for older days (Hyperliquid keeps 5,000 candles per size). Nothing is saved to the account.
+- **API:** `GET /api/season`, `GET /api/calendar` (public); `GET|POST /api/alerts`, `GET /api/following`, `POST /api/follow`, `GET /api/notes`, `POST /api/note`. With `TEST_HOOKS=1` (tests only, never in production): `POST /api/test/season-end`, `POST /api/test/calendar`.
+
 ## Bots
 
 The 20 house bots were retired. Any bot account still in the database (user IDs starting `bot:`) is deleted by the cron job within a minute, with its trades, badges and clan membership; nobody can sign in with such an ID.
@@ -348,6 +362,10 @@ node tests/server/posts.check.mjs        # posts from X and Truth Social: accoun
                                          #   (fresh server with --var X_API_URL:http://127.0.0.1:8500/x --var X_BEARER_TOKEN:test-x-token
                                          #    --var TRUTH_API_URL:http://127.0.0.1:8500/ts --var TRUMP_FEED_URL:http://127.0.0.1:8500/ts/feed; see the file)
 node tests/server/posts.browser.cjs      # the Posts tab on desktop and phone, and the admin card (Playwright; run scripts/dev.sh first)
+node tests/server/extras.check.mjs       # alerts (and their emails), following, journal notes, seasons, calendar (fresh server with
+                                         #   --var TEST_HOOKS:1 --var CAL_URL:http://127.0.0.1:8500/cal/week.json
+                                         #   --var RESEND_API_KEY:re_test_key --var RESEND_API_URL:http://127.0.0.1:8500/resend; see the file)
+node tests/server/extras.browser.cjs     # the same tools in a browser, desktop and phone, plus the replay page (run scripts/dev.sh first)
 node tests/server/email.check.mjs        # real emails, email codes, name rules (needs a .dev.vars pointing email + Firebase admin at the stand-in; see the file's header)
 ```
 
@@ -364,6 +382,9 @@ node tests/server/email.check.mjs        # real emails, email codes, name rules 
 - `aureous/web/auth.js`, `aureous/web/firebase-config.js`: sign-in (Firebase Auth) and the connection to the trading server
 - `worker/`: the trading server (Cloudflare Worker + Durable Object), `wrangler.jsonc` its settings
 - `firestore.rules`: closes the unused Firestore database
+- `worker/extras.js`: alerts, following, journal notes, monthly seasons, economic calendar
+- `aureous/web/alerts.js`, `calendar.js`, `journal.js`: the alerts window, calendar countdown, Journal tab
+- `aureous/web/replay.html`: practise on a past day
 - `scripts/publish_pages.sh`: publish the site to GitHub Pages and Cloudflare Pages
 - `scripts/build_pages.py`: regenerates the content pages (edit the text there)
 - `scripts/set_domain.py`: switch the site to a new domain in one step

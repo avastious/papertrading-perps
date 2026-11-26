@@ -26,7 +26,7 @@
 <body>
 <header class="site-head">
   <a class="brand" href="./" aria-label="Aureous home"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="16" r="12.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-dasharray="0 2.58" stroke-linecap="round"/><text x="16" y="21.3" text-anchor="middle" font-family="Cinzel,Georgia,serif" font-weight="600" font-size="14.5" fill="currentColor">A</text></svg><span class="wordmark">Aureous</span></a>
-  <nav aria-label="Site"><a href="./">Trade</a><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a></nav>
+  <nav aria-label="Site"><a href="./">Trade</a><a href="replay.html">Replay</a><a href="./#leaderboard">Leaderboard</a><a href="how-it-works.html">How it works</a><a href="about.html">About</a></nav>
   <a class="btn primary" href="./">Start trading</a>
 </header>
 <main>
@@ -39,6 +39,8 @@
 <p>Sign-in is handled by Google Firebase Authentication. Firebase keeps your email address, your name and profile photo if your sign-in provider shares them (Google does), and a user ID. If you sign up with email, Firebase stores your password securely; Aureous never sees it.</p>
 <h3>Your trading account</h3>
 <p>The Aureous server, which runs on Cloudflare, stores your paper account under your user ID: your balance, positions, orders, trade and funding history, account-value history, recent notifications, badges and milestones, the leaderboard name you choose, whether you've hidden your trades, and when you were last active. It doesn't store your email address.</p>
+<h3>Alerts, follows and notes</h3>
+<p>If you set alerts, the server keeps them (market, price, and the time they went off). If you ask for an alert by email, your email address is stored with that alert so it can be sent; removing the alert removes it. The server also keeps the list of traders you follow and your private journal notes. Deleting your account deletes all of these.</p>
 <h3>Emails we send</h3>
 <p>If you sign up with an email and password, we send one-time codes (or Firebase sends links) to confirm your address and, if you ask, to reset your password. The codes are sent through our email provider and stored on the server only as a scrambled (hashed) version for 10 minutes, together with your address and how many codes were sent, so they can't be abused. We don't send newsletters or marketing.</p>
 <h3>What the site owner can see</h3>
@@ -50,6 +52,7 @@
 <p>The leaderboard shows your leaderboard name, rank, account value, return, badges and how many positions you have open. Clicking your name opens your public profile. It shows those same details plus your best account value, closed profit and loss, win rate, number of trades and resets, and the date you started.</p>
 <p>By default your profile also shows your <strong>open positions</strong> (market, side, size, leverage, entry price and profit or loss) and your <strong>last 50 trades</strong>. To hide them, choose <strong>Hide my trades</strong> in the account menu. Your summary and badges stay visible on the leaderboard.</p>
 <p>Share cards are made in your browser. If you add your own image or video as a card background, it never leaves your device: it's kept in your browser's storage so it's there next time, and you can remove it from the share window.</p>
+<p>Your profile shows how many followers you have (not who they are). Traders who follow you are told when you open a new position, with the market, direction, leverage and entry price, unless you've chosen <strong>Hide my trades</strong>. Season trophies you win are shown on your profile and next to your name.</p>
 <p>If you join a clan, its tag appears next to your name, and the clan's public page lists you with your account value, return and number of open positions. Leave the clan to remove that.</p>
 <p>Profiles never show your email address, your sign-in ID or your resting orders. Your leaderboard name defaults to your first name and last initial, and you can change it from the account menu at any time.</p>
 

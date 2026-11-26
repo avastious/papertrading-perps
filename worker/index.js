@@ -14,6 +14,11 @@
 //   GET  /api/clan/<TAG>           public; a clan's members ranked (plus the invite link for members)
 //   GET  /api/invite/<code>        public; which clan an invite link is for
 //   POST /api/clan/create {name, tag} | join {code} | leave | invite (new link) | kick {pid} | rename {name}
+//   GET  /api/season               public; this month's season ranking (return since the season began) and last season's winners
+//   GET  /api/calendar             public; upcoming US economic releases (Fed, inflation, jobs)
+//   GET|POST /api/alerts           your price and liquidation alerts {action: add|remove|clear, kind: price|liq, coin, value, email}
+//   GET  /api/following, POST /api/follow {pid, on}   traders you follow (told when they open a trade)
+//   GET  /api/notes, POST /api/note {key, text}        your private trade journal notes
 //   /api/admin/...                 owner-only dashboard data (overview, user detail, rename/reset/remove, clan-remove)
 //
 // Every request except the leaderboard needs "Authorization: Bearer <Firebase ID token>".
@@ -65,6 +70,10 @@ export default {
         const q = Object.fromEntries(["sort", "status", "coin", "pid", "id"].map(k => [k, url.searchParams.get(k) || undefined]));
         return reply(await ex.calls(q, user ? user.uid : null));
       }
+      if (url.pathname === "/api/season" && req.method === "GET") return reply(await ex.seasonBoard(user ? user.uid : null));
+      if (url.pathname === "/api/calendar" && req.method === "GET") return reply(await ex.calendar());
+      if (env.TEST_HOOKS === "1" && url.pathname === "/api/test/season-end" && req.method === "POST") return reply({ok: true, season: await ex.ensureSeason(Date.now(), true)});
+      if (env.TEST_HOOKS === "1" && url.pathname === "/api/test/calendar" && req.method === "POST") return reply({ok: true, ...(await ex.fetchCalendar(true))});
       if (url.pathname === "/api/posts" && req.method === "GET") return reply(await ex.postsFeed(url.searchParams.get("after") || ""));
       if (url.pathname === "/api/clans" && req.method === "GET") return reply(await ex.clans(user ? user.uid : null));
       const cm = /^\/api\/clan\/([A-Za-z0-9]{2,5})$/.exec(url.pathname);
@@ -129,6 +138,9 @@ export default {
         return json({ok: false, error: "Not found"}, 404, cors);
       }
 
+      if (url.pathname === "/api/alerts" && req.method === "GET") return reply(await ex.alertsList(user.uid));
+      if (url.pathname === "/api/following" && req.method === "GET") return reply(await ex.following(user.uid));
+      if (url.pathname === "/api/notes" && req.method === "GET") return reply(await ex.notes(user.uid));
       if (url.pathname === "/api/account" && req.method === "GET") {
         return reply(await ex.account(user.uid, {name: user.name}, +url.searchParams.get("since") || 0));
       }
@@ -143,6 +155,9 @@ export default {
       if (url.pathname === "/api/privacy") return reply(await ex.setPrivate(user.uid, body.private === true));
       if (url.pathname === "/api/delete") return reply(await ex.remove(user.uid));
       if (url.pathname === "/api/call") return reply(await ex.postCall(user.uid, body));
+      if (url.pathname === "/api/alerts") return reply(await ex.alertsAction({uid: user.uid, email: user.email, emailVerified: user.emailVerified}, body));
+      if (url.pathname === "/api/follow") return reply(await ex.follow(user.uid, body));
+      if (url.pathname === "/api/note") return reply(await ex.setNote(user.uid, body));
       if (url.pathname === "/api/call/vote") return reply(await ex.voteCall(user.uid, body));
       const ca = /^\/api\/clan\/(create|join|leave|invite|kick|rename)$/.exec(url.pathname);
       if (ca) return reply(await ex.clanAction(user.uid, {name: user.name}, ca[1], body));

@@ -14,6 +14,7 @@ import {mailerFor, codeEmail} from "./mailer.js";
 import {GoogleAdmin} from "./google-admin.js";
 import {setupCalls, callMethods} from "./calls.js";
 import {setupPosts, postsMethods} from "./posts.js";
+import {setupExtras, extrasMethods} from "./extras.js";
 
 const {HyperliquidClient, PaperExchange, LocalApp, PaperError, APIError, TIERS, SPOTLIGHT_MS} = globalThis.Aureous;
 
@@ -79,6 +80,7 @@ export class Exchange extends DurableObject {
     add("spotlight_until", "INTEGER NOT NULL DEFAULT 0"); add("resets", "INTEGER NOT NULL DEFAULT 0"); add("private", "INTEGER NOT NULL DEFAULT 0");
     add("last_seen", "INTEGER NOT NULL DEFAULT 0");
     add("clan", "INTEGER"); add("clan_joined", "INTEGER NOT NULL DEFAULT 0");
+    add("trophies", "TEXT NOT NULL DEFAULT '[]'");                 // season top-3 finishes (extras.js)
     this.sql.exec(`CREATE TABLE IF NOT EXISTS clans (
       id INTEGER PRIMARY KEY AUTOINCREMENT, tag TEXT NOT NULL UNIQUE, name TEXT NOT NULL, owner TEXT NOT NULL,
       invite TEXT NOT NULL UNIQUE, created INTEGER NOT NULL)`);
@@ -88,6 +90,7 @@ export class Exchange extends DurableObject {
       attempts INTEGER NOT NULL DEFAULT 0, sent_at INTEGER NOT NULL, window_start INTEGER NOT NULL, sends INTEGER NOT NULL, PRIMARY KEY (email, purpose))`);
     setupCalls(this.sql);
     setupPosts(this.sql);
+    setupExtras(this.sql);
     this.sweepNames();
     for (const r of this.sql.exec("SELECT uid FROM accounts WHERE pid IS NULL").toArray()) this.sql.exec("UPDATE accounts SET pid = ? WHERE uid = ?", newPid(), r.uid);
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_pid ON accounts(pid)");
@@ -139,6 +142,7 @@ export class Exchange extends DurableObject {
     return ex;
   }
   persist(row, ex, histLoaded) {
+    try { this.notifyFollowers(row, ex); } catch (e) { console.error("follow", e.message); }
     this.persistState(row, ex, histLoaded);
     this.checkMilestones(row.uid, ex);
     this.settleCalls(row.uid, ex);
@@ -242,7 +246,7 @@ export class Exchange extends DurableObject {
         events.push(...app.events.map(e => ({kind: e.kind, msg: e.msg})));
         if (path === "/api/reset") {
           this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
-          if (!error) this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid);
+          if (!error) { this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid); this.seasonReset(uid); }
         }
         else this.addEvents(uid, events);
         this.persist(row, ex, true);
@@ -253,11 +257,12 @@ export class Exchange extends DurableObject {
   }
 
   ownProfile(uid) {
-    const r = this.sql.exec("SELECT pid, name, badges, peak, spotlight_until, private, resets, clan FROM accounts WHERE uid = ?", uid).toArray()[0];
+    const r = this.sql.exec("SELECT pid, name, badges, peak, spotlight_until, private, resets, clan, trophies FROM accounts WHERE uid = ?", uid).toArray()[0];
     if (!r) return null;
     const c = r.clan ? this.sql.exec("SELECT tag, name, owner FROM clans WHERE id = ?", r.clan).toArray()[0] : null;
     return {pid: r.pid, name: r.name, badges: JSON.parse(r.badges || "[]"), peak: r.peak, spotlight_until: r.spotlight_until,
-            private: !!r.private, resets: r.resets, clan: c ? {tag: c.tag, name: c.name, owner: c.owner === uid} : null};
+            private: !!r.private, resets: r.resets, clan: c ? {tag: c.tag, name: c.name, owner: c.owner === uid} : null,
+            trophies: JSON.parse(r.trophies || "[]")};
   }
 
   async setPrivate(uid, priv) {
@@ -286,6 +291,9 @@ export class Exchange extends DurableObject {
       this.sql.exec("DELETE FROM call_votes WHERE call_id IN (SELECT id FROM calls WHERE uid = ?)", uid);
       this.sql.exec("DELETE FROM calls WHERE uid = ?", uid);
       this.sql.exec("DELETE FROM call_votes WHERE uid = ?", uid);
+      for (const t of ["alerts", "notes", "season_start"]) this.sql.exec(`DELETE FROM ${t} WHERE uid = ?`, uid);
+      this.sql.exec("DELETE FROM follows WHERE uid = ? OR target = ?", uid, uid);
+      this.liqAlerts = null;
       this.board = null; this.adminCache = null; this.seen.delete(uid);
       return {ok: true, messages: ["Account removed."]};
     });
@@ -297,7 +305,7 @@ export class Exchange extends DurableObject {
         const ex = new PaperExchange(this.client, {storage: null, refreshMs: 0});
         await ex.refresh();
         const tags = new Map(this.sql.exec("SELECT id, tag FROM clans").toArray().map(c => [c.id, c.tag]));
-        const rows = this.sql.exec("SELECT uid, pid, name, core, badges, spotlight_until, clan, clan_joined FROM accounts").toArray().map(r => {
+        const rows = this.sql.exec("SELECT uid, pid, name, core, badges, spotlight_until, clan, clan_joined, trophies FROM accounts").toArray().map(r => {
           const core = JSON.parse(r.core);
           let equity = core.balance;
           for (const [coin, p] of Object.entries(core.positions)) {
@@ -307,20 +315,22 @@ export class Exchange extends DurableObject {
           }
           const badges = JSON.parse(r.badges || "[]");
           const top = TIERS.filter(t => badges.some(b => b.tier === t.id)).pop();
-          return {uid: r.uid, pid: r.pid, name: r.name, equity, positions: Object.keys(core.positions).length, bot: isBot(r.uid),
+          const trophies = JSON.parse(r.trophies || "[]"), best = trophies.length ? Math.min(...trophies.map(t => t.place)) : 0;
+          return {uid: r.uid, trophy: best || null, pid: r.pid, name: r.name, equity, positions: Object.keys(core.positions).length, bot: isBot(r.uid),
                   clan: r.clan || null, clan_tag: r.clan ? tags.get(r.clan) || null : null, clan_joined: r.clan_joined,
                   badge: top ? top.id : null, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0};
         }).sort((a, b) => b.equity - a.equity);
         rows.forEach((r, i) => { r.rank = i + 1; r.return = r.equity / START_BALANCE - 1; });
         this.board = {t: Date.now(), rows};
       }
-      const pub = r => ({rank: r.rank, pid: r.pid, name: r.name, equity: r.equity, return: r.return, positions: r.positions,
+      const pub = r => ({rank: r.rank, pid: r.pid, name: r.name, equity: r.equity, return: r.return, positions: r.positions, ...(r.trophy ? {trophy: r.trophy} : {}),
                          badge: r.badge, spotlight_until: r.spotlight_until > Date.now() ? r.spotlight_until : 0, ...(r.bot ? {bot: true} : {}),
                          ...(r.clan_tag ? {clan: r.clan_tag} : {})});
       const me = uid ? this.board.rows.find(r => r.uid === uid) : null;
       const milestones = this.sql.exec(`SELECT m.tier, m.at, a.name, a.pid FROM milestones m JOIN accounts a ON a.uid = m.uid
                                         WHERE m.at > ? ORDER BY m.at DESC LIMIT 10`, Date.now() - SPOTLIGHT_MS).toArray();
-      return {ok: true, updated: this.board.t, total: this.board.rows.length, start: START_BALANCE,
+      const following = uid ? this.sql.exec("SELECT a.pid FROM follows f JOIN accounts a ON a.uid = f.target WHERE f.uid = ?", uid).toArray().map(r => r.pid) : [];
+      return {ok: true, updated: this.board.t, total: this.board.rows.length, start: START_BALANCE, following,
               rows: this.board.rows.slice(0, 100).map(pub), me: me ? pub(me) : null, milestones};
     } catch (e) { return fail(e); }
   }
@@ -340,7 +350,8 @@ export class Exchange extends DurableObject {
         ok: true, pid, name: row.name, self, rank: ranked ? ranked.rank : null, total: this.board.rows.length,
         equity, return: equity / START_BALANCE - 1, peak: Math.max(row.peak, equity), resets: row.resets, joined: row.created,
         badges: JSON.parse(row.badges || "[]"), spotlight_until: row.spotlight_until > Date.now() ? row.spotlight_until : 0,
-        private: !!row.private, stats: ex.stats(),
+        private: !!row.private, stats: ex.stats(), trophies: JSON.parse(row.trophies || "[]"),
+        followers: this.followCount(row.uid), following: this.isFollowing(viewerUid, row.uid),
       };
       if (row.clan) { const c = this.sql.exec("SELECT tag, name FROM clans WHERE id = ?", row.clan).toArray()[0]; if (c) out.clan = {tag: c.tag, name: c.name}; }
       delete out.stats.equity; delete out.stats.start;
@@ -496,7 +507,7 @@ export class Exchange extends DurableObject {
   config() {
     return {ok: true, over_cap: this.setting("over_cap", true), max_leverage: globalThis.Aureous.MAX_LEVERAGE,
             live: this.setting("live", "off"), builder: this.setting("builder", ""), builder_fee: this.setting("builder_fee", 50),
-            posts: this.postsOn()};
+            posts: this.postsOn(), alert_email: !!this.mailer};
   }
   putSetting(key, value) {
     this.sql.exec("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", key, JSON.stringify(value));
@@ -753,6 +764,7 @@ export class Exchange extends DurableObject {
         ex.reset(null);
         this.persist(this.row(uid), ex, true);
         this.sql.exec("UPDATE accounts SET resets = resets + 1 WHERE uid = ?", uid);
+        this.seasonReset(uid);
         this.sql.exec("DELETE FROM events WHERE uid = ?", uid);
         this.addEvents(uid, [{kind: "event", msg: "Your account was reset to $10,000 by Aureous."}]);
         return {ok: true, messages: [`${row.name}'s account was reset to $10,000.`]};
@@ -775,6 +787,9 @@ export class Exchange extends DurableObject {
   // every minute (Cron Trigger): settle all accounts with open positions or orders
   async tick() {
     this.client.cache.clear();                  // start every run from fresh prices
+    this.liqAlerts = null;
+    let season = null;
+    try { season = (await this.ensureSeason()).id; } catch (e) { console.error("season", e.message); }
     const rows = this.sql.exec("SELECT uid FROM accounts WHERE active = 1").toArray();
     let processed = 0, failed = 0;
     for (const {uid} of rows) {
@@ -786,6 +801,7 @@ export class Exchange extends DurableObject {
           const events = await this.catchUp(ex);
           if (!isBot(uid)) this.addEvents(uid, events);
           this.persist(row, ex, false);
+          await this.checkLiqAlert(uid, ex);
           processed++;
         } catch (e) { failed++; console.error("tick", uid, e.message); }
       });
@@ -793,7 +809,10 @@ export class Exchange extends DurableObject {
     let bots = null, posts = null;
     try { bots = await this.removeBots(); } catch (e) { console.error("bots", e.message); }
     try { posts = await this.fetchPosts(); } catch (e) { console.error("posts", e.message); }
-    return {ok: true, active: rows.length, processed, failed, bots, posts};
+    let alerts = null, calendar = null;
+    try { alerts = await this.checkPriceAlerts(); } catch (e) { console.error("alerts", e.message); }
+    try { calendar = await this.fetchCalendar(); } catch (e) { console.error("calendar", e.message); }
+    return {ok: true, active: rows.length, processed, failed, bots, posts, alerts, calendar, season};
   }
 
   // ------------------------------------------------------------------ retired house bots
@@ -804,4 +823,4 @@ export class Exchange extends DurableObject {
     return {removed: gone.length};
   }
 }
-Object.assign(Exchange.prototype, callMethods, postsMethods);
+Object.assign(Exchange.prototype, callMethods, postsMethods, extrasMethods);

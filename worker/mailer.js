@@ -42,3 +42,18 @@ export function codeEmail(code, purpose) {
 </table></td></tr></table></body></html>`;
   return {subject, text, html};
 }
+
+// An alert the trader asked for by email (price alerts, liquidation warnings).
+export function alertEmail(subject, msg) {
+  const text = `${msg}\n\nOpen Aureous: https://aureous.trade\n\nYou get this because you set an email alert on Aureous. Remove the alert on the site (bell icon) to stop these.\n\nAureous (paper trading) - https://aureous.trade`;
+  const html = `<!doctype html><html><body style="margin:0;background:#0C0D10;font-family:Arial,Helvetica,sans-serif;color:#ECE8E1">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0C0D10;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#131418;border:1px solid #272A31;border-radius:10px;padding:28px">
+<tr><td style="font-family:Georgia,'Times New Roman',serif;letter-spacing:4px;font-size:20px;color:#ECE8E1">AUREOUS</td></tr>
+<tr><td style="padding-top:18px;font-size:16px;line-height:1.5;color:#E2BE77;font-weight:bold">${esc(subject)}</td></tr>
+<tr><td style="padding-top:10px;font-size:15px;line-height:1.5;color:#D6D2CA">${esc(msg)}</td></tr>
+<tr><td style="padding-top:18px"><a href="https://aureous.trade" style="display:inline-block;background:#D1A85A;color:#0C0D10;text-decoration:none;font-weight:bold;padding:10px 18px;border-radius:6px">Open Aureous</a></td></tr>
+<tr><td style="padding-top:22px;font-size:12px;line-height:1.5;color:#67645E">You get this because you set an email alert on Aureous. Remove the alert on the site (the bell icon) to stop these. Paper trading only, not financial advice.</td></tr>
+</table></td></tr></table></body></html>`;
+  return {subject: `Aureous alert: ${subject}`, text, html};
+}

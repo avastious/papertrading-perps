@@ -413,6 +413,44 @@ tr.spot td:first-child{box-shadow:inset 2px 0 0 var(--gold)}
 .ms-chip button{background:none;border:0;padding:0;color:var(--text);font-weight:500}
 .ms-chip button:hover{text-decoration:underline}
 .toast.milestone{border-left-color:var(--gold)}
+.toast.alert{border-left-color:#E0A63A} .toast.follow{border-left-color:var(--accent)} .toast[data-href]{cursor:pointer}
+/* distance to liquidation */
+.wide-dlg{width:min(480px,calc(100vw - 32px))}
+.al-box{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px}
+.al-box b{font-weight:600} .al-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .al-coin{font-weight:600;font-size:15px}
+.al-box select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:3px 6px;font:inherit}
+#alList h4{margin:6px 0 4px;font-size:12px;color:var(--muted);font-weight:600;display:flex;gap:10px;align-items:baseline}
+.al-item{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.al-item.done{opacity:.65} .al-rm{position:static;font-size:18px;padding:0 4px}
+.icon-btn{position:relative} .al-badge{position:absolute;top:2px;right:0;margin:0}
+.chart-tools svg{width:13px;height:13px;vertical-align:-2px;margin-right:4px}
+#newsBtn[aria-pressed=true]{color:var(--accent)}
+.trophy{vertical-align:-2px;margin-left:4px;flex:none}
+.cal-chip{background:none;border:0;border-left:1px solid var(--line-soft);padding:0 0 0 14px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.cal-chip:hover #calNext{text-decoration:underline}
+.cal-chip.soon #calNext{color:#E0A63A} .cal-chip.now #calNext{color:var(--short)}
+.cal-day{margin:12px 0 4px;font-size:12px;color:var(--muted);font-weight:600}
+.cal-row{display:grid;grid-template-columns:52px 10px 1fr;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.cal-row.past{opacity:.55} .cal-time{font-variant-numeric:tabular-nums;color:var(--muted)} .cal-num{grid-column:3;font-size:11.5px}
+.cal-imp{width:8px;height:8px;border-radius:50%} .cal-imp.hi{background:var(--short)} .cal-imp.md{background:#E0A63A}
+.journal{padding:0 0 14px}
+.jr-stats small{font-size:11px;color:var(--muted);font-weight:500;margin-left:3px}
+.jr-insight{margin:4px 14px 10px;padding:9px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;font-size:13px;color:var(--muted);line-height:1.5}
+.jr-insight b{color:var(--text);font-weight:600;margin-right:4px}
+.jr-markets h4,.jr-bar h4{margin:0;font-size:12.5px;font-weight:600}
+.jr-markets{padding:6px 0} .jr-markets h4{padding:8px 14px 2px}
+.jr-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px 6px;font-size:12.5px}
+.jr-trades td{vertical-align:top} .jr-trades textarea{width:100%;min-width:220px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:6px 8px;font:inherit;font-size:12.5px;resize:vertical}
+.jr-btns{display:flex;gap:6px;margin-top:6px} .jr-btns .btn{padding:3px 10px;font-size:12px}
+.jr-note{background:none;border:0;padding:0;color:var(--text);font:inherit;font-size:12.5px;text-align:left;white-space:pre-wrap;line-height:1.45;cursor:text}
+.jr-note:hover{color:var(--accent)}
+.news-tip{position:absolute;z-index:6;max-width:300px;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.4;box-shadow:0 10px 28px rgba(0,0,0,.45);pointer-events:none}
+.news-tip div+div{margin-top:6px;padding-top:6px;border-top:1px solid var(--line-soft)} .news-tip b{font-weight:600} .news-tip .muted{font-size:11px}
+.liqd{display:block;font-size:10.5px;color:var(--muted);font-weight:500;white-space:nowrap}
+.liqd.warn{color:#E0A63A} .liqd.danger{color:var(--short);font-weight:600}
+.summary .liqd{display:inline;margin-left:4px}
+.cf-warn{color:var(--text);background:rgba(229,87,94,.1);border:1px solid rgba(229,87,94,.4);border-radius:6px;padding:9px 11px;font-size:13px;line-height:1.45;margin:0}
+.cf-warn b{color:var(--short)}
 .progress{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
 .progress .bar{height:4px;border-radius:2px;background:var(--raise);overflow:hidden}
 .progress .bar i{display:block;height:100%;background:var(--gold);border-radius:2px;transition:width .4s}
@@ -479,7 +517,7 @@ td.rank{color:var(--muted);width:56px}
 .net-tag{font-size:10px;font-weight:600;letter-spacing:.04em;color:#E8A33D;border:1px solid currentColor;border-radius:3px;padding:0 4px;line-height:1.5}
 .live-banner{display:none;margin:0;font-size:12px;line-height:1.45;color:#E8A33D;background:rgba(232,163,61,.1);border:1px solid rgba(232,163,61,.35);border-radius:var(--r-ctl);padding:7px 10px}
 .live-on .live-banner{display:block}
-.live-only{display:none}.live-on .live-only{display:block}
+.live-only{display:none}.live-on .live-only{display:block} .live-on .paper-only{display:none}
 .live-on .ticket{box-shadow:inset 3px 0 0 #E8A33D}
 .live-acct .btn{width:100%;padding:9px}
 .live-who{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
@@ -563,6 +601,8 @@ td.rank{color:var(--muted);width:56px}
   .conn #connText{display:none}
   .get-app{display:inline}
   .ticker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 10px;padding:6px 12px 10px 4px;border-bottom:1px solid var(--line-soft);overflow:visible}
+  .cal-chip{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:baseline;border-left:0;border-top:1px solid var(--line-soft);padding:6px 0 0 8px}
+  .cal-chip span{white-space:normal}
   .coin-btn{grid-column:1/3;justify-self:start}
   .px-block{grid-column:3/5;justify-self:end;align-items:flex-end}
   .hstat{min-width:0;padding-left:8px}
@@ -607,6 +647,7 @@ td.rank{color:var(--muted);width:56px}
       <a href="#calls" id="navCalls" hidden>Calls</a>
       <a href="#posts" id="navPosts" hidden>Posts</a>
       <a href="#clans" id="navClans" hidden>Clans</a>
+      <a href="replay.html" title="Practise on a past day's real prices">Replay</a>
       <a href="how-it-works.html" class="opt">How it works</a>
       <a href="about.html" class="opt">About</a>
       <a href="#" data-install hidden>Get the app</a>
@@ -643,6 +684,7 @@ td.rank{color:var(--muted);width:56px}
     <div class="hstat opt"><span>Open interest</span><span id="hOI">–</span></div>
     <div class="hstat"><span>Funding / hour</span><span id="hFunding">–</span></div>
     <div class="hstat"><span>Next funding</span><span id="hCountdown">–</span></div>
+    <button class="hstat cal-chip" id="calChip" type="button" hidden title="Economic calendar: the US releases that move markets"><span>Next big release</span><span id="calNext">–</span></button>
   </div>
   <div class="mswitch ptabs" id="mswitch" role="tablist" aria-label="View"><button type="button" data-mv="chart" class="on">Chart</button><button type="button" data-mv="book">Order book</button><button type="button" data-mv="trades">Trades</button><button type="button" data-mv="posts" hidden>Posts<span class="po-badge" hidden></span></button></div>
 
@@ -666,6 +708,7 @@ td.rank{color:var(--muted);width:56px}
       <button data-i="1h" class="on">1h</button><button data-i="4h">4h</button><button data-i="1d">1d</button>
       <span class="sep"></span>
       <button id="resetView" title="Back to the latest candles at the default zoom">Reset view</button>
+      <button id="newsBtn" type="button" aria-pressed="true" title="Show posts and economic releases on the chart">News</button>
       <span class="hint">Drag to move, scroll to zoom. Drawing tools on the left</span>
     </div>
     <div class="chart-wrap">
@@ -745,6 +788,7 @@ td.rank{color:var(--muted);width:56px}
         <dt>Position value</dt><dd id="sValue">–</dd>
         <dt>Margin required</dt><dd id="sMargin">–</dd>
         <dt>Est. fee</dt><dd id="sFee">–</dd>
+        <dt class="paper-only" title="Roughly where this trade would be liquidated, counting your other positions (cross margin)">Liquidation price</dt><dd class="paper-only" id="sLiq">–</dd>
         <dt>Available</dt><dd id="sAvail">–</dd>
         <dt class="live-only">Testnet price</dt><dd class="live-only" id="sTnPx">–</dd>
       </dl>
@@ -778,7 +822,7 @@ td.rank{color:var(--muted);width:56px}
   <section class="bottom" aria-label="Positions and history">
     <div class="ptabs" id="btabs">
       <button data-t="positions" class="on">Positions</button><button data-t="orders">Open orders</button>
-      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="board" id="boardTab" hidden>Leaderboard</button><button data-t="calls" id="callsTab" hidden>Calls</button><button data-t="live" id="liveTab" hidden>Live (testnet)</button>
+      <button data-t="trades">Trade history</button><button data-t="funding">Funding</button><button data-t="perf">Performance</button><button data-t="journal">Journal</button><button data-t="board" id="boardTab" hidden>Leaderboard</button><button data-t="calls" id="callsTab" hidden>Calls</button><button data-t="live" id="liveTab" hidden>Live (testnet)</button>
       <span class="grow"></span>
       <button id="bulkBtn" class="tiny" hidden></button>
     </div>
@@ -884,7 +928,7 @@ td.rank{color:var(--muted);width:56px}
   <div class="tr-wrap">
     <div class="tr-head"><button class="dlg-x" id="trClose" type="button" aria-label="Close" style="top:10px;right:12px">&times;</button>
       <h3 id="trName">Trader</h3><p id="trSub"></p>
-      <div class="tr-actions" id="trActions" hidden><button class="btn" type="button" id="trShare">Share profile</button><button class="btn" type="button" id="trLink">Copy link</button></div></div>
+      <div class="tr-actions" id="trActions" hidden><button class="btn primary" type="button" id="trFollow" hidden>Follow</button><button class="btn" type="button" id="trShare">Share profile</button><button class="btn" type="button" id="trLink">Copy link</button></div></div>
     <div class="tr-body" id="trBody"><div class="empty">Loading…</div></div>
   </div>
 </dialog>
@@ -916,7 +960,8 @@ td.rank{color:var(--muted);width:56px}
   <form method="dialog">
     <h3 id="cfTitle">Confirm order</h3>
     <dl class="confirm-sum" id="cfSum"></dl>
-    <label class="toggle"><input type="checkbox" id="cfNoAsk"> Don't ask again</label>
+    <p class="cf-warn" id="cfWarn" hidden></p>
+    <label class="toggle" id="cfNoAskWrap"><input type="checkbox" id="cfNoAsk"> Don't ask again</label>
     <div class="dlg-btns"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok" id="cfOk">Place order</button></div>
   </form>
 </dialog>
@@ -1057,9 +1102,11 @@ const cname = c => (window.Aureous && Aureous.displayName ? Aureous.displayName(
 const mlabel = c => ((window.Aureous && Aureous.MARKET_LABELS) || {})[c] || "";
 function toast(msg, kind = "event"){
   const el = document.createElement("div");
+  const link = /\s#trader-([0-9a-f]{12})\.?$/.exec(msg);
+  if (link) { msg = String(msg).replace(link[0], ""); el.dataset.href = link[1]; el.title = "Open their profile"; el.addEventListener("click", () => openTrader(link[1])); }
   el.className = "toast " + kind; el.textContent = String(msg).replace(/\b[a-z][a-z0-9]*:([A-Z0-9]+)\b/g, "$1");
   $("#toasts").appendChild(el);
-  setTimeout(() => el.remove(), kind === "error" ? 7000 : 5000);
+  setTimeout(() => el.remove(), kind === "error" || kind === "alert" ? 9000 : kind === "follow" ? 8000 : 5000);
 }
 async function act(path, body){
   try {
@@ -1177,7 +1224,7 @@ function initChart(){
   });
   volSeries = chart.addSeries(LC.HistogramSeries, {priceScaleId: "vol", priceFormat: {type: "volume"}, lastValueVisible: false, priceLineVisible: false});
   chart.priceScale("vol").applyOptions({scaleMargins: {top: .86, bottom: 0}});
-  chart.subscribeCrosshairMove(p => renderLegend(p && p.time !== undefined ? p.seriesData.get(candleSeries) : null));
+  chart.subscribeCrosshairMove(p => { renderLegend(p && p.time !== undefined ? p.seriesData.get(candleSeries) : null); newsTip(p); });
   chart.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r && r.from < 20) loadOlder(); });
   $("#chartEl").addEventListener("dblclick", resetView);
   if (window.AureousDraw) {
@@ -1227,7 +1274,7 @@ async function loadCandles(){
     candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
     $("#chartMsg").hidden = !!S.candles.length;
     if (!S.candles.length) $("#chartMsg").textContent = "No price history for this market yet";
-    resetView(); tickLastCandle(); drawPriceLines(); renderLegend(null); if (DRAW) DRAW.refresh();
+    resetView(); tickLastCandle(); drawPriceLines(); renderLegend(null); drawNews(); if (DRAW) DRAW.refresh();
   } catch (e) { if (gen === S.chartGen) $("#chartMsg").textContent = "Couldn't load the chart. Retrying shortly."; }
 }
 async function loadOlder(){
@@ -1243,6 +1290,7 @@ async function loadOlder(){
     S.candles = older.concat(S.candles);
     candleSeries.setData(S.candles.map(barOf)); volSeries.setData(S.candles.map(volOf));
     if (range) chart.timeScale().setVisibleLogicalRange({from: range.from + older.length, to: range.to + older.length});
+    drawNews();
   } catch {} finally { S.olderLoading = false; }
 }
 // keep the newest candle moving with the live mark price
@@ -1269,6 +1317,60 @@ async function refreshRecentCandles(){
     candleSeries.update(barOf(k)); volSeries.update(volOf(k));
   }
 }
+// ---------- news on the chart ----------
+// Dots above the candles where something market-moving happened: Truth Social and Fed/Treasury posts (all markets),
+// posts about this market, and big US economic releases (squares). Hover a dot to read it.
+let newsSeries = null;
+S.news = store.get("news", true);
+const WIDE = /^(realDonaldTrump|federalreserve|WhiteHouse|SecScottBessent|NickTimiraos)$/i;
+const CAL_SHORT = [[/CPI/, "CPI"], [/PCE/, "PCE"], [/NFP|Jobs report/, "Jobs"], [/^Fed rate/, "Fed"], [/^Fed /, "Fed"], [/GDP/, "GDP"], [/PPI/, "PPI"], [/Retail/, "Retail"], [/Unemployment rate/, "Jobs"]];
+function newsItems(){
+  const out = [];
+  const P = window.AureousPosts;
+  if (P && P.on && P.list) for (const p of P.list) {
+    const wide = p.src === "ts" || WIDE.test(p.author.handle);
+    if (!wide && !(P.mentions && P.mentions(p, S.coin))) continue;
+    const text = p.segs.map(x => typeof x === "string" ? x : x.d || (x.c ? "$" + x.c : x.m ? "@" + x.m : "")).join("").trim();
+    out.push({at: p.at, cal: false, wide, who: p.author.name, sub: p.src === "ts" ? "Truth Social" : "X", text: text.length > 180 ? text.slice(0, 179) + "…" : text || (p.media ? "(photo or video)" : "")});
+  }
+  if (window.AureousCal) for (const e of AureousCal.events) {
+    if (e.impact !== "High" || e.at > Date.now()) continue;
+    const short = (CAL_SHORT.find(([re]) => re.test(e.label)) || [0, ""])[1];
+    out.push({at: e.at, cal: true, short, who: e.label, sub: "Economic release", text: [e.forecast && "Forecast " + e.forecast, e.previous && "previous " + e.previous].filter(Boolean).join(", ")});
+  }
+  return out;
+}
+function drawNews(){
+  if (!chart || !LC.createSeriesMarkers) return;
+  if (!newsSeries) newsSeries = LC.createSeriesMarkers(candleSeries, []);
+  S.newsByBar = new Map();
+  $("#newsBtn").setAttribute("aria-pressed", String(!!S.news));
+  if (!S.news || !S.candles.length) { newsSeries.setMarkers([]); return; }
+  const step = INTERVAL_MS[S.interval], first = S.candles[0][0], end = S.candles[S.candles.length - 1][0] + step;
+  for (const n of newsItems().sort((a, b) => a.at - b.at)) {
+    if (n.at < first || n.at >= end) continue;
+    const t = toChartTime(Math.floor(n.at / step) * step);
+    (S.newsByBar.get(t) || S.newsByBar.set(t, []).get(t)).push(n);
+  }
+  const marks = [...S.newsByBar.entries()].sort((a, b) => a[0] - b[0]).map(([time, list]) => {
+    const cal = list.find(n => n.cal), wide = list.some(n => n.wide);
+    return {time, position: "aboveBar", shape: cal ? "square" : "circle", size: 1,
+            color: cal ? "#E0A63A" : wide ? C.accent : C.muted, text: cal ? cal.short : list.length > 1 ? String(list.length) : ""};
+  });
+  newsSeries.setMarkers(marks);
+}
+function newsTip(p){
+  let tip = $("#newsTip");
+  const list = p && p.time !== undefined && p.point && S.newsByBar ? S.newsByBar.get(p.time) : null;
+  if (!list) { if (tip) tip.hidden = true; return; }
+  if (!tip) { $(".chart-wrap").insertAdjacentHTML("beforeend", `<div class="news-tip" id="newsTip"></div>`); tip = $("#newsTip"); }
+  tip.innerHTML = list.slice(-4).map(n => `<div><b>${esc(n.who)}</b> <span class="muted">${esc(n.sub)}, ${new Date(n.at).toLocaleTimeString(undefined, {hour: "2-digit", minute: "2-digit"})}</span>${n.text ? `<br>${esc(n.text)}` : ""}</div>`).join("") +
+    (list.length > 4 ? `<div class="muted">+${list.length - 4} more in the Posts tab</div>` : "");
+  tip.hidden = false;
+  const w = $(".chart-wrap").clientWidth, x = p.point.x;
+  tip.style.left = Math.max(8, Math.min(x + 14, w - 312)) + "px"; tip.style.top = "34px";
+}
+$("#newsBtn").addEventListener("click", () => { S.news = !S.news; store.set("news", S.news); drawNews(); toast(S.news ? "News shows on the chart: hover a dot to read it." : "News hidden from the chart."); });
 function renderLegend(bar){
   S.hovering = !!bar;
   if (!bar) { const k = S.candles[S.candles.length - 1]; if (!k) { $("#legend").innerHTML = ""; return; } bar = barOf(k); }
@@ -1283,7 +1385,7 @@ function drawPriceLines(){
   const p = S.acct?.positions.find(x => x.coin === S.coin);
   if (p) {
     add(p.entry, C.accent, `Entry ${p.size > 0 ? "long" : "short"}`, LC.LineStyle.Solid);
-    if (p.liq) add(p.liq, C.short, "Liquidation");
+    if (p.liq) add(p.liq, C.short, `Liquidation (${(liqDist(p) * 100).toFixed(1)}% away)`);
   }
   for (const o of S.acct?.orders || []) {
     if (o.coin !== S.coin) continue;
@@ -1375,6 +1477,32 @@ function refPrice(){ const m = market(); if (!m) return NaN; if (S.type === "lim
 function notional(){ const sz = num($("#size").value); if (!(sz > 0)) return 0; return S.unit === "margin" ? sz * getLev() : S.unit === "usd" ? sz : sz * refPrice(); }
 function sizeFor(n){ const m = market(); return S.unit === "margin" ? (n / getLev()).toFixed(2) : S.unit === "usd" ? n.toFixed(2) : String(+(n / refPrice()).toFixed(m ? m.sz_dec : 4)); }
 const UNIT_LABEL = {margin: "Margin (your money)", usd: "Position value", coin: "Size in "};
+// ---------- distance to liquidation ----------
+// how far the price can move against a position before it's liquidated, as a share of the price
+const liqDist = p => p && p.liq && p.mark > 0 ? Math.abs(p.mark - p.liq) / p.mark : null;
+const LIQ_WARN = .03;                                  // below this, opening a trade asks first
+function liqTag(d){
+  if (d == null) return "";
+  const lvl = d < LIQ_WARN ? "danger" : d < .1 ? "warn" : "";
+  return `<small class="liqd ${lvl}" title="How far the price can move against you before liquidation">${(d * 100).toFixed(d < .1 ? 1 : 0)}% away</small>`;
+}
+// where the order on the ticket would leave the liquidation price (the engine's own sums, on a copy of the account)
+function liqPreview(){
+  const m = market();
+  if (!LOCAL || !m || LIVE() || locked() || $("#ro").checked || !window.Aureous) return null;
+  const n = notional(), px = refPrice(); if (!(n > 0) || !(px > 0)) return null;
+  const ex = LOCAL.ex, saved = ex.state;
+  try {
+    const name = ex.market(m.name).name, p = saved.positions[name], sz = (S.side === "buy" ? 1 : -1) * n / px;
+    const [size, entry, realized] = Aureous.applyFill(p ? p.size : 0, p ? p.entry : 0, sz, px);
+    if (Math.abs(size) < 1e-12) return {liq: null, dist: null, closes: true};
+    const fee = n * (S.acct && S.acct.fees ? S.acct.fees.taker : .00045);
+    ex.state = {...saved, balance: saved.balance + realized - fee, leverage: {...saved.leverage, [name]: getLev()},
+                positions: {...saved.positions, [name]: {...(p || {opened_ms: Date.now(), realized: 0, funding: 0}), size, entry}}};
+    const liq = ex.liqPrice(name), mark = ex.market(name).mark;
+    return {liq, dist: liq ? Math.abs(mark - liq) / mark : null, size};
+  } catch { return null; } finally { ex.state = saved; }
+}
 function renderSummary(){
   const m = market(), a = S.acct; if (!m) return;
   const n = notional(), lev = getLev(), fee = a ? (S.type === "limit" && $("#post").checked ? a.fees.maker : a.fees.taker) : .00045;
@@ -1382,6 +1510,8 @@ function renderSummary(){
   $("#sMargin").textContent = n ? usd(n / lev) : "–";
   $("#sFee").textContent = n ? usd(n * fee) : "–";
   $("#sAvail").textContent = a ? usd(a.available) : "–";
+  const lp = n ? liqPreview() : null;
+  $("#sLiq").innerHTML = !lp ? "–" : lp.closes ? "Closes the position" : lp.liq ? fpx(lp.liq) + liqTag(lp.dist) : "None";
   const btn = $("#submit");
   if (LIVE()) {
     const av = AureousLive.available(), b = AureousLive.builder(), lf = .00045 + (b ? b.f / 1e5 : 0);
@@ -1425,7 +1555,8 @@ async function submitOrder(ev){
     if ($("#post").checked) body.tif = "Alo";
   }
   if ($("#tpslOn").checked) { const tp = num($("#tpIn").value), sl = num($("#slIn").value); if (tp > 0) body.tp = tp; if (sl > 0) body.sl = sl; }
-  if (SET.confirm && !(await confirmOrder(body, m))) return;
+  const lp = LIVE() ? null : liqPreview(), risky = !!(lp && lp.dist != null && lp.dist < LIQ_WARN);
+  if ((SET.confirm || risky) && !(await confirmOrder(body, m, risky ? lp : null))) return;
   const btn = $("#submit"); btn.disabled = true;
   if (LIVE()) { try { await AureousLive.submit(body, m); } finally { btn.disabled = false; } return; }
   const thesis = !$("#callOptWrap").hidden && $("#callOpt").checked && body.type !== "limit" ? $("#callOptText").value.trim() : "";
@@ -1439,7 +1570,7 @@ async function submitOrder(ev){
   finally { btn.disabled = false; }
 }
 
-function confirmOrder(body, m){
+function confirmOrder(body, m, risky = null){
   return new Promise(resolve => {
     const n = notional(), lev = getLev();
     const rows = [["Market", m.name], ["Side", body.side === "buy" ? "Long" : "Short"], ["Type", body.type === "limit" ? `Limit at ${fpx(body.price)}` : "Market"],
@@ -1448,13 +1579,17 @@ function confirmOrder(body, m){
     if (body.sl) rows.push(["Stop loss", fpx(body.sl)]);
     if (body.reduce_only) rows.push(["Reduce only", "Yes"]);
     if (LIVE()) rows.unshift(["Where", "Hyperliquid testnet (test money)"]);
+    if (risky) rows.push(["Liquidation price", fpx(risky.liq)]);
+    $("#cfWarn").hidden = !risky; $("#cfNoAskWrap").hidden = !!risky;
+    if (risky) $("#cfWarn").innerHTML = `<b>Close to liquidation.</b> A move of only <b>${(risky.dist * 100).toFixed(risky.dist < .001 ? 2 : 1)}%</b> against you would liquidate this position${S.acct && S.acct.positions.length ? " (and your other positions with it, since they share your balance)" : ""}. Lower the leverage or the size to give it more room.`;
     $("#cfTitle").textContent = `${body.side === "buy" ? "Long" : "Short"} ${cname(m.name)}${LIVE() ? " on testnet" : ""}?`;
     $("#cfSum").innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
     $("#cfOk").className = "btn " + (body.side === "buy" ? "primary" : "danger");
+    $("#cfOk").textContent = risky ? "Place it anyway" : "Place order";
     $("#cfNoAsk").checked = false;
     const dlg = $("#confirmDlg");
     dlg.addEventListener("close", () => {
-      if (dlg.returnValue === "ok" && $("#cfNoAsk").checked) saveSettings({...SET, confirm: false});
+      if (dlg.returnValue === "ok" && $("#cfNoAsk").checked && !risky) saveSettings({...SET, confirm: false});
       resolve(dlg.returnValue === "ok");
     }, {once: true});
     dlg.returnValue = ""; dlg.showModal();
@@ -1496,10 +1631,10 @@ window.addEventListener("aureous-settings", () => { C = AureousSettings.apply(SE
 // ---------- account + tables ----------
 async function refreshState(){
   const r = await api(`/api/state?since=${S.lastEvent ?? 0}`);
-  if (S.lastEvent !== null) r.events.forEach(e => { if (e.kind !== "fill") toast(e.msg, e.kind); if (e.kind === "milestone") loadBoard(true); });
+  if (S.lastEvent !== null) r.events.forEach(e => { if (e.kind !== "fill") toast(e.msg, e.kind); if (e.kind === "milestone") loadBoard(true); if (window.AureousAlerts) AureousAlerts.onEvent(e); });
   S.lastEvent = r.last_event;
-  const linesChanged = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]) !== S.linesKey;
-  S.linesKey = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6)]), r.orders]);
+  const linesChanged = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6), p.liq && +(liqDist(p) * 100).toFixed(1)]), r.orders]) !== S.linesKey;
+  S.linesKey = JSON.stringify([r.positions.map(p => [p.coin, p.entry, p.liq && +p.liq.toPrecision(6), p.liq && +(liqDist(p) * 100).toFixed(1)]), r.orders]);
   S.acct = r;
   renderAccount(); renderBottom(); renderSummary();
   if (linesChanged) drawPriceLines();
@@ -1536,6 +1671,7 @@ function renderBottom(){
   bulk.hidden = true;
   if (S.tab === "board") { renderBoard(); return; }
   if (S.tab === "calls") { if (window.AureousCalls) AureousCalls.render(v); return; }
+  if (S.tab === "journal") { if (window.AureousJournal) AureousJournal.render(v); else v.innerHTML = `<div class="empty">The journal couldn't load.</div>`; return; }
   if (S.tab === "live") { if (window.AureousLive) AureousLive.renderBottom(v); return; }
   if (S.tab === "positions") {
     if (locked()) { v.innerHTML = `<div class="empty">Sign in to start trading. Everyone gets $10,000 of paper money, and the leaderboard ranks accounts by value.</div>`; return; }
@@ -1547,7 +1683,7 @@ function renderBottom(){
         return `<tr><td>${coinBtn(p.coin)}</td><td class="${p.size > 0 ? "up" : "down"}">${p.size > 0 ? "Long" : "Short"} ${p.lev}x</td>
           <td>${Math.abs(p.size)}</td><td>${usd(p.value)}</td><td>${fpx(p.entry)}</td><td>${fpx(p.mark)}</td>
           <td class="${cls(p.upnl)}">${sgnUsd(p.upnl)} (${pct(p.roe, 1)})</td>
-          <td title="${p.liq ? "" : "Your whole balance backs this position (cross margin), so it can't be liquidated at any positive price."}">${p.liq ? fpx(p.liq) : "None"}</td>
+          <td title="${p.liq ? "" : "Your whole balance backs this position (cross margin), so it can't be liquidated at any positive price."}">${p.liq ? fpx(p.liq) + liqTag(liqDist(p)) : "None"}</td>
           <td class="${cls(p.funding)}">${sgnUsd(p.funding)}</td>
           <td><span class="up">${tp}</span> / <span class="down">${sl}</span></td>
           <td><span class="act">${AUTH && AUTH.postCall ? `<button data-act="call" data-coin="${esc(p.coin)}" title="Post this position publicly with your reasons">Call</button>` : ""}<button data-act="share-pos" data-coin="${esc(p.coin)}" title="Share this position as an image">Share</button><button data-act="tpsl" data-coin="${esc(p.coin)}">TP/SL</button><button data-act="half" data-coin="${esc(p.coin)}" title="Close half at market">50%</button><button data-act="close" data-coin="${esc(p.coin)}" title="Close all at market">Close</button></span></td></tr>`;
@@ -1890,14 +2026,63 @@ const topIndex = id => TIERS.findIndex(t => t.id === id);
 function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; }
 function left(until){ const m = Math.max(0, Math.round((until - Date.now()) / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}d ${Math.floor(m % 1440 / 60)}h left` : m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m left` : `${m}m left`; }
 function clanTag(tag){ return tag ? `<button class="clan-tag" data-clan="${esc(tag)}" title="Open the clan ${esc(tag)}">[${esc(tag)}]</button>` : ""; }
+// season trophies: gold, silver and bronze medals for the top 3 of a month
+function trophySvg(place, size = 15){
+  const c = {1: "#E3B341", 2: "#C9D1DB", 3: "#C98B57"}[place]; if (!c) return "";
+  const name = {1: "Gold", 2: "Silver", 3: "Bronze"}[place];
+  return `<svg class="trophy" width="${size}" height="${size}" viewBox="0 0 20 20" role="img" aria-label="${name} season trophy"><title>${name} trophy: finished #${place} in a monthly season</title>` +
+    `<path d="M6 1h3l1 5H7zM11 1h3l-1 5h-3z" fill="${c}" opacity=".55"/><circle cx="10" cy="12.5" r="6.5" fill="${c}"/><circle cx="10" cy="12.5" r="4.6" fill="none" stroke="rgba(0,0,0,.28)"/>` +
+    `<text x="10" y="15.6" text-anchor="middle" font-family="IBM Plex Sans,Arial,sans-serif" font-weight="700" font-size="8" fill="rgba(0,0,0,.65)">${place}</text></svg>`;
+}
 function traderName(r){
   const gold = r.badge && topIndex(r.badge) >= topIndex("aureus");
-  return clanTag(r.clan) + `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span></button>` +
+  return clanTag(r.clan) + `<button class="trader-btn" data-pid="${esc(r.pid)}" title="View ${esc(r.name)}'s profile">${r.badge ? badgeSvg(r.badge) : ""}<span class="tname${gold ? " gold" : ""}">${esc(r.name)}</span>${r.trophy ? trophySvg(r.trophy) : ""}</button>` +
     (r.bot ? `<span class="bot-tag" title="An Aureous bot trading a simple strategy on real prices. Can you beat it?">BOT</span>` : "") +
     (r.spotlight_until ? `<span class="spot-tag" title="New milestone. Spotlight: ${left(r.spotlight_until)}">Spotlight</span>` : "");
 }
 S.boardView = "traders"; S.clans = null; S.clansAt = 0;
-const boardSwitch = () => `<div class="board-switch" role="tablist"><button data-view="traders" class="${S.boardView === "traders" ? "on" : ""}">Traders</button><button data-view="clans" class="${S.boardView === "clans" ? "on" : ""}">Clans</button></div>`;
+const boardSwitch = () => `<div class="board-switch" role="tablist">` + [["traders", "All time"], ["season", "This month"], ["clans", "Clans"], ...(S.user ? [["following", "Following"]] : [])]
+  .map(([k, l]) => `<button data-view="${k}" class="${S.boardView === k ? "on" : ""}">${l}</button>`).join("") + `</div>`;
+// monthly season: ranked by return since the 1st, so newcomers have the same chance; top 3 win a trophy
+S.season = null; S.seasonAt = 0; S.follows = null; S.followsAt = 0;
+async function loadSeason(force){
+  if (!AUTH || !AUTH.season || (!force && Date.now() - S.seasonAt < 20000)) return;
+  S.seasonAt = Date.now();
+  try { S.season = await AUTH.season(); S.seasonErr = null; } catch (e) { S.seasonErr = e.message; }
+  if (S.tab === "board" && S.boardView === "season") renderBottom();
+}
+async function loadFollows(force){
+  if (!AUTH || !AUTH.following || !S.user || (!force && Date.now() - S.followsAt < 20000)) return;
+  S.followsAt = Date.now();
+  try { S.follows = await AUTH.following(); S.followsErr = null; } catch (e) { S.followsErr = e.message; }
+  if (S.tab === "board" && S.boardView === "following") renderBottom();
+}
+function loadView(force){ ({clans: loadClans, season: loadSeason, following: loadFollows}[S.boardView] || loadBoard)(force); }
+function renderSeason(){
+  const v = $("#bview"), d = S.season;
+  if (!d) { v.innerHTML = boardSwitch() + `<div class="empty">${S.seasonErr ? esc("Couldn't load the season: " + S.seasonErr) : "Loading this month's season…"}</div>`; return; }
+  const s = d.season, me = d.me;
+  const head = `<div class="board-head"><span><b style="color:var(--text)">${esc(s.name)} season</b>, ${left(s.end)}. Ranked by return since the season began, so everyone has the same chance each month. The top 3 win a trophy.</span>` +
+    (me && me.rank ? `<span>You're <b>#${me.rank}</b> of ${d.ranked}</span>` : S.user ? `<span>Make a trade to join this season</span>` : `<span>Sign in to join</span>`) + `</div>`;
+  const last = d.last && d.last.results.length ? `<div class="milestones" aria-label="Last season's winners"><span class="ms-chip" style="padding-left:10px">${esc(d.last.name)} winners</span>` +
+    d.last.results.map(w => `<span class="ms-chip">${trophySvg(w.place, 18)}<span><button data-pid="${esc(w.pid)}">${esc(w.name)}</button> ${pct(w.return, 1)}</span></span>`).join("") + `</div>` : "";
+  if (!d.rows.length) { v.innerHTML = boardSwitch() + head + last + `<div class="empty">Nobody has traded this season yet. Make a trade to take the lead.</div>`; return; }
+  const row = r => `<tr class="${me && r.pid === me.pid ? "me" : ""}"><td class="rank">${r.rank ? "#" + r.rank : "–"}</td><td style="text-align:left">${traderName(r)}</td>
+    <td class="${cls(r.return)}">${pct(r.return)}</td><td>${usd(r.start)}</td><td>${usd(r.equity)}</td></tr>`;
+  let rows = d.rows.map(row).join("");
+  if (me && me.rank && me.rank > d.rows.length) rows += `<tr><td colspan="5" style="text-align:center;color:var(--faint)">…</td></tr>` + row(me);
+  v.innerHTML = boardSwitch() + head + last + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Return this month</th><th>Value at the start</th><th>Value now</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderFollowing(){
+  const v = $("#bview"), d = S.follows;
+  if (!d) { v.innerHTML = boardSwitch() + `<div class="empty">${S.followsErr ? esc("Couldn't load who you follow: " + S.followsErr) : "Loading…"}</div>`; return; }
+  const head = `<div class="board-head"><span>Traders you follow. You're told when one of them opens a trade (unless they keep their trades private).</span></div>`;
+  if (!d.following.length) { v.innerHTML = boardSwitch() + head + `<div class="empty">You don't follow anyone yet. Open a trader from the leaderboard and press Follow.</div>`; return; }
+  v.innerHTML = boardSwitch() + head + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th><th>Following since</th><th></th></tr></thead><tbody>` +
+    d.following.map(r => `<tr><td class="rank">${r.rank ? "#" + r.rank : "–"}</td><td style="text-align:left">${traderName(r)}${r.private ? ' <span class="muted" title="Their trades are private">(private)</span>' : ""}</td>
+      <td>${usd(r.equity)}</td><td class="${cls(r.return)}">${r.return == null ? "–" : pct(r.return)}</td><td>${r.positions ?? "–"}</td><td>${new Date(r.since).toLocaleDateString(undefined, {day: "numeric", month: "short"})}</td>
+      <td><span class="act"><button data-unfollow="${esc(r.pid)}">Unfollow</button></span></td></tr>`).join("") + `</tbody></table>`;
+}
 async function loadClans(force){
   if (!AUTH || !AUTH.clans || (!force && Date.now() - S.clansAt < 20000)) return;
   S.clansAt = Date.now();
@@ -1918,6 +2103,8 @@ function renderClans(){
 }
 function renderBoard(){
   if (S.boardView === "clans") return renderClans();
+  if (S.boardView === "season") return renderSeason();
+  if (S.boardView === "following") return renderFollowing();
   const v = $("#bview"), b = S.board;
   if (!b) { v.innerHTML = boardSwitch() + `<div class="empty">${S.boardErr ? esc("Couldn't load the leaderboard: " + S.boardErr) : "Loading the leaderboard…"}</div>`; return; }
   const me = b.me;
@@ -1934,7 +2121,9 @@ function renderBoard(){
   v.innerHTML = boardSwitch() + head + strip + `<table><thead><tr><th>Rank</th><th style="text-align:left">Trader</th><th>Account value</th><th>Return</th><th>Open positions</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 $("#bview").addEventListener("click", e => {
-  const sw = e.target.closest("[data-view]"); if (sw) { S.boardView = sw.dataset.view; renderBoard(); if (S.boardView === "clans") loadClans(true); else loadBoard(true); return; }
+  const sw = e.target.closest("[data-view]"); if (sw) { S.boardView = sw.dataset.view; renderBoard(); loadView(true); return; }
+  const uf = e.target.closest("[data-unfollow]");
+  if (uf) { AUTH.follow(uf.dataset.unfollow, false).then(r => { toast(r.messages[0]); loadFollows(true); }).catch(err => toast(err.message, "error")); return; }
   if (e.target.closest("[data-clan-new]")) { openClanNew(); return; }
   const c = e.target.closest("[data-clan]"); if (c) { openClan(c.dataset.clan); return; }
   const t = e.target.closest("[data-pid]"); if (t) openTrader(t.dataset.pid);
@@ -2419,6 +2608,11 @@ function renderTrader(){
     (d.self ? ` <span class="lev-chip">You</span>` : "") + (d.bot ? `<span class="bot-tag">BOT</span>` : "") + (d.clan ? ` <button class="clan-tag" data-clan="${esc(d.clan.tag)}" title="${esc(d.clan.name)}" style="font-size:15px">[${esc(d.clan.tag)}] ${esc(d.clan.name)}</button>` : "") + (d.spotlight_until ? `<span class="spot-tag">Spotlight, ${left(d.spotlight_until)}</span>` : "");
   $("#trSub").textContent = d.bot ? `${d.rank ? `#${d.rank} of ${d.total}. ` : ""}Aureous bot. ${d.strategy || ""}` : `${d.rank ? `#${d.rank} of ${d.total}` : "Unranked"}. Trading since ${new Date(d.joined).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"})}.`;
   $("#trActions").hidden = false;
+  const fb = $("#trFollow");
+  fb.hidden = !(AUTH && AUTH.follow && S.user && !d.self && !d.bot);
+  fb.textContent = d.following ? "Following ✓" : "Follow"; fb.classList.toggle("primary", !d.following);
+  fb.title = d.following ? "Unfollow" : d.private ? "They keep their trades private, so you'd only see their rank" : "Get told when they open a trade";
+  if (d.followers != null && !d.bot) $("#trSub").textContent += ` ${d.followers} follower${d.followers === 1 ? "" : "s"}.`;
   // live values from this page's prices where we have them
   const mk = c => S.mk[c] ? S.mk[c].mark : null;
   const pos = (d.positions || []).map(p => { const m = mk(p.coin) ?? p.mark; return {...p, mark: m, upnl: p.size * (m - p.entry), value: Math.abs(p.size) * m}; });
@@ -2428,6 +2622,7 @@ function renderTrader(){
   const ladder = TIERS.map(t => { const got = (d.badges || []).find(b => b.tier === t.id);
     return `<div class="rung${got ? "" : " locked"}">${badgeSvg(t.id, 22)}<div><b>${t.name}</b><span>${got ? "Earned " + new Date(got.at).toLocaleDateString(undefined, {day: "numeric", month: "short"}) : "$" + t.at.toLocaleString("en-US")}</span></div></div>`; }).join("");
   let html = `<div class="tr-stats">${stats.map(([k, v, c]) => `<div><span>${k}</span><b class="${c}">${v}</b></div>`).join("")}</div><div class="ladder">${ladder}</div>`;
+  if ((d.trophies || []).length) html += `<div class="ladder trophies">` + d.trophies.slice().reverse().map(t => `<div class="rung">${trophySvg(t.place, 22)}<div><b>#${t.place}, ${esc(t.name)}</b><span>${pct(t.return, 1)} that month</span></div></div>`).join("") + `</div>`;
   if (d.private && !d.self) {
     html += `<div class="tr-private">${esc(d.name)} keeps their positions and trades private.</div>`;
   } else {
@@ -2444,6 +2639,13 @@ function renderTrader(){
   $("#trBody").innerHTML = html;
 }
 $("#trClose").addEventListener("click", () => $("#traderDlg").close());
+$("#trFollow").addEventListener("click", async () => {
+  const d = S.trader && S.trader.data; if (!d || !AUTH || !AUTH.follow) return;
+  $("#trFollow").disabled = true;
+  try { const r = await AUTH.follow(d.pid, !d.following); d.following = r.following; d.followers = r.followers; renderTrader(); toast(r.messages[0]); S.followsAt = 0; if (S.board) S.board.following = r.following ? [...(S.board.following || []), d.pid] : (S.board.following || []).filter(p => p !== d.pid); }
+  catch (e) { toast(e.message, "error"); }
+  finally { $("#trFollow").disabled = false; }
+});
 $("#trName").addEventListener("click", e => { const c = e.target.closest("[data-clan]"); if (c) { $("#traderDlg").close(); openClan(c.dataset.clan); } });
 $("#traderDlg").addEventListener("close", () => { S.trader = null; if (location.hash.startsWith("#trader-")) history.replaceState(null, "", location.pathname + location.search); });
 $("#trShare").addEventListener("click", () => { if (S.trader && S.trader.data) shareProfile(S.trader.data); });
@@ -2623,7 +2825,7 @@ $("#privacyBtn").addEventListener("click", async () => {
   try { const r = await AUTH.setPrivate(!p.private); toast(r.messages[0]); loadBoard(true); } catch (e) { toast(e.message, "error"); }
 });
 
-document.querySelector('[data-t="board"]').addEventListener("click", () => { loadBoard(true); if (S.boardView === "clans") loadClans(true); });
+document.querySelector('[data-t="board"]').addEventListener("click", () => { loadBoard(true); if (S.boardView !== "traders") loadView(true); });
 function openBoard(){ document.querySelector('[data-t="board"]').click(); $(".bottom").scrollIntoView({block: "nearest", behavior: "smooth"}); }
 $("#navClans").addEventListener("click", e => { e.preventDefault(); S.boardView = "clans"; openBoard(); loadClans(true); });
 $("#navBoard").addEventListener("click", e => { e.preventDefault(); history.replaceState(null, "", "#leaderboard"); openBoard(); });
@@ -2660,7 +2862,9 @@ window.AureousUI = {
   },
   setUser(user, phase){
     S.user = user; S.authPhase = phase || null; renderUser(); renderSaveNote(); renderSummary(); renderNameBtn(); renderClanBtn();
-    if (S.tab === "board") { loadBoard(true); if (S.boardView === "clans") loadClans(true); }
+    if (S.tab === "board") { if (!user && S.boardView === "following") S.boardView = "traders"; loadBoard(true); if (S.boardView !== "traders") loadView(true); }
+    if (window.AureousAlerts) AureousAlerts.load();
+    if (window.AureousJournal) AureousJournal.load();
     if (phase === "ready" && S.pendingJoin) { const c = S.pendingJoin; S.pendingJoin = null; doJoin(c); }
   },
   syncStatus(status, msg){ S.syncError = status === "error" ? msg : null; renderSaveNote(); },
@@ -2673,6 +2877,9 @@ window.AureousUI = {
     if (hashClan() && api.clan) { S.boardView = "clans"; openBoard(); openClan(hashClan()); }
     if (window.AureousCalls) AureousCalls.enable(api);
     if (window.AureousPosts) AureousPosts.enable(api);
+    if (window.AureousAlerts) AureousAlerts.enable(api);
+    if (window.AureousJournal) AureousJournal.enable(api);
+    if (window.AureousCal) AureousCal.enable(api);
     renderCallOpt();
   },
 };
@@ -2758,13 +2965,16 @@ function loop(fn, ms){ const run = async () => { try { await fn(); } catch (e) {
   loop(refreshTrades, 5000);
   setTimeout(() => loop(async () => { if (S.candles.length) await refreshRecentCandles(); else await loadCandles(); }, 20000), 20000);
   countdown(); setInterval(countdown, 1000);
-  setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView === "clans") loadClans(); } }, 30000);
+  setInterval(() => { if (S.tab === "board" && document.visibilityState === "visible") { loadBoard(); if (S.boardView !== "traders") loadView(); } }, 30000);
   setInterval(() => { if (S.tab === "calls" && document.visibilityState === "visible" && window.AureousCalls) AureousCalls.load(); }, 20000);
 })();
 </script>
 <script src="live.js"></script>
 <script src="calls.js"></script>
 <script src="posts.js"></script>
+<script src="alerts.js"></script>
+<script src="calendar.js"></script>
+<script src="journal.js"></script>
 <script type="module" src="auth.js"></script>
 </body>
 </html>

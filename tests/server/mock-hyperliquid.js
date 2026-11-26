@@ -197,6 +197,9 @@ function tsApi(u) {
   }
   return [404, { error: 'Not found' }];
 }
+// A stand-in for the economic calendar feed (nfs.faireconomy.media/ff_calendar_thisweek.json): GET /cal/week.json.
+// Tests replace the week's events with POST /cal/set [{title, country, date, impact, forecast, previous}, ...]; /cal/log counts reads.
+const CAL = { events: [], reads: 0 };
 http.createServer((req, res) => {
   let body = ''; req.on('data', c => body += c); req.on('end', () => {
     const u = new URL(req.url, 'http://x');
@@ -228,6 +231,9 @@ http.createServer((req, res) => {
     if (u.pathname === '/ts/mode') { TS.mode = +u.searchParams.get('status') || 0; return send({ ok: true }); }
     if (u.pathname === '/ts/log') return send({ log: TS.log });
     if (u.pathname === '/ts/reset') { TS.posts = []; TS.log = []; TS.mode = 0; TS.feedMode = 0; return send({ ok: true }); }
+    if (u.pathname === '/cal/week.json') { CAL.reads++; return send(CAL.events); }
+    if (u.pathname === '/cal/set') { CAL.events = JSON.parse(body || '[]'); return send({ ok: true }); }
+    if (u.pathname === '/cal/log') return send({ reads: CAL.reads });
     if (u.pathname === '/tn/info') return send(tnInfo(JSON.parse(body)));
     if (u.pathname === '/tn/exchange') return send(tnExchange(JSON.parse(body)));
     if (u.pathname === '/tn/fund') { TN.user = u.searchParams.get('user').toLowerCase(); tnAcct(TN.user).usdc += +(u.searchParams.get('amount') || 1000); return send({ ok: true }); }

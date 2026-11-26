@@ -35,6 +35,11 @@ Read `docs/HANDOFF.md` first: what the original claude.ai chat built, decided an
   come from trumpstruth.org's public RSS feed (`parseArchiveFeed`, ETag, at most every 30s); other accounts try
   truthsocial.com's Mastodon-style API. Don't try to get past Truth Social's bot blocking. Local servers need
   `--var TRUTH_API_URL:http://127.0.0.1:8500/ts --var TRUMP_FEED_URL:http://127.0.0.1:8500/ts/feed`.
+- **Trader tools** (`worker/extras.js` + `aureous/web/alerts.js`, `calendar.js`, `journal.js`, `replay.html`): price and
+  liquidation alerts (site/browser/email), economic calendar (Forex Factory weekly feed hourly + `FOMC` dates in extras.js:
+  add each new year's Fed dates), news dots on the chart, monthly seasons with trophies, following traders, trade journal,
+  replay of a past day. Alerts/follows reach the browser through the `events` table (kinds `alert`, `follow`).
+  Local servers also need `--var CAL_URL:http://127.0.0.1:8500/cal/week.json`; tests use `--var TEST_HOOKS:1` (never in production).
 - Bots were removed for good; the cron job deletes any leftover `bot:` accounts.
 
 ## Testing
