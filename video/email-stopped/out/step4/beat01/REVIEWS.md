@@ -37,3 +37,26 @@ toward the camera's position as it moved.
 
 **Self-review of v3:** passes every automated check (framing, signs, extras, foot slide, camera side, change spacing).
 Remaining weak spot I can see: in the two-shot trader 2 is mostly behind trader 1 (background huddle).
+
+## v3 — fresh reviewer (no context): DON'T SEND
+
+Must fix: (1) the swinging foot slid ~200 px **backwards along the floor** before lifting (the planted foot was fine).
+Should fix: (2) feet shuffle 10–15 px as the poses settle after the walk; (3) monitor stands poked through the screens
+("CANNOT CO|NECT"); (4) the crawling ticker cut words mid-letter; (5) a colleague's raised hand floated beside a monitor;
+(6) a stub of Bigsby's far hand stuck out at his shoulder when pointing. Nits: desk fronts overlapping in the close-up,
+colleagues frozen in one pose, a colleague popping into view across the first cut.
+
+**Cause of (1), confirmed by measuring both feet:** the walk cycle swung the legs by angle, and bending the knee at
+lift-off dragged the foot back along the floor (180 px back, 10 px up). My v2 check only watched the planted foot.
+
+## v4 fixes
+
+- Walk rebuilt from **planned foot paths** (two-bone IK): the planted foot slides straight back along the floor, the
+  swinging foot lifts in an arc (about 43 px) and only ever moves forward. Two 30-frame cycles; body moved by walkTrack.
+- New check: **any foot touching the floor must not move** on screen (both feet, every frame, all shots where visible).
+- One standing stance for every grounded pose in the wide shot; Bigsby's legs change only while he's in the air or off
+  screen; after the walk his legs stay exactly where they stopped.
+- Monitor stands sit behind their screens; back-row desks no longer overlap.
+- Ticker swaps two whole messages every 1.5 s (MARKET OPENS 09:00 / EMAIL: NOT CONNECTED) instead of crawling.
+- Colleague 2 reacts with both arms up (no floating hand); both colleagues keep moving a little and cheer at the end.
+- Bigsby points and cheers with his phone hand; the far arm hangs relaxed (no stub at the shoulder).
