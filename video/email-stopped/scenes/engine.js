@@ -220,19 +220,21 @@ export function makeBeat(spec, meta) {
   // ---------- overlay text (HTML) ----------
   function overlay(n) {
     const cap = document.getElementById('cap'), lab = document.getElementById('label'), tit = document.getElementById('title');
-    cap.textContent = meta.line; cap.style.opacity = (seq(n, 2, 8) * (1 - seq(n, FRAMES - 4, FRAMES))).toFixed(3);
+    // fades use colour alpha, not CSS opacity: opacity layers left black ghost boxes in headless Chrome
+    const ca = seq(n, 2, 8) * (1 - seq(n, FRAMES - 4, FRAMES));
+    cap.textContent = meta.line; cap.style.color = `rgba(255,250,240,${ca.toFixed(3)})`; cap.style.background = `rgba(22,20,28,${(0.82 * ca).toFixed(3)})`;
     const label = spec.label ?? meta.text;
     lab.style.display = label && !spec.title ? 'block' : 'none'; lab.textContent = label || '';
-    lab.style.opacity = seq(n, T(spec.labelAt ?? 0.4), T(spec.labelAt ?? 0.4) + 8).toFixed(3);
+    const la = seq(n, T(spec.labelAt ?? 0.4), T(spec.labelAt ?? 0.4) + 8);
+    lab.style.color = `rgba(255,250,240,${la.toFixed(3)})`; lab.style.background = `rgba(29,26,36,${la.toFixed(3)})`; lab.style.borderRightColor = `rgba(233,185,73,${la.toFixed(3)})`;
     if (spec.title) {
       tit.style.display = 'flex';
       const lines = spec.title, attrib = lines.length > 1 && spec.attrib !== false ? lines.length - 1 : -1;
       const words = lines.map(l => l.split(' ')), total = words.reduce((k, w, i) => k + (i === attrib ? 1 : w.length), 0);
       const t0 = T(spec.titleAt ?? 0.3), t1 = Math.max(t0 + 20, FRAMES - 48), shown = Math.ceil(total * seq(n, t0, t1));   // words appear steadily
       let k = 0;
-      tit.innerHTML = words.map((w, i) => { const cls = i === attrib ? 'sub' : ''; const html = i === attrib ? (k++ < shown ? w.join(' ') : '') : w.map(x => `<span style="opacity:${k++ < shown ? 1 : 0}">${x.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`).join(' ');
+      tit.innerHTML = words.map((w, i) => { const cls = i === attrib ? 'sub' : ''; const html = i === attrib ? (k++ < shown ? w.join(' ') : '') : w.map(x => `<span style="color:${k++ < shown ? 'inherit' : 'transparent'};text-shadow:${k <= shown ? '' : 'none'}">${x.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`).join(' ');
         return `<div class="${cls}">${html || '&nbsp;'}</div>`; }).join('');
-      tit.style.opacity = '1';
     } else tit.style.display = 'none';
   }
 
@@ -255,6 +257,7 @@ export function makeBeat(spec, meta) {
     for (const p of LIVE) p.update(n);
     await Promise.all(Object.values(cards).map(c => c.load()));
     stage.renderer.render(stage.scene, stage.camera);
+    const c2 = document.getElementById('c2'); if (c2) c2.getContext('2d').drawImage(stage.renderer.domElement, 0, 0);   // show the 3D frame on a plain 2D canvas (see overlay note)
     overlay(n);
   }
   function soleWorld(A, n, leg) {
