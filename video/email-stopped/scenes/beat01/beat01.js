@@ -17,7 +17,7 @@ export const SHOTS = [
 // Something on screen changes at each of these frames (checked: never more than 2 s apart).
 export const EVENTS = [
   [0, 'open on the floor; Bigsby taps refresh'], [24, 'a colleague throws up his hands'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
-  [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [100, 'Bigsby jumps'],
+  [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [90, 'shriek arcs keep coming in from the left'], [100, 'Bigsby jumps'],
   [128, 'Bigsby goes from shock to fear'], [150, 'Bigsby turns toward the noise'], [165, 'CUT to two-shot'], [169, 'Bigsby starts walking over'], [196, 'paper starts coming out'],
   [235, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
   [270, 'a trader points, another covers her ears'], [285, 'a green tick stamps the page'],
@@ -141,7 +141,7 @@ function faxieAt(n) {
     svg += `<g transform="translate(${shake.toFixed(1)} 0)"><path d="M-46 ${y0.toFixed(1)} L46 ${y0.toFixed(1)} L48 ${(y0 + len).toFixed(1)} L-44 ${(y0 + len + 2).toFixed(1)} Z" fill="#fffdf6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
       `<path d="M-30 ${(y0 + 14).toFixed(1)} h56 M-30 ${(y0 + 25).toFixed(1)} h44" stroke="#9aa4b1" stroke-width="4" opacity="${clamp(len / 40).toFixed(2)}"/>` +
       (out > 0.85 ? `<text x="2" y="${(y0 + 50).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="0.5" fill="#d9483b">CONFIRM</text>` : '') +
-      (tick > 0 ? `<path d="M26 ${(y0 + 30).toFixed(1)} l8 9 l16 -20" fill="none" stroke="#2e9e5b" stroke-width="${(7 * tick).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round" opacity="${tick.toFixed(2)}"/>` : '') + '</g>';
+      (tick > 0 ? `<path d="M22 ${(y0 + 18).toFixed(1)} l6 7 l13 -16" fill="none" stroke="#2e9e5b" stroke-width="${(7 * tick).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round" opacity="${tick.toFixed(2)}"/>` : '') + '</g>';
   }
   return { svg, x: FAX_X, z: FAX_Z, y: TABLE_H };
 }
@@ -173,6 +173,15 @@ function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
   return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1.5 : 1.5, turn: turned ? 0.7 : 0.7, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
 }
 
+// Close-up only: the shriek's arcs keep coming in from off-screen left (the fax is out of shot).
+function edgeWavesAt(n) {
+  let svg = '<rect width="1" height="1" fill="none"/>';
+  for (let k = 0; k < 3; k++) {
+    const ph = ((n * 0.11 + k / 3) % 1), rr = 80 + ph * 200, op = (1 - ph * ph) * 0.9;
+    svg += `<path d="M${(ph * 140).toFixed(1)} ${(-360 - rr * 0.45).toFixed(1)} q${(rr * 0.4).toFixed(1)} ${(rr * 0.45).toFixed(1)} 0 ${(rr * 0.9).toFixed(1)}" fill="none" stroke="#e85d4a" stroke-width="${(14 - ph * 7).toFixed(1)}" stroke-linecap="round" opacity="${op.toFixed(2)}"/>`;
+  }
+  return svg;
+}
 // "SKREEEE!" sound word over Faxie: bounces in at the shriek, jitters, gone once Faxie grins.
 function sfxAt(n) {
   const on = (n >= 66 && n < 90) || (n >= 165 && n < 238);
@@ -260,7 +269,7 @@ function buildSet(stage) {
   } });
   const SCREENS = [[DESK.x - 0.5, -1.4, 0.75], [EXTRAS.t2 + 0.8, -3.7, -0.3], [EXTRAS.t1 + 0.8, -3.7, -0.3]];
   for (const [x, z, ry] of SCREENS) screen(x, z, ry, true, z < -3 ? 1.05 : 1.5);   // back row narrower: neighbours never overlap
-  screen(10.4, -3.7, -0.3, false); screen(9.2, -0.8, -0.5, false);
+  // (no monitor on the far-right desk: it sat sliced at the frame edge in the wides)
   for (const [x, z, ry] of SCREENS) box(scene, { w: 0.16, h: 0.26, d: 0.12, color: '#2b2f3a', x: x - 0.16 * Math.sin(ry), y: 2.14, z: z - 0.16 * Math.cos(ry), ry });   // stand sits behind its screen
   box(scene, { w: 1.0, h: 0.08, d: 0.45, color: '#3b3f4a', x: DESK.x + 0.4, y: 2.14, z: -0.8, ry: 0.2 });                            // keyboard
   // Faxie's corner: pillar, side table, filing cabinet, a dead plant
@@ -277,7 +286,7 @@ export async function setup(canvas) {
   stage = createStage(canvas);
   LIVE.length = 0;
   buildSet(stage);
-  cards = { waves: createCard(stage.scene, 'waves'), sfx: createCard(stage.scene, 'sfx'), faxie: createCard(stage.scene, 'faxie'), t1: createCard(stage.scene, 't1'), t2: createCard(stage.scene, 't2'), bigsby: createCard(stage.scene, 'bigsby') };
+  cards = { edge: createCard(stage.scene, 'edge'), waves: createCard(stage.scene, 'waves'), sfx: createCard(stage.scene, 'sfx'), faxie: createCard(stage.scene, 'faxie'), t1: createCard(stage.scene, 't1'), t2: createCard(stage.scene, 't2'), bigsby: createCard(stage.scene, 'bigsby') };
 }
 
 function place(n) {
@@ -289,9 +298,11 @@ function place(n) {
   cards.t1.set(traderAt(T1, n, { x: EXTRAS.t1, flipStart: false, turnAt: 78, react: 'surprised', react2: 'point', react2At: 270 }).svg, { x: EXTRAS.t1, z: -4.3, shadowW: 0 });
   const t2x = lerp(EXTRAS.t2, EXTRAS.t2b, ease(seq(n, 80, 88)));
   cards.t2.set(traderAt(T2, n, { x: t2x, flipStart: false, turnAt: 84, react: 'surprised', react2: 'surprised', react2At: 270 }).svg, { x: t2x, z: -4.3, shadowW: 0 });
+  cards.edge.set(edgeWavesAt(n), { x: BX[90] - 3.3, y: 0, z: B_Z - 0.3, shadowW: 0 });
   const fx = sfxAt(n); cards.sfx.set(fx.svg || '<rect width="1" height="1" fill="none"/>', { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.4, ground: TABLE_H, shadowW: 0 });
   for (const k in cards) { cards[k].face(c); cards[k].visible = true; }
-  cards.waves.mesh.renderOrder = -1;                                  // sound arcs draw behind every character
+  cards.waves.mesh.renderOrder = -1;
+  cards.edge.visible = shotAt(n).id === 'B';                                  // sound arcs draw behind every character
   cards.sfx.visible = fx.visible;
   return cam;
 }

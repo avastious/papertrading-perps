@@ -167,3 +167,18 @@ celebration ending may run ahead of the script (the user's call).
 - Back-row monitors narrower so neighbours never overlap.
 - Opening wide shot from further right, so the colleagues stand clear of Bigsby.
 - Sound arcs always draw behind the characters; final wide camera points straight at the set (no tilt, no card turn).
+
+## v10 — fresh reviewer (no context): **SEND**
+
+No must-fix problems. Reviewer measured: cuts exact (89/90, 164/165, 254/255) in the right order; screen sides hold;
+pupils toward the fax at every cut; planted shoes hold to within 1 px, no creep; something changes at least every 2 s.
+Should fix: (1) two monitors doubled up at the right frame edge; (2) the green tick covered the M of CONFIRM;
+(3) nothing in the close-up showed the fax was still shrieking. Nits: a colleague briefly behind Bigsby's head at the
+start of the two-shot; pupils up-left during the recoil; colleagues' heads overlapping at the end; a crouched walk.
+
+## v11 (final picture for approval) fixes
+
+- Far-right monitors removed (no sliced or doubled screens at the frame edge).
+- Tick moved beside the word: "CONFIRM ✓".
+- Close-up: the shriek's arcs keep coming in from off-screen left (own effect card, close-up only).
+- Self-check of v11: all automated checks pass; cut frames reviewed.
