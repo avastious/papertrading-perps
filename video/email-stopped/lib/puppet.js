@@ -74,6 +74,7 @@
     blink: { eyes: 'closed', open: 1, pupil: 1, brow: 0, raise: 0, mouth: 'smallSmile' },
     talkA: { eyes: 'open', open: 1, pupil: 1, brow: 0, raise: 3, mouth: 'talkA' },
     talkB: { eyes: 'open', open: 1, pupil: 1, brow: 0, raise: 1, mouth: 'talkB' },
+    worried: { eyes: 'open', open: 1.15, pupil: 1.0, brow: -10, raise: 7, mouth: 'wobble' },   // scared, but with full-size pupils so the eyeline reads
     shriek: { eyes: 'open', open: 1.35, pupil: 0.45, brow: 16, raise: 8, mouth: 'shriek' },   // added for beat 1: a full-volume scream
   };
 

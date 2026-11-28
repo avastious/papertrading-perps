@@ -132,3 +132,23 @@ a calm closed-eye blink in the middle of the shriek.
 - Before the shriek: Bigsby and the colleagues are worried and look at their phone/screens, not the lens.
 - Walking, the phone hand is carried up in front (forearm raised), so the phone is held, not on the wrist.
 - No blink during the shriek; ground shadow darker and wider.
+
+## v8 — fresh reviewer (no context): DON'T SEND
+
+Must fix: (1) after the startle hop Bigsby stayed 6 px in the air until the cut, over a dark shadow that read as a
+blob under his shoes; (2)/(3) the reviewer read his pupils as pointing away from the fax in the wide and the walk.
+Should fix: (4) crossed-leg stance at the cut into the two-shot, woman hidden behind his head; (5) final wide too
+far back and high. Nits: "SKREEEE!" vs "SKREE!"; a slow first 1.5 s.
+
+**On (2)/(3):** I cropped the frames at full size: the pupils were on the fax's side, but in the scared face they
+were small (about 4 px) beside a white highlight, so at normal size they read the other way. Two reviewers made the
+same reading, so it is a real readability fault even though the measured direction was right.
+
+## v9 fixes
+
+- New `worried` face in the rig (scared brows and mouth, full-size pupils); Bigsby uses it, with a stronger look.
+- The flinch is a quick hop that lands at once (no hovering).
+- Ready stance has the near foot forward (less leg-crossing); two-shot camera raised a little.
+- Final wide pulled in (ticker still fully in frame); one spelling of the sound word.
+- Colleagues swapped seats so the woman sits furthest right and stays visible; the hoodie colleague throws up his
+  hands at his dead screen at frame 24 (an earlier change in the opening).

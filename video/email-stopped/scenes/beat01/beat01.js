@@ -16,7 +16,7 @@ export const SHOTS = [
 ];
 // Something on screen changes at each of these frames (checked: never more than 2 s apart).
 export const EVENTS = [
-  [0, 'open on the floor; Bigsby taps refresh'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
+  [0, 'open on the floor; Bigsby taps refresh'], [24, 'a colleague throws up his hands'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
   [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [100, 'Bigsby jumps'],
   [128, 'Bigsby goes from shock to fear'], [150, 'Bigsby turns toward the noise'], [165, 'CUT to two-shot'], [169, 'Bigsby starts walking over'], [196, 'paper starts coming out'],
   [235, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
@@ -40,7 +40,7 @@ Object.assign(T2.body, { color: '#c8643c', color2: '#a54e2c' }); Object.assign(T
 //   planted foot: slides straight back along the floor from +D to -D (so the body moves forward by exactly that);
 //   swinging foot: lifts in an arc and only ever moves forward, from -D to +D.
 // walkTrack then moves the body by exactly how far the planted foot pushes back, so nothing slides.
-const WALK = { start: 169, cycle: 22, from: -0.25, strides: 2.25, close: 0.5 };   // from -0.25: both feet on the floor (ready stance)
+const WALK = { start: 169, cycle: 22, from: 0.25, strides: 2.25, close: 0.5 };   // from 0.25: both feet down, near foot forward (ready stance)
 WALK.end = WALK.start + Math.round((WALK.strides + WALK.close - WALK.from) * WALK.cycle);
 const B_START_X = 1.9, B_Z = 0.15;
 const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 32, LIFT = 26;
@@ -80,7 +80,7 @@ const POSE = {
   phoneA: { lean: 4, armR: [40, 150], armL: [55, 95], ...STANCE, head: -4, propHand: 'R' },     // staring at the phone, jabbing keys
   phoneB: { lean: 4, armR: [40, 138], armL: [62, 112], ...STANCE, head: -6, propHand: 'R' },
   shake: { lean: 8, armR: [52, 150], armL: [60, 100], ...STANCE, head: -10, propHand: 'R' },
-  flinch: { lean: -9, bob: -6, armR: [18, 140], armL: [-24, 40], ...STANCE, head: -10, propHand: 'R' },
+  flinch: { lean: -9, bob: 0, armR: [18, 140], armL: [-24, 40], ...STANCE, head: -10, propHand: 'R' },
   jump: { ...P.POSES.surprised, ...gait(WALK.from), lean: -8, head: -6, armL: P.POSES.surprised.armL, armR: P.POSES.surprised.armR, propHand: 'R' },   // lands in walk-ready stance (legs move in the air)
   fear: { lean: -6, bob: 0, armR: [30, 120], armL: [-20, 60], legL: gait(WALK.from).legL, legR: gait(WALK.from).legR, shoeL: 0, shoeR: 0, head: 6, propHand: 'R' },
   lean: { lean: 16, bob: 0, armR: [30, 80], armL: [40, 70], ...WALK_LEGS_END, head: 10, propHand: 'R' },
@@ -89,16 +89,16 @@ const POSE = {
 };
 
 function bigsbyPose(n) {
-  let pose, face = 'scared', look = 1.5, turn = 0.6;   // + = the way he faces = screen-left once flipped (phone/desk, then the fax). Measured: see checkAll.
-  if (n < 30) { pose = Math.floor(n / 5) % 2 ? POSE.phoneA : POSE.phoneB; face = 'scared'; }                 // jab, jab: nothing (worried)
+  let pose, face = 'worried', look = 2.0, turn = 0.6;   // + = the way he faces = screen-left once flipped (phone/desk, then the fax). Measured: see checkAll.
+  if (n < 30) { pose = Math.floor(n / 5) % 2 ? POSE.phoneA : POSE.phoneB; face = 'worried'; }                 // jab, jab: nothing (worried)
   else if (n < 66) { pose = lerpPose(POSE.shake, POSE.phoneB, (Math.sin(n * 1.3) + 1) / 2 * 0.7); face = 'angry'; }  // shakes the phone
-  else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); face = n < 76 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }  // flinches at the shriek
-  else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 1.6; turn = 0.8; }
-  else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = 'scared'; look = 1.6; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
-  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) { const w = pose; pose = { ...lerpPose(POSE.fear, w, ease(seq(n, WALK.start, WALK.start + 6))), legL: w.legL, legR: w.legR, shoeL: 0, shoeR: 0 }; } face = 'scared'; look = 1.6; turn = 0.8; }   // blend the upper body only; legs stay on their planned paths
-  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = n < 241 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }
-  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 1.6; turn = 0.8; }
-  else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = 1.6; turn = 0.8; }        // the page lands: he cheers
+  else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); pose.bob = -8 * Math.sin(Math.PI * seq(n, 66, 74)); face = n < 76 ? 'surprised' : 'worried'; look = 2.0; turn = 0.8; }  // flinches at the shriek
+  else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 2.0; turn = 0.8; }
+  else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = 'worried'; look = 2.0; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
+  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) { const w = pose; pose = { ...lerpPose(POSE.fear, w, ease(seq(n, WALK.start, WALK.start + 6))), legL: w.legL, legR: w.legR, shoeL: 0, shoeR: 0 }; } face = 'worried'; look = 2.0; turn = 0.8; }   // blend the upper body only; legs stay on their planned paths
+  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = n < 241 ? 'surprised' : 'worried'; look = 2.0; turn = 0.8; }
+  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 2.0; turn = 0.8; }
+  else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = 2.0; turn = 0.8; }        // the page lands: he cheers
   return { pose, face, look, turn };
 }
 function bigsbyAt(n) {
@@ -161,6 +161,7 @@ function wavesAt(n) {
 function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
   const turned = n >= turnAt;
   let pose = Math.floor(n / 9) % 2 ? { armL: [30, 100], armR: [40, 80], head: -4 } : { armL: [30, 100], armR: [46, 92], head: -6 };
+  if (spec === T1 && n >= 24 && n < turnAt) pose = { ...P.POSES.shrug, head: 8 };                 // 'still nothing'
   let face = 'scared';                        // email is down: worried, eyes on their own screens
   if (turned) {
     const base = P.POSES[n >= react2At ? react2 : react], w = Math.sin(n * 0.35) * 8;          // keep moving a little
@@ -176,21 +177,21 @@ function sfxAt(n) {
   if (!on) return { svg: '', visible: false };
   const t = n < 90 ? seq(n, 66, 72) : 1, k = 0.4 + 0.6 * ease(t) + 0.06 * Math.sin(n * 1.9);
   const jx = Math.sin(n * 3.1) * 4, jy = Math.cos(n * 2.7) * 3;
-  const word = n < 90 ? 'SKREEEE!' : 'SKREE!';
+  const word = 'SKREEEE!';
   const txt = (fill, sw) => `<text x="0" y="0" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="64" font-style="italic" letter-spacing="2" fill="${fill}" stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round" paint-order="stroke">${word}</text>`;
   return { visible: true, svg: `<g transform="translate(${jx.toFixed(1)} ${(-310 + jy).toFixed(1)}) rotate(-6) scale(${k.toFixed(3)})">${txt('#ffd23f', 12)}</g>` };
 }
 
 // ---------------- camera per shot ----------------
-export const EXTRAS = { t2: 4.2, t2b: 4.2, t1: 5.35 };   // both colleagues sit on Bigsby's right (screen side never changes)
-export const C_CAM = { dx: 3.1, z: 10.6 }, D_CAM = { x: 0.5, z: 15, lx: -1.1, ly: 3.6 };
+export const EXTRAS = { t2: 5.35, t2b: 5.35, t1: 4.2 };   // both colleagues sit on Bigsby's right (screen side never changes)
+export const C_CAM = { dx: 3.1, z: 10.6, y: 3.9 }, D_CAM = { x: 0.3, z: 13.5, lx: -1.3, ly: 3.2 };
 export const B_CAM = { dx: 0.8, lx: 1.0, z: 6.9 };
 function cameraAt(n) {
   const s = shotAt(n), t = (n - s.from) / (s.to - s.from), bx = BX[n];
   switch (s.id) {
     case 'A': return { pos: [lerp(-0.6, -0.8, t), 3.3, lerp(14.2, 13.2, ease(t))], look: [-0.8, 2.95, -1.4], fov: 36 };
     case 'B': { const ax = BX[90]; return { pos: [ax + B_CAM.dx, 3.6, B_CAM.z], look: [ax + B_CAM.lx, 3.3, 0], fov: 32 }; }
-    case 'C': { const cx = FAX_X + C_CAM.dx; return { pos: [cx, 3.25, C_CAM.z], look: [cx, 2.6, -0.2], fov: 34 }; }   // square to the set: cards and walk share one axis
+    case 'C': { const cx = FAX_X + C_CAM.dx; return { pos: [cx, C_CAM.y, C_CAM.z], look: [cx, 2.6, -0.2], fov: 34 }; }   // square to the set: cards and walk share one axis
     case 'D': return { pos: [lerp(D_CAM.x, D_CAM.x - 0.3, t), 3.5, lerp(D_CAM.z, D_CAM.z - 0.5, t)], look: [D_CAM.lx, D_CAM.ly, -1.6], fov: 36 };
   }
 }
