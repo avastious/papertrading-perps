@@ -57,6 +57,22 @@
       prop: 'paper',
     },
   };
+  // Penny's email: a walking envelope (appliance-style puppet: face on the body)
+  CAST.envelope = {
+    name: 'The email', role: "Penny's email.", skin: '#fbf7ef',
+    head: { r: 0 },
+    face: { panelY: 60, eyeDX: 26, eyeY: -4, eyeRx: 11, eyeRy: 13, mouthY: 16, mouthScale: 0.8, browColor: '#6b5f4a', blush: '#e0707a' },
+    body: { shape: 'box', torsoW: 150, torsoH: 100, color: '#fbf7ef', outfit: 'envelope', radius: 10, shoulderDrop: 60, shoulderIn: 4, stamp: '#e85d4a' },
+    arms: { len: 60, w: 14, color: '#d8cfbf', hand: '#fbf7ef' },
+    legs: { len: 58, w: 16, color: '#d8cfbf', shoe: '#e85d4a', shoeLen: 32, shoeH: 14 },
+    prop: 'none',
+  };
+  // Recolour any cast member into a background person: variant('sam', { body: { color: '#..' } })
+  CAST.variant = (base, over) => {
+    const c = JSON.parse(JSON.stringify(CAST[base]));
+    for (const k in over) c[k] = (typeof over[k] === 'object' && !Array.isArray(over[k])) ? Object.assign(c[k] || {}, over[k]) : over[k];
+    return c;
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = CAST;
   if (typeof globalThis !== 'undefined') globalThis.CAST = CAST;
 })();

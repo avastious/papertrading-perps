@@ -139,7 +139,8 @@ export function createCard(scene, name) {
   // Card corners in screen space (0..1). edges = which sides must stay in frame.
   card.screenBox = cam => {
     const b = card.bbox, pts = [];
-    for (const [sx, sy] of [[b.x + PAD, b.y + PAD], [b.x + b.w - PAD, b.y + PAD], [b.x + PAD, b.y + b.h - PAD], [b.x + b.w - PAD, b.y + b.h - PAD]]) {
+    const I = PAD - 10;                                          // measure the drawing including its ink strokes (max ~9 px wide)
+    for (const [sx, sy] of [[b.x + I, b.y + I], [b.x + b.w - I, b.y + I], [b.x + I, b.y + b.h - I], [b.x + b.w - I, b.y + b.h - I]]) {
       const v = new THREE.Vector3(sx * S, -sy * S, 0).applyMatrix4(group.matrixWorld).project(cam);
       pts.push([(v.x + 1) / 2, (1 - v.y) / 2]);
     }

@@ -323,6 +323,7 @@ export async function renderFrame(n) {
 
 // lower-third caption (HTML over the canvas)
 function overlay(n) {
+  const cap = document.getElementById('cap'); if (cap) cap.style.opacity = (seq(n, 2, 8) * (1 - seq(n, 296, 300))).toFixed(3);
   const el = document.getElementById('lower');
   const a = clamp(seq(n, 8, 18)) * (1 - seq(n, 78, 88));
   el.style.opacity = a.toFixed(3);

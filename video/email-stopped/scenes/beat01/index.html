@@ -3,12 +3,15 @@
 <style>
   html,body{margin:0;background:#000;overflow:hidden}
   canvas{display:block;width:1920px;height:1080px}
-  #lower{position:absolute;left:96px;bottom:92px;opacity:0;font:700 46px/1.1 Arial, sans-serif;color:#fffaf0;
+  #lower{position:absolute;left:96px;top:64px;opacity:0;font:700 46px/1.1 Arial, sans-serif;color:#fffaf0;
     background:#1d1a24;padding:18px 30px 20px;border-left:12px solid #e9b949;letter-spacing:1px}
   #lower small{display:block;font-weight:400;font-size:28px;color:#e9b949;margin-top:6px;letter-spacing:2px}
+  #cap{position:absolute;left:50%;bottom:42px;transform:translateX(-50%);max-width:1560px;width:max-content;text-align:center;
+    font:600 40px/1.28 Arial, sans-serif;color:#fffaf0;background:rgba(22,20,28,0.82);padding:14px 34px 16px;border-radius:14px;opacity:0}
 </style></head>
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
+<div id="cap">Friday the thirteenth of November, 2026. In a finance office in Taiwan, a machine nobody has touched in years shrieks to life.</div>
 <div id="lower">Fri 13 Nov 2026<small>TAIWAN</small></div>
 <script src="../../lib/puppet.js"></script>
 <script src="../../lib/cast.js"></script>

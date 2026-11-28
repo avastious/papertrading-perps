@@ -268,6 +268,12 @@
       s += `<path d="M${f(-W / 2 + 12)} -8 L${f(W / 2 - 12)} -8" stroke="${shade(sp.body.color, -0.3)}" stroke-width="5"/>`;
       return s;
     },
+    envelope: (sp) => {                       // a letter with legs: body is the envelope, the flap is drawn on it
+      const H = sp.body.torsoH, W = sp.body.torsoW;
+      return `<path d="M${f(-W / 2 + 6)} ${f(-H + 6)} L0 ${f(-H * 0.42)} L${f(W / 2 - 6)} ${f(-H + 6)}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
+        `<path d="M${f(-W / 2 + 6)} -6 L${f(-W * 0.12)} ${f(-H * 0.5)} M${f(W / 2 - 6)} -6 L${f(W * 0.12)} ${f(-H * 0.5)}" stroke="${shade(sp.body.color, -0.18)}" stroke-width="4"/>` +
+        (sp.body.stamp ? `<rect x="${f(W / 2 - 34)}" y="${f(-H + 12)}" width="22" height="26" rx="2" fill="${sp.body.stamp}" stroke="${INK}" stroke-width="3"/>` : '');
+    },
     fax: (sp) => {
       const H = sp.body.torsoH, W = sp.body.torsoW;
       let s = `<path d="M${f(-W / 2 + 22)} ${f(-H)} L${f(-W / 2 + 36)} ${f(-H - 44)} L${f(W / 2 - 50)} ${f(-H - 44)} L${f(W / 2 - 40)} ${f(-H)} Z" fill="#ffffff" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`;
