@@ -39,7 +39,10 @@
   };
 
   // Continuous cycles for animation (phase in turns, 0..1).
+  // Phase runs backwards inside these so the planted (straight) leg sweeps back while the bent leg swings
+  // forward; the first version had them the other way round, which made the feet moonwalk.
   function walkPose(phase) {
+    phase = -phase;
     const s = Math.sin(phase * 2 * Math.PI);
     const c = Math.cos(phase * 2 * Math.PI);
     const k = (x) => Math.max(0, x);
@@ -50,6 +53,7 @@
     };
   }
   function runPose(phase) {
+    phase = -phase;
     const s = Math.sin(phase * 2 * Math.PI);
     const c = Math.cos(phase * 2 * Math.PI);
     const k = (x) => Math.max(0, x);

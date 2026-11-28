@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Beat 1 · The Day Email Stopped</title>
+<style>
+  html,body{margin:0;background:#000;overflow:hidden}
+  canvas{display:block;width:1920px;height:1080px}
+  #lower{position:absolute;left:96px;bottom:92px;opacity:0;font:700 46px/1.1 Arial, sans-serif;color:#fffaf0;
+    background:#1d1a24;padding:18px 30px 20px;border-left:12px solid #e9b949;letter-spacing:1px}
+  #lower small{display:block;font-weight:400;font-size:28px;color:#e9b949;margin-top:6px;letter-spacing:2px}
+</style></head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="lower">Fri 13 Nov 2026<small>TAIWAN</small></div>
+<script src="../../lib/puppet.js"></script>
+<script src="../../lib/cast.js"></script>
+<script type="module">
+  import * as scene from './beat01.js';
+  await scene.setup(document.getElementById('c'));
+  window.scene = scene;
+  const q = new URLSearchParams(location.search);
+  await scene.renderFrame(+(q.get('frame') || 0));
+  window.ready = true;
+</script>
+</body></html>
