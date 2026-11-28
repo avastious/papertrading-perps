@@ -343,16 +343,18 @@
     return `<path d="M${f(-hw)} 0 L${f(hw)} 0 Q${f(hw + 2)} 0 ${f(hw)} -6 L${f(sw)} ${f(-H + r)} Q${f(sw)} ${f(-H)} ${f(sw - r)} ${f(-H)} L${f(-sw + r)} ${f(-H)} Q${f(-sw)} ${f(-H)} ${f(-sw)} ${f(-H + r)} L${f(-hw)} -6 Q${f(-hw - 2)} 0 ${f(-hw)} 0 Z" fill="${b.color}" stroke="${INK}" stroke-width="${OW}" stroke-linejoin="round"/>`;
   }
 
-  function drawHead(spec, expr, look) {
+  // turn: -1..1 turns the head toward +x (the way the character faces) by sliding the face across it (a 3/4 view).
+  function drawHead(spec, expr, look, turn) {
+    const tx = (turn || 0) * spec.head.r * 0.22;
     const h = spec.head, R = h.r;
     let s = '';
     if (h.hood) s += `<ellipse cx="0" cy="${f(R * 0.25)}" rx="${f(R * 1.18)}" ry="${f(R * 1.08)}" fill="${shade(h.hood, -0.12)}" stroke="${INK}" stroke-width="${OW}"/>`;
     if (spec.hair && HAIR[spec.hair.type]) s += HAIR[spec.hair.type].back(R, spec.hair.color);
     for (const sd of [-1, 1]) s += `<circle cx="${f(sd * R * 0.96)}" cy="${f(R * 0.12)}" r="${f(R * 0.19)}" fill="${spec.skin}" stroke="${INK}" stroke-width="${OW}"/>`;
     s += `<ellipse cx="0" cy="0" rx="${f(R * (h.sx || 1))}" ry="${f(R * (h.sy || 1))}" fill="${spec.skin}" stroke="${INK}" stroke-width="${OW}"/>`;
-    s += drawFace(spec, expr, look, true);
+    s += `<g transform="translate(${f(tx)} 0)">${drawFace(spec, expr, look, true)}</g>`;
     if (spec.hair && HAIR[spec.hair.type]) s += HAIR[spec.hair.type].front(R, spec.hair.color);
-    { const e = EXPR[expr] || EXPR.neutral; s += drawBrow(spec.face, -1, e) + drawBrow(spec.face, 1, e); }
+    { const e = EXPR[expr] || EXPR.neutral; s += `<g transform="translate(${f(tx)} 0)">${drawBrow(spec.face, -1, e) + drawBrow(spec.face, 1, e)}</g>`; }
     if (spec.accessory && ACCESSORY[spec.accessory]) s += ACCESSORY[spec.accessory](R, spec);
     return s;
   }
@@ -387,7 +389,7 @@
     if (spec.head.r) {
       const neckY = -H - spec.head.neck;
       const hy = neckY - spec.head.r * (spec.head.sy || 1) * 0.86;
-      s += `<g transform="rotate(${f(-(p.head || 0))} 0 ${f(neckY)}) translate(0 ${f(hy)})">${drawHead(spec, expr, look)}</g>`;
+      s += `<g transform="rotate(${f(-(p.head || 0))} 0 ${f(neckY)}) translate(0 ${f(hy)})">${drawHead(spec, expr, look, opts.turn)}</g>`;
     } else {
       // Appliance: face lives on the body, hat sits on top.
       s += `<g transform="translate(0 ${f(-H + spec.face.panelY)})">${drawFace(spec, expr, look)}</g>`;

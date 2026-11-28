@@ -82,3 +82,24 @@ floor. My check measured the ankle, not the sole.
 - Eyelines: the rig's `look` is mirrored by `flip`; Bigsby and the turned colleagues now look screen-left, at the fax.
 - Sign: once email goes down (frame 45) it stays "EMAIL: NOT CONNECTED", flashing.
 - One continuous modesty panel along the back row; pillar runs to the ceiling; SKREE is full size after the cut.
+
+## v5 — fresh reviewer (no context): DON'T SEND
+
+Must fix: (1) Bigsby never looks at the fax (pupils point right). Should fix: (2) the woman hidden behind Bigsby's head in
+the close-up and early two-shot; (3) cut 164→165 jumps from standing to mid-step; (4) the walk reads as a sidestep
+because his face points at the camera. Nits: plant pot sliced by the close-up's bottom edge; a background monitor cut
+at the right edge; the ending (printing, cheering) runs into beat 2's territory; CONFIRM small in the last wide.
+Feet: the reviewer measured planted shoes locked to the pixel — rule 5 passes.
+
+**Cause of (1): my own error.** After the v4 review said he looked away, I flipped the `look` sign without measuring.
+Measured afterwards: with `flip`, `look = +1` already puts the pupils screen-left; v5's `-1` turned them right. The
+offset (about 4 px) was also too small to read.
+
+## v6 fixes
+
+- Eyes: `look` +1.6 (stronger) toward the fax. Rig: new `turn` option slides the face across the head (3/4 view), so he
+  faces the fax rather than the camera; he turns his head toward the noise at frame 150. New check measures pupil vs eye
+  centre from the drawing for every frame after the shriek (and fails if the sign is wrong — tested).
+- Walk starts on screen in the two-shot (frame 169) after a beat of standing, so the cut matches.
+- Colleagues re-spaced (3.9 and 5.2) so neither hides behind Bigsby at rest; plant pot removed.
+- v6 review: the fresh reviewer could not run (account spend limit reached). Not yet reviewed.
