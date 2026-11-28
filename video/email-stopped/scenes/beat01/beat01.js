@@ -42,7 +42,7 @@ Object.assign(T2.body, { color: '#c8643c', color2: '#a54e2c' }); Object.assign(T
 // walkTrack then moves the body by exactly how far the planted foot pushes back, so nothing slides.
 const WALK = { start: 169, cycle: 22, from: -0.25, strides: 2.25, close: 0.5 };   // from -0.25: both feet on the floor (ready stance)
 WALK.end = WALK.start + Math.round((WALK.strides + WALK.close - WALK.from) * WALK.cycle);
-const B_START_X = 2.4, B_Z = 0.15;
+const B_START_X = 1.9, B_Z = 0.15;
 const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 32, LIFT = 26;
 const HIP_H = Math.sqrt((2 * LEG_HALF) ** 2 - STRIDE_D ** 2) * 0.985;   // hip height that keeps the leg just short of straight at full stride
 function legIK(fx, fy) {                     // foot (fx forward, fy down) from the hip → [thigh, shin] angles (0 = down, + = forward)
@@ -58,7 +58,7 @@ function footAt(q) {                         // q in [0,1): 0-0.5 planted, 0.5-1
 }
 function gait(phase) {
   const sw = Math.sin(Math.min(phase, WALK.strides) * 2 * Math.PI) * (1 - ease(seq(phase, WALK.strides, WALK.strides + WALK.close)));
-  const arms = { armL: [26 * sw, 26 * sw + 22], armR: [-26 * sw, -26 * sw + 22] };
+  const arms = { armL: [26 * sw, 26 * sw + 22], armR: [12 - 14 * sw, 120 - 10 * sw] };   // near hand holds the phone up in front
   let fL, fR;
   if (phase <= WALK.strides) { fL = footAt(phase + 0.25); fR = footAt(phase + 0.75); }   // phase 0: left planted mid-stride, right mid-swing
   else {                                   // closing step: right foot planted at the front, left foot swings up beside it
@@ -89,12 +89,12 @@ const POSE = {
 };
 
 function bigsbyPose(n) {
-  let pose, face = 'neutral', look = 0.8, turn = 0.3;   // + = the way he faces = screen-left once flipped (phone/desk, then the fax). Measured: see checkAll.
-  if (n < 30) { pose = Math.floor(n / 5) % 2 ? POSE.phoneA : POSE.phoneB; }                                  // jab, jab: nothing
+  let pose, face = 'scared', look = 1.5, turn = 0.6;   // + = the way he faces = screen-left once flipped (phone/desk, then the fax). Measured: see checkAll.
+  if (n < 30) { pose = Math.floor(n / 5) % 2 ? POSE.phoneA : POSE.phoneB; face = 'scared'; }                 // jab, jab: nothing (worried)
   else if (n < 66) { pose = lerpPose(POSE.shake, POSE.phoneB, (Math.sin(n * 1.3) + 1) / 2 * 0.7); face = 'angry'; }  // shakes the phone
   else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); face = n < 76 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }  // flinches at the shriek
   else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 1.6; turn = 0.8; }
-  else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = n >= 140 && n < 143 ? 'blink' : 'scared'; look = 1.6; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
+  else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = 'scared'; look = 1.6; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
   else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) { const w = pose; pose = { ...lerpPose(POSE.fear, w, ease(seq(n, WALK.start, WALK.start + 6))), legL: w.legL, legR: w.legR, shoeL: 0, shoeR: 0 }; } face = 'scared'; look = 1.6; turn = 0.8; }   // blend the upper body only; legs stay on their planned paths
   else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = n < 241 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }
   else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 1.6; turn = 0.8; }
@@ -161,13 +161,13 @@ function wavesAt(n) {
 function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
   const turned = n >= turnAt;
   let pose = Math.floor(n / 9) % 2 ? { armL: [30, 100], armR: [40, 80], head: -4 } : { armL: [30, 100], armR: [46, 92], head: -6 };
-  let face = 'neutral';
+  let face = 'scared';                        // email is down: worried, eyes on their own screens
   if (turned) {
     const base = P.POSES[n >= react2At ? react2 : react], w = Math.sin(n * 0.35) * 8;          // keep moving a little
     pose = { ...base, armL: [base.armL[0] + w, base.armL[1] + w], armR: [base.armR[0] - w, base.armR[1] - w], head: (base.head || 0) + Math.sin(n * 0.2) * 4 };
     face = n >= react2At ? (react2 === 'point' ? ['talkA', 'talkB'][Math.floor(n / 6) % 2] : 'happy') : 'surprised';
   }
-  return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1.5 : 0.6, turn: turned ? 0.7 : 0.4, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
+  return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1.5 : 1.5, turn: turned ? 0.7 : 0.7, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
 }
 
 // "SKREEEE!" sound word over Faxie: bounces in at the shriek, jitters, gone once Faxie grins.
@@ -182,8 +182,8 @@ function sfxAt(n) {
 }
 
 // ---------------- camera per shot ----------------
-export const EXTRAS = { t2: 1.8, t2b: 3.9, t1: 5.2 };   // trader 2 starts at her screen, then steps along the desk (behind it) to see
-export const C_CAM = { dx: 2.6, z: 10.6 }, D_CAM = { x: 0.5, z: 15, lx: -1.1, ly: 3.6 };
+export const EXTRAS = { t2: 4.2, t2b: 4.2, t1: 5.35 };   // both colleagues sit on Bigsby's right (screen side never changes)
+export const C_CAM = { dx: 3.1, z: 10.6 }, D_CAM = { x: 0.5, z: 15, lx: -1.1, ly: 3.6 };
 export const B_CAM = { dx: 0.8, lx: 1.0, z: 6.9 };
 function cameraAt(n) {
   const s = shotAt(n), t = (n - s.from) / (s.to - s.from), bx = BX[n];
@@ -242,11 +242,11 @@ function buildSet(stage) {
   // desks: Bigsby's (front), two in the back row
   const desk = (x, z, w, d) => { box(scene, { w, h: 0.14, d, color: '#c9b79a', x, y: 2.0, z }); for (const sx of [-1, 1]) box(scene, { w: 0.14, h: 2.0, d: d * 0.9, color: '#8b7a64', x: x + sx * (w / 2 - 0.2), z }); };
   desk(DESK.x, -1.3, DESK.w, 1.6);
-  desk(EXTRAS.t2 + 0.5, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: EXTRAS.t2 + 0.5, z: -2.82 });
+  desk(0.4, -3.5, 3.0, 1.4); desk(3.9, -3.5, 3.0, 1.4);
   desk(10.0, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: 10.0, z: -2.82 });
   desk(9.0, -0.6, 3.0, 1.4);
   box(scene, { w: 13.6, h: 1.9, d: 0.06, color: '#b6a385', x: 5.3, z: -2.8 });                      // one modesty panel along the whole back row            // modesty panels hide back-row legs
-  desk(6.2, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: 6.2, z: -2.82 });
+  desk(7.1, -3.5, 2.8, 1.4);
   const screen = (x, z, ry, live) => panel(scene, { w: 1.5, h: 0.95, x, y: 2.75, z, ry, px: 180, live, outline: 0.07, draw: (c, w, h, n) => {
     c.fillStyle = '#1e2a38'; c.fillRect(0, 0, w, h);
     c.strokeStyle = '#e8e2d4'; c.lineWidth = 8; c.strokeRect(w * 0.3, h * 0.22, w * 0.4, h * 0.36); c.beginPath(); c.moveTo(w * 0.3, h * 0.22); c.lineTo(w * 0.5, h * 0.42); c.lineTo(w * 0.7, h * 0.22); c.stroke();
@@ -254,7 +254,7 @@ function buildSet(stage) {
     c.fillStyle = '#e8e2d4'; c.font = 'bold 22px Arial, sans-serif'; c.textAlign = 'center'; c.fillText('CANNOT CONNECT', w / 2, h * 0.84);
     const a = (n || 0) * 0.25; c.strokeStyle = '#6ef0ff'; c.lineWidth = 6; c.beginPath(); c.arc(w * 0.18, h * 0.4, 16, a, a + 4.2); c.stroke();
   } });
-  const SCREENS = [[DESK.x - 0.5, -1.4, 0.75], [EXTRAS.t2 + 1.0, -3.7, -0.3], [EXTRAS.t1 + 1.0, -3.7, -0.3]];
+  const SCREENS = [[DESK.x - 0.5, -1.4, 0.75], [EXTRAS.t2 + 0.8, -3.7, -0.3], [EXTRAS.t1 + 0.8, -3.7, -0.3]];
   for (const [x, z, ry] of SCREENS) screen(x, z, ry, true);
   screen(10.4, -3.7, -0.3, false); screen(9.2, -0.8, -0.5, false);
   for (const [x, z, ry] of SCREENS) box(scene, { w: 0.16, h: 0.26, d: 0.12, color: '#2b2f3a', x: x - 0.16 * Math.sin(ry), y: 2.14, z: z - 0.16 * Math.cos(ry), ry });   // stand sits behind its screen
@@ -279,7 +279,7 @@ export async function setup(canvas) {
 function place(n) {
   const cam = cameraAt(n), c = stage.camera;
   c.position.set(...cam.pos); c.fov = cam.fov; c.updateProjectionMatrix(); c.lookAt(...cam.look); c.updateMatrixWorld();
-  const b = bigsbyAt(n); cards.bigsby.set(b.svg, { x: b.x, z: b.z, shadowW: 1.5 });
+  const b = bigsbyAt(n); cards.bigsby.set(b.svg, { x: b.x, z: b.z, shadowW: 1.8 });
   const f = faxieAt(n); cards.faxie.set(f.svg, { x: f.x, y: f.y, z: f.z, ground: TABLE_H, shadowW: 2.3 });
   cards.waves.set(wavesAt(n), { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.01, ground: TABLE_H, shadowW: 0 });
   cards.t1.set(traderAt(T1, n, { x: EXTRAS.t1, flipStart: false, turnAt: 78, react: 'surprised', react2: 'point', react2At: 270 }).svg, { x: EXTRAS.t1, z: -4.3, shadowW: 0 });

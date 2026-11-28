@@ -115,3 +115,20 @@ Found: at the cut into the two-shot Bigsby stood on one foot (his ready stance w
 - Entering the walk blends only the upper body; legs stay on their planned paths (no 0.6 px slip).
 - Two-shot camera re-aimed (the longer walk moved the fax left). All automated checks pass.
 - Fresh no-context review of v7 still to run once the limit resets (07:20 UTC).
+
+## v7 — fresh reviewer (no context): DON'T SEND
+
+Feet and eyelines now pass (reviewer measured: planted shoe within ±1 px; pupils toward the fax in every shot).
+Must fix: (1) the woman colleague swapped sides of Bigsby across the first cut (she stepped along her desk behind
+him in the wide). Should fix: (2) the phone read as a wristwatch during the walk (drawn above a hanging fist);
+(3) everyone smiled into the lens for the first second although email was already down; (4) the woman hidden in
+the two-shot. Nits: a colleague's pose jump at the cut; a monitor cut at the right edge; faint ground shadow;
+a calm closed-eye blink in the middle of the shriek.
+
+## v8 fixes
+
+- Both colleagues sit on Bigsby's right for the whole clip (no move); back-row desks re-laid; Bigsby starts a little
+  further left so the woman shows beside him in the opening wide.
+- Before the shriek: Bigsby and the colleagues are worried and look at their phone/screens, not the lens.
+- Walking, the phone hand is carried up in front (forearm raised), so the phone is held, not on the wrist.
+- No blink during the shriek; ground shadow darker and wider.

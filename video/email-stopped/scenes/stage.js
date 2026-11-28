@@ -73,7 +73,7 @@ function shadowTexture() {
   if (shadowTex) return shadowTex;
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gr.addColorStop(0, 'rgba(20,16,30,0.42)'); gr.addColorStop(0.6, 'rgba(20,16,30,0.22)'); gr.addColorStop(1, 'rgba(20,16,30,0)');
+  gr.addColorStop(0, 'rgba(20,16,30,0.62)'); gr.addColorStop(0.6, 'rgba(20,16,30,0.34)'); gr.addColorStop(1, 'rgba(20,16,30,0)');
   x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
   return (shadowTex = new THREE.CanvasTexture(c));
 }
