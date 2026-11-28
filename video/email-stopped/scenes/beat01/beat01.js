@@ -18,9 +18,9 @@ export const SHOTS = [
 export const EVENTS = [
   [0, 'open on the floor; Bigsby taps refresh'], [24, 'a colleague throws up his hands'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
   [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [90, 'shriek arcs keep coming in from the left'], [100, 'Bigsby jumps'],
-  [128, 'Bigsby goes from shock to fear'], [150, 'Bigsby turns toward the noise'], [165, 'CUT to two-shot'], [169, 'Bigsby starts walking over'], [196, 'paper starts coming out'],
-  [235, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
-  [270, 'a trader points, another covers her ears'], [285, 'a green tick stamps the page'],
+  [128, 'Bigsby goes from shock to fear'], [150, 'Bigsby turns toward the noise'], [165, 'CUT to two-shot'], [169, 'Bigsby starts walking over'], [196, 'Faxie gets louder: bigger hops, strobing light'],
+  [224, 'Bigsby stops, feet together, and leans in'], [238, 'the shriek hits him: hands over his ears'], [255, 'CUT to wide'],
+  [268, 'the colleagues cover their ears'], [282, 'the shriek peaks: the sound word doubles in size'],
 ];
 export const shotAt = n => SHOTS.find(s => n >= s.from && n < s.to);
 
@@ -86,6 +86,7 @@ const POSE = {
   lean: { lean: 16, bob: 0, armR: [30, 80], armL: [40, 70], ...WALK_LEGS_END, head: 10, propHand: 'R' },
   point: { lean: 6, bob: 0, armR: [88, 96], armL: [-10, -4], ...WALK_LEGS_END, head: 2, propHand: 'R' },          // jabs the phone at the page
   cheer: { lean: 2, bob: 0, armR: [150, 175], armL: [-30, -60], ...WALK_LEGS_END, head: -4, propHand: 'R' },
+  ears: { lean: -8, bob: 0, armR: [150, 215], armL: [-150, -215], ...WALK_LEGS_END, head: -6, propHand: 'R' },        // hands clamped over his ears
 };
 
 function bigsbyPose(n) {
@@ -96,9 +97,8 @@ function bigsbyPose(n) {
   else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 2.0; turn = 0.8; }
   else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = 'worried'; look = 2.0; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
   else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) { const w = pose; pose = { ...lerpPose(POSE.fear, w, ease(seq(n, WALK.start, WALK.start + 6))), legL: w.legL, legR: w.legR, shoeL: 0, shoeR: 0 }; } face = 'worried'; look = 2.0; turn = 0.8; }   // blend the upper body only; legs stay on their planned paths
-  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = n < 241 ? 'surprised' : 'worried'; look = 2.0; turn = 0.8; }
-  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 2.0; turn = 0.8; }
-  else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = 2.0; turn = 0.8; }        // the page lands: he cheers
+  else if (n < 238) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = 'surprised'; look = 2.0; turn = 0.8; }   // leans in for a closer look
+  else { pose = lerpPose(POSE.lean, POSE.ears, ease(seq(n, 238, 243))); pose.lean = lerp(16, -8, ease(seq(n, 238, 243))) + Math.sin(n * 1.7) * 2; face = 'angry'; look = 2.0; turn = 0.8; }   // the shriek hits: hands over ears, wincing
   return { pose, face, look, turn };
 }
 function bigsbyAt(n) {
@@ -113,8 +113,8 @@ FAX_X = B_STOP_X - 2.75;
 // Faxie: asleep and dusty → light flickers → shakes the dust off and shrieks → prints → grins.
 function faxieAt(n) {
   const awake = n >= 48, shriek = n >= 66;
-  const face = !awake ? 'blink' : !shriek ? 'surprised' : n >= 240 ? 'happy' : (Math.floor(n / 4) % 3 ? 'shriek' : 'surprised');
-  const hop = shriek && n < 240 ? Math.abs(Math.sin(n * 0.9)) * 10 : 0;
+  const face = !awake ? 'blink' : !shriek ? 'surprised' : (Math.floor(n / 4) % 3 ? 'shriek' : 'surprised');   // shrieks to the end
+  const hop = shriek ? Math.abs(Math.sin(n * 0.9)) * (n >= 196 ? 16 : 10) : 0;
   const shake = shriek ? Math.sin(n * 2.3) * 5 : 0;
   const pose = { lean: shriek ? Math.sin(n * 1.7) * 3 : 0, bob: -hop, armL: shriek ? [-60 - 30 * Math.sin(n * 0.8), -120] : [-6, -4], armR: shriek ? [60 + 30 * Math.sin(n * 0.8), 120] : [6, 4], legL: [-6, -4], legR: [6, 4], propHand: 'none' };
   let svg = P.renderCharacter(FAX, { pose, face, look: 0, shadow: false, x: shake });
@@ -131,11 +131,12 @@ function faxieAt(n) {
   }
   // power light: flickers from 48, steady from 60
   const on = n >= 60 || (n >= 48 && [0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1][n - 48]);
-  svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="8" fill="${on ? '#7cf29a' : '#5b6352'}" stroke="${INK}" stroke-width="4"/>`;
+  const strobe = n >= 196 && Math.floor(n / 3) % 2;
+  svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="8" fill="${on ? (strobe ? '#ff5a4a' : '#7cf29a') : '#5b6352'}" stroke="${INK}" stroke-width="4"/>`;
   if (on) svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="16" fill="#7cf29a" opacity="0.3"/>`;
   // the page coming out of the front slot (from 196); it never hangs below the table top (it would be hidden).
   // At 285 a green tick stamps onto it: confirmed.
-  const out = ease(seq(n, 196, 250)), tick = ease(seq(n, 285, 290));
+  const out = 0, tick = 0;   // (beat 1 ends on the shriek: no page — that is beat 2)
   if (out > 0) {
     const y0 = -(FAX.legs.len + FAX.legs.shoeH * 0.55) - 12, len = 14 + out * 52;   // bottom stays above the feet's floor line
     svg += `<g transform="translate(${shake.toFixed(1)} 0)"><path d="M-46 ${y0.toFixed(1)} L46 ${y0.toFixed(1)} L48 ${(y0 + len).toFixed(1)} L-44 ${(y0 + len + 2).toFixed(1)} Z" fill="#fffdf6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
@@ -166,9 +167,10 @@ function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
   if (spec === T1 && n >= 24 && n < turnAt) pose = { ...P.POSES.shrug, head: 8 };                 // 'still nothing'
   let face = 'scared';                        // email is down: worried, eyes on their own screens
   if (turned) {
-    const base = P.POSES[n >= react2At ? react2 : react], w = Math.sin(n * 0.35) * 8;          // keep moving a little
+    const EARS = { armL: [-150, -215], armR: [150, 215], head: -6 };
+    const base = n >= react2At && react2 === 'ears' ? EARS : P.POSES[n >= react2At ? react2 : react], w = Math.sin(n * 0.35) * (n >= react2At ? 4 : 8);   // keep moving a little
     pose = { ...base, armL: [base.armL[0] + w, base.armL[1] + w], armR: [base.armR[0] - w, base.armR[1] - w], head: (base.head || 0) + Math.sin(n * 0.2) * 4 };
-    face = n >= react2At ? (react2 === 'point' ? ['talkA', 'talkB'][Math.floor(n / 6) % 2] : 'happy') : 'surprised';
+    face = n >= react2At ? 'angry' : 'surprised';   // wincing at the noise
   }
   return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1.5 : 1.5, turn: turned ? 0.7 : 0.7, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
 }
@@ -184,11 +186,11 @@ function edgeWavesAt(n) {
 }
 // "SKREEEE!" sound word over Faxie: bounces in at the shriek, jitters, gone once Faxie grins.
 function sfxAt(n) {
-  const on = (n >= 66 && n < 90) || (n >= 165 && n < 238);
+  const on = (n >= 66 && n < 90) || n >= 165;
   if (!on) return { svg: '', visible: false };
-  const t = n < 90 ? seq(n, 66, 72) : 1, k = 0.4 + 0.6 * ease(t) + 0.06 * Math.sin(n * 1.9);
+  const t = n < 90 ? seq(n, 66, 72) : 1, k = (0.4 + 0.6 * ease(t)) * (1 + 0.55 * ease(seq(n, 282, 288))) + 0.06 * Math.sin(n * 1.9);
   const jx = Math.sin(n * 3.1) * 4, jy = Math.cos(n * 2.7) * 3;
-  const word = 'SKREEEE!';
+  const word = n >= 282 ? 'SKREEEEEE!!' : 'SKREEEE!';
   const txt = (fill, sw) => `<text x="0" y="0" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="64" font-style="italic" letter-spacing="2" fill="${fill}" stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round" paint-order="stroke">${word}</text>`;
   return { visible: true, svg: `<g transform="translate(${jx.toFixed(1)} ${(-310 + jy).toFixed(1)}) rotate(-6) scale(${k.toFixed(3)})">${txt('#ffd23f', 12)}</g>` };
 }
@@ -212,7 +214,7 @@ const FRAME_RULES = {
   A: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'lrt', t2: 'lrt', sfx: 'lrtb' },
   B: { bigsby: 'lrt', faxie: 'x', t1: 'x', t2: 'x' },
   C: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'x', t2: 'x', sfx: 'lrtb' },
-  D: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'lrt', t2: 'lrt' },
+  D: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'lrt', t2: 'lrt', sfx: 'lrtb' },
 };
 
 // ---------------- the set ----------------
@@ -295,9 +297,9 @@ function place(n) {
   const b = bigsbyAt(n); cards.bigsby.set(b.svg, { x: b.x, z: b.z, shadowW: 1.8 });
   const f = faxieAt(n); cards.faxie.set(f.svg, { x: f.x, y: f.y, z: f.z, ground: TABLE_H, shadowW: 2.3 });
   cards.waves.set(wavesAt(n), { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.01, ground: TABLE_H, shadowW: 0 });
-  cards.t1.set(traderAt(T1, n, { x: EXTRAS.t1, flipStart: false, turnAt: 78, react: 'surprised', react2: 'point', react2At: 270 }).svg, { x: EXTRAS.t1, z: -4.3, shadowW: 0 });
+  cards.t1.set(traderAt(T1, n, { x: EXTRAS.t1, flipStart: false, turnAt: 78, react: 'surprised', react2: 'ears', react2At: 268 }).svg, { x: EXTRAS.t1, z: -4.3, shadowW: 0 });
   const t2x = lerp(EXTRAS.t2, EXTRAS.t2b, ease(seq(n, 80, 88)));
-  cards.t2.set(traderAt(T2, n, { x: t2x, flipStart: false, turnAt: 84, react: 'surprised', react2: 'surprised', react2At: 270 }).svg, { x: t2x, z: -4.3, shadowW: 0 });
+  cards.t2.set(traderAt(T2, n, { x: t2x, flipStart: false, turnAt: 84, react: 'surprised', react2: 'ears', react2At: 272 }).svg, { x: t2x, z: -4.3, shadowW: 0 });
   cards.edge.set(edgeWavesAt(n), { x: BX[90] - 3.3, y: 0, z: B_Z - 0.3, shadowW: 0 });
   const fx = sfxAt(n); cards.sfx.set(fx.svg || '<rect width="1" height="1" fill="none"/>', { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.4, ground: TABLE_H, shadowW: 0 });
   for (const k in cards) { cards[k].face(c); cards[k].visible = true; }

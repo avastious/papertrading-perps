@@ -182,3 +182,13 @@ start of the two-shot; pupils up-left during the recoil; colleagues' heads overl
 - Tick moved beside the word: "CONFIRM ✓".
 - Close-up: the shriek's arcs keep coming in from off-screen left (own effect card, close-up only).
 - Self-check of v11: all automated checks pass; cut frames reviewed.
+
+## v11 — approved by the user, with one change: end beat 1 on the shriek
+
+## v12 changes (ending)
+
+- No page, no tick, no cheering (the confirmation belongs to beat 2).
+- Faxie shrieks to the end and gets louder from frame 196 (bigger hops, strobing light).
+- Bigsby leans in (224), then the shriek hits him: hands clamped over his ears, wincing (238 →).
+- The colleagues cover their ears too (268, 272); the sound word grows to "SKREEEEEE!!" at the peak (282) and is
+  checked to stay in frame in the final wide.
