@@ -64,7 +64,7 @@ function gait(phase) {
   else {                                   // closing step: right foot planted at the front, left foot swings up beside it
     const u = clamp((phase - WALK.strides) / WALK.close);
     fR = [STRIDE_D * (1 - u), HIP_H];
-    fL = [-STRIDE_D + STRIDE_D * ease(u), HIP_H - LIFT * 0.8 * Math.sin(Math.PI * u)];
+    fL = [-STRIDE_D + STRIDE_D * 0.45 * ease(u), HIP_H - LIFT * 0.8 * Math.sin(Math.PI * u)];   // lands a little behind: both shoes stay visible
   }
   // foot paths are planned from the body's centre line; each leg reaches from its own hip (±HIP_X), so in this side
   // view the far foot would otherwise land a hip-width short every step and the walk reads as a shuffle
@@ -99,7 +99,7 @@ function bigsbyPose(n) {
   else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 2.0; turn = 0.8; }
   else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = 'worried'; look = 2.0; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
   else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) { const w = pose; pose = { ...lerpPose(POSE.fear, w, ease(seq(n, WALK.start, WALK.start + 6))), legL: w.legL, legR: w.legR, shoeL: 0, shoeR: 0 }; } face = 'worried'; look = 2.0; turn = 0.8; }   // blend the upper body only; legs stay on their planned paths
-  else if (n < 238) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = 'surprised'; look = 2.0; turn = 0.8; }   // leans in for a closer look
+  else if (n < 238) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = 'worried'; look = 2.0; turn = 0.8; }   // leans in for a closer look
   else { pose = lerpPose(POSE.lean, POSE.ears, ease(seq(n, 238, 243))); pose.lean = lerp(16, -8, ease(seq(n, 238, 243))) + Math.sin(n * 1.7) * 2; face = 'angry'; look = 2.0; turn = 0.8; }   // the shriek hits: hands over ears, wincing
   return { pose, face, look, turn };
 }
@@ -171,7 +171,8 @@ function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
   if (turned) {
     const EARS = { armL: [-150, -215], armR: [150, 215], head: -6 };
     const base = n >= react2At && react2 === 'ears' ? EARS : P.POSES[n >= react2At ? react2 : react], w = Math.sin(n * 0.35) * (n >= react2At ? 4 : 8);   // keep moving a little
-    pose = { ...base, armL: [base.armL[0] + w, base.armL[1] + w], armR: [base.armR[0] - w, base.armR[1] - w], head: (base.head || 0) + Math.sin(n * 0.2) * 4 };
+    const jolt = 10 * Math.sin(Math.PI * seq(n, 282, 290));                                   // flinch at the shriek's peak
+    pose = { ...base, armL: [base.armL[0] + w, base.armL[1] + w], armR: [base.armR[0] - w, base.armR[1] - w], head: (base.head || 0) + Math.sin(n * 0.2) * 4 - jolt, lean: -jolt * 0.8 };
     face = n >= react2At ? 'angry' : 'surprised';   // wincing at the noise
   }
   return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1.5 : 1.5, turn: turned ? 0.7 : 0.7, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
@@ -198,7 +199,7 @@ function sfxAt(n) {
 }
 
 // ---------------- camera per shot ----------------
-export const EXTRAS = { t2: 5.35, t2b: 5.35, t1: 4.2 };   // both colleagues sit on Bigsby's right (screen side never changes)
+export const EXTRAS = { t2: 5.8, t2b: 5.8, t1: 4.65 };   // both colleagues sit on Bigsby's right (screen side never changes)
 export const A_CAM = { x: 1.2 };
 export const C_CAM = { dx: 3.1, z: 10.6, y: 3.9 }, D_CAM = { x: -1.0, z: 13.5, lx: -1.0, ly: 3.2 };
 export const B_CAM = { dx: 0.8, lx: 1.0, z: 6.9 };

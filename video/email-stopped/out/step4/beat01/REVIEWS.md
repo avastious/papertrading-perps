@@ -209,3 +209,18 @@ view that put every far-foot landing a hip-width short.
 - Foot paths planned from the body's centre line (each leg still reaches from its own hip): footfalls now alternate
   evenly about 95 px apart (measured R 1299 → L 1205 → R 1101 → L 1007 → R 903, then feet together).
 - Clock drawn on a transparent panel (no pale square).
+
+## v13 — fresh reviewer (no context): **SEND**
+
+No must-fix problems; walk measured as an even ~95 px step every 11 frames with planted shoes fixed. Should fix:
+(1) feet ended exactly together, so one shoe hid behind the other and he looked one-legged on the last frame;
+(2) Bigsby's head covered a colleague's face for the first half-second of the two-shot. Nits: the woman barely seen,
+colleagues looping one pose, a brief glance away at f230.
+
+## v14 (picture for approval) fixes
+
+- Closing step lands the back foot a little behind the front one: both shoes show.
+- Colleagues moved right (4.65 / 5.8) so the two-shot opens with them clear of Bigsby's head.
+- Bigsby's face stays "worried" (full-size pupils) through the stop, so no glance away; colleagues flinch at the
+  shriek's peak (282).
+- All automated checks pass; stills checked. Not re-reviewed by a fresh reviewer (polish on a SEND).
