@@ -240,8 +240,52 @@ for b in BEATS:
         if c['kind'] == 'shriek': duck_span(starts[b['beat']] + c['t'], starts[b['beat']] + c['t'] + c.get('dur', 1))
 mus *= duck[:, None]
 
+# ---------------------------------------------------------------- voice-over (Kokoro-82M, see audio/LICENCES.md)
+import os
+VDIR = os.path.join(os.path.dirname(cues_path), 'voice')
+voice = np.zeros(N, np.float32); talk = np.zeros(N, np.float32); vlog = []
+if os.path.isdir(VDIR):
+    prev_end = 0.0
+    for n in range(1, len(BEATS) + 2):
+        f = os.path.join(VDIR, f'b{n:02d}.wav')
+        if not os.path.exists(f): continue
+        with wave.open(f) as w: v = np.frombuffer(w.readframes(w.getnframes()), np.int16 if w.getsampwidth() == 2 else np.int32).astype(np.float32); vsr = w.getframerate(); v /= (32768 if w.getsampwidth() == 2 else 2 ** 31)
+        nz = np.nonzero(np.abs(v) > 0.01)[0]; v = v[max(0, nz[0] - int(0.03 * vsr)): nz[-1] + int(0.12 * vsr)] if len(nz) else v   # trim silence
+        v = np.interp(np.arange(int(len(v) * SR / vsr)) * vsr / SR, np.arange(len(v)), v)                                    # 24 kHz -> 48 kHz
+        v = v / (np.sqrt(np.mean(v ** 2)) + 1e-9) * 0.12                                                                    # even loudness, about -18 dBFS
+        at = max(starts[n] + 0.3, prev_end + 0.25); i = int(at * SR); j = min(N, i + len(v)); voice[i:j] += v[: j - i]; talk[i:j] = 1
+        prev_end = at + len(v) / SR; vlog.append((n, round(at - starts[n], 2), round(prev_end - (starts[n + 1] if n + 1 in starts else TOTAL), 2)))
+    late = [x for x in vlog if x[1] > 0.35]
+    sbr = None
+    # duck everything else under speech (smooth 0.25 s ramps)
+    k = int(0.25 * SR); sm = np.convolve(talk, np.ones(k) / k, mode='same')
+    mus *= (1 - 0.6 * sm)[:, None]; amb *= (1 - 0.4 * sm)[:, None]; fx *= (1 - 0.45 * sm)[:, None]
+    # keep speech at least 10 dB above everything else: measure in 0.2 s windows, then apply as one smooth gain curve
+    W = int(0.2 * SR); gw = np.ones(N // W + 1)
+    for q, i in enumerate(range(0, N - W, W)):
+        if talk[i:i + W].mean() < 0.5: continue
+        bg = np.sqrt(np.mean((fx[i:i + W] + amb[i:i + W] + mus[i:i + W] * 0.9) ** 2)) + 1e-9; sp = np.sqrt(np.mean(voice[i:i + W] ** 2)) + 1e-9
+        gw[q] = min(1.0, sp / bg / 3.16)
+    gw = np.minimum.reduce([gw, np.r_[gw[1:], 1], np.r_[1, gw[:-1]]])                  # look one window either side
+    gain = np.interp(np.arange(N), np.arange(len(gw)) * W + W / 2, gw).astype(np.float32)
+    gain = np.convolve(gain, np.ones(int(0.1 * SR)) / int(0.1 * SR), mode='same').astype(np.float32)
+    fx *= gain[:, None]; amb *= gain[:, None]; mus *= gain[:, None]
+    sbr = None
+    print('voice lines', len(vlog), '| started late (beat, s):', [(a, b) for a, b, c in late], '| ran past beat end:', [(a, c) for a, b, c in vlog if c > 0])
+    # duck everything else under speech (smooth 0.25 s ramps)
+    k = int(0.25 * SR); sm = np.convolve(talk, np.ones(k) / k, mode='same')
+    mus *= (1 - 0.6 * sm)[:, None]; amb *= (1 - 0.4 * sm)[:, None]; fx *= (1 - 0.45 * sm)[:, None]
+    # keep speech at least 10 dB above everything else, window by window (the shrieks need extra room)
+    W = int(0.2 * SR)
+    for i in range(0, N - W, W):
+        if talk[i:i + W].mean() < 0.5: continue
+        bg = np.sqrt(np.mean((fx[i:i + W] + amb[i:i + W] + mus[i:i + W] * 0.9) ** 2)) + 1e-9; sp = np.sqrt(np.mean(voice[i:i + W] ** 2)) + 1e-9
+        g = min(1.0, sp / bg / 3.16)
+        if g < 1: fx[i:i + W] *= g; amb[i:i + W] *= g; mus[i:i + W] *= g
+    fx[:] = np.stack([np.convolve(fx[:, c], np.ones(64) / 64, mode='same') if False else fx[:, c] for c in (0, 1)], 1)
+
 # ---------------------------------------------------------------- mix + master
-mix = fx * 1.0 + amb * 1.0 + mus * 0.9
+mix = fx * 1.0 + amb * 1.0 + mus * 0.9 + voice[:, None] * 1.0
 mix = np.tanh(mix * 1.1) / np.tanh(1.1)                                 # gentle soft-clip
 mix = mix / max(1e-9, np.max(np.abs(mix))) * 0.89                        # peak at about -1 dBFS
 pcm = (mix * 32767).astype(np.int16)

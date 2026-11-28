@@ -12,7 +12,10 @@ A cartoon recap (now 10–15 minutes; first planned as 60 seconds) of the Micros
   Beat 1 = `scenes/beat01` (v15: v14 + narration caption). Beats 2-99 = the beat engine (`scenes/engine.js`, specs in
   `scenes/beats/all.js`, sets/sprites in `scenes/sets.js`, `scenes/sprites.js`); `node tools/render_full.js check|stills|video <range> <ver>`.
   Sound made in code: `tools/dump_cues.js` -> `audio/cues.json` -> `tools/sound.py` (see `audio/LICENCES.md`). Assemble: `tools/assemble.sh <name>`.
-  The narration has no voice yet: it runs as on-screen captions.
+  **v2 adds an AI voice-over** (`out/final/the-day-email-stopped_v2.mp4`): Kokoro-82M, voice `af_heart`, run locally by
+  `tools/voice.py` (venv `.venv-tts`, model in `audio/tts-model/` from the kokoro-onnx GitHub release; huggingface.co is
+  blocked here). `tools/sound.py` places each line at its beat (or just after the previous line), ducks everything else to
+  keep speech 10 dB clear. Captions stay on screen.
 - [ ] Step 6 — Notes rounds (keep every version)
 
 ## Files
