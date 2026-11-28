@@ -152,3 +152,18 @@ same reading, so it is a real readability fault even though the measured directi
 - Final wide pulled in (ticker still fully in frame); one spelling of the sound word.
 - Colleagues swapped seats so the woman sits furthest right and stays visible; the hoodie colleague throws up his
   hands at his dead screen at frame 24 (an earlier change in the opening).
+
+## v9 — fresh reviewer (no context): DON'T SEND
+
+Passes now (reviewer measured): eyelines toward the fax in every shot, no foot slide or creep, screen sides hold.
+Must fix: (1) the CONFIRM page slid down behind the table top at the end (hidden). Should fix: (2) overlapping
+back-row monitors cut a label to "NOT CONNECT"; (3) colleagues jammed behind Bigsby's head in the opening wide.
+Nits: a colleague's pose jump at the first cut; sound arcs drawn over Bigsby; the final wide looked tilted; the
+celebration ending may run ahead of the script (the user's call).
+
+## v10 fixes
+
+- The page never hangs below the table top; at 285 a green tick stamps it instead of it dropping.
+- Back-row monitors narrower so neighbours never overlap.
+- Opening wide shot from further right, so the colleagues stand clear of Bigsby.
+- Sound arcs always draw behind the characters; final wide camera points straight at the set (no tilt, no card turn).

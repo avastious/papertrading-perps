@@ -20,7 +20,7 @@ export const EVENTS = [
   [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [100, 'Bigsby jumps'],
   [128, 'Bigsby goes from shock to fear'], [150, 'Bigsby turns toward the noise'], [165, 'CUT to two-shot'], [169, 'Bigsby starts walking over'], [196, 'paper starts coming out'],
   [235, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
-  [270, 'a trader points, another covers her ears'], [285, 'the page drops into the tray'],
+  [270, 'a trader points, another covers her ears'], [285, 'a green tick stamps the page'],
 ];
 export const shotAt = n => SHOTS.find(s => n >= s.from && n < s.to);
 
@@ -133,13 +133,15 @@ function faxieAt(n) {
   const on = n >= 60 || (n >= 48 && [0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1][n - 48]);
   svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="8" fill="${on ? '#7cf29a' : '#5b6352'}" stroke="${INK}" stroke-width="4"/>`;
   if (on) svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="16" fill="#7cf29a" opacity="0.3"/>`;
-  // the page coming out of the front slot (from 196), dropping into the tray at 285
-  const out = ease(seq(n, 196, 250)), drop = ease(seq(n, 285, 292));
+  // the page coming out of the front slot (from 196); it never hangs below the table top (it would be hidden).
+  // At 285 a green tick stamps onto it: confirmed.
+  const out = ease(seq(n, 196, 250)), tick = ease(seq(n, 285, 290));
   if (out > 0) {
-    const len = 18 + out * 70, y0 = -(FAX.legs.len + FAX.legs.shoeH * 0.55) - 12 + drop * 22;
-    svg += `<g transform="translate(${shake.toFixed(1)} 0)"><path d="M-46 ${y0.toFixed(1)} L46 ${y0.toFixed(1)} L50 ${(y0 + len).toFixed(1)} L-42 ${(y0 + len + 4).toFixed(1)} Z" fill="#fffdf6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
-      `<path d="M-30 ${(y0 + 18).toFixed(1)} h56 M-30 ${(y0 + 32).toFixed(1)} h44 M-30 ${(y0 + 46).toFixed(1)} h52" stroke="#9aa4b1" stroke-width="4" opacity="${clamp(len / 60).toFixed(2)}"/>` +
-      (out > 0.85 ? `<text x="4" y="${(y0 + 66).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="14" letter-spacing="0.5" fill="#d9483b">CONFIRM</text>` : '') + '</g>';
+    const y0 = -(FAX.legs.len + FAX.legs.shoeH * 0.55) - 12, len = 14 + out * 52;   // bottom stays above the feet's floor line
+    svg += `<g transform="translate(${shake.toFixed(1)} 0)"><path d="M-46 ${y0.toFixed(1)} L46 ${y0.toFixed(1)} L48 ${(y0 + len).toFixed(1)} L-44 ${(y0 + len + 2).toFixed(1)} Z" fill="#fffdf6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M-30 ${(y0 + 14).toFixed(1)} h56 M-30 ${(y0 + 25).toFixed(1)} h44" stroke="#9aa4b1" stroke-width="4" opacity="${clamp(len / 40).toFixed(2)}"/>` +
+      (out > 0.85 ? `<text x="2" y="${(y0 + 50).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="0.5" fill="#d9483b">CONFIRM</text>` : '') +
+      (tick > 0 ? `<path d="M26 ${(y0 + 30).toFixed(1)} l8 9 l16 -20" fill="none" stroke="#2e9e5b" stroke-width="${(7 * tick).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round" opacity="${tick.toFixed(2)}"/>` : '') + '</g>';
   }
   return { svg, x: FAX_X, z: FAX_Z, y: TABLE_H };
 }
@@ -184,15 +186,16 @@ function sfxAt(n) {
 
 // ---------------- camera per shot ----------------
 export const EXTRAS = { t2: 5.35, t2b: 5.35, t1: 4.2 };   // both colleagues sit on Bigsby's right (screen side never changes)
-export const C_CAM = { dx: 3.1, z: 10.6, y: 3.9 }, D_CAM = { x: 0.3, z: 13.5, lx: -1.3, ly: 3.2 };
+export const A_CAM = { x: 1.2 };
+export const C_CAM = { dx: 3.1, z: 10.6, y: 3.9 }, D_CAM = { x: -1.0, z: 13.5, lx: -1.0, ly: 3.2 };
 export const B_CAM = { dx: 0.8, lx: 1.0, z: 6.9 };
 function cameraAt(n) {
   const s = shotAt(n), t = (n - s.from) / (s.to - s.from), bx = BX[n];
   switch (s.id) {
-    case 'A': return { pos: [lerp(-0.6, -0.8, t), 3.3, lerp(14.2, 13.2, ease(t))], look: [-0.8, 2.95, -1.4], fov: 36 };
+    case 'A': return { pos: [lerp(A_CAM.x, A_CAM.x - 0.2, t), 3.3, lerp(14.2, 13.2, ease(t))], look: [A_CAM.x - 0.2, 2.95, -1.4], fov: 36 };
     case 'B': { const ax = BX[90]; return { pos: [ax + B_CAM.dx, 3.6, B_CAM.z], look: [ax + B_CAM.lx, 3.3, 0], fov: 32 }; }
     case 'C': { const cx = FAX_X + C_CAM.dx; return { pos: [cx, C_CAM.y, C_CAM.z], look: [cx, 2.6, -0.2], fov: 34 }; }   // square to the set: cards and walk share one axis
-    case 'D': return { pos: [lerp(D_CAM.x, D_CAM.x - 0.3, t), 3.5, lerp(D_CAM.z, D_CAM.z - 0.5, t)], look: [D_CAM.lx, D_CAM.ly, -1.6], fov: 36 };
+    case 'D': return { pos: [D_CAM.x, 3.5, lerp(D_CAM.z, D_CAM.z - 0.5, t)], look: [D_CAM.lx, D_CAM.ly, -1.6], fov: 36 };
   }
 }
 // Which edges of which characters must stay in frame, per shot (close-ups crop at the waist on purpose).
@@ -248,15 +251,15 @@ function buildSet(stage) {
   desk(9.0, -0.6, 3.0, 1.4);
   box(scene, { w: 13.6, h: 1.9, d: 0.06, color: '#b6a385', x: 5.3, z: -2.8 });                      // one modesty panel along the whole back row            // modesty panels hide back-row legs
   desk(7.1, -3.5, 2.8, 1.4);
-  const screen = (x, z, ry, live) => panel(scene, { w: 1.5, h: 0.95, x, y: 2.75, z, ry, px: 180, live, outline: 0.07, draw: (c, w, h, n) => {
+  const screen = (x, z, ry, live, sw = 1.5) => panel(scene, { w: sw, h: 0.95, x, y: 2.75, z, ry, px: 180, live, outline: 0.07, draw: (c, w, h, n) => {
     c.fillStyle = '#1e2a38'; c.fillRect(0, 0, w, h);
     c.strokeStyle = '#e8e2d4'; c.lineWidth = 8; c.strokeRect(w * 0.3, h * 0.22, w * 0.4, h * 0.36); c.beginPath(); c.moveTo(w * 0.3, h * 0.22); c.lineTo(w * 0.5, h * 0.42); c.lineTo(w * 0.7, h * 0.22); c.stroke();
     c.strokeStyle = '#e85d4a'; c.lineWidth = 10; c.beginPath(); c.moveTo(w * 0.6, h * 0.45); c.lineTo(w * 0.76, h * 0.62); c.moveTo(w * 0.76, h * 0.45); c.lineTo(w * 0.6, h * 0.62); c.stroke();
-    c.fillStyle = '#e8e2d4'; c.font = 'bold 22px Arial, sans-serif'; c.textAlign = 'center'; c.fillText('CANNOT CONNECT', w / 2, h * 0.84);
+    c.fillStyle = '#e8e2d4'; c.font = `bold ${w < 220 ? 18 : 22}px Arial, sans-serif`; c.textAlign = 'center'; c.fillText('CANNOT CONNECT', w / 2, h * 0.84);
     const a = (n || 0) * 0.25; c.strokeStyle = '#6ef0ff'; c.lineWidth = 6; c.beginPath(); c.arc(w * 0.18, h * 0.4, 16, a, a + 4.2); c.stroke();
   } });
   const SCREENS = [[DESK.x - 0.5, -1.4, 0.75], [EXTRAS.t2 + 0.8, -3.7, -0.3], [EXTRAS.t1 + 0.8, -3.7, -0.3]];
-  for (const [x, z, ry] of SCREENS) screen(x, z, ry, true);
+  for (const [x, z, ry] of SCREENS) screen(x, z, ry, true, z < -3 ? 1.05 : 1.5);   // back row narrower: neighbours never overlap
   screen(10.4, -3.7, -0.3, false); screen(9.2, -0.8, -0.5, false);
   for (const [x, z, ry] of SCREENS) box(scene, { w: 0.16, h: 0.26, d: 0.12, color: '#2b2f3a', x: x - 0.16 * Math.sin(ry), y: 2.14, z: z - 0.16 * Math.cos(ry), ry });   // stand sits behind its screen
   box(scene, { w: 1.0, h: 0.08, d: 0.45, color: '#3b3f4a', x: DESK.x + 0.4, y: 2.14, z: -0.8, ry: 0.2 });                            // keyboard
@@ -288,6 +291,7 @@ function place(n) {
   cards.t2.set(traderAt(T2, n, { x: t2x, flipStart: false, turnAt: 84, react: 'surprised', react2: 'surprised', react2At: 270 }).svg, { x: t2x, z: -4.3, shadowW: 0 });
   const fx = sfxAt(n); cards.sfx.set(fx.svg || '<rect width="1" height="1" fill="none"/>', { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.4, ground: TABLE_H, shadowW: 0 });
   for (const k in cards) { cards[k].face(c); cards[k].visible = true; }
+  cards.waves.mesh.renderOrder = -1;                                  // sound arcs draw behind every character
   cards.sfx.visible = fx.visible;
   return cam;
 }
