@@ -192,3 +192,20 @@ start of the two-shot; pupils up-left during the recoil; colleagues' heads overl
 - Bigsby leans in (224), then the shriek hits him: hands clamped over his ears, wincing (238 →).
 - The colleagues cover their ears too (268, 272); the sound word grows to "SKREEEEEE!!" at the peak (282) and is
   checked to stay in frame in the final wide.
+
+## v12 — fresh reviewer (no context): **SEND**
+
+No must-fix problems; cuts, sides, eyelines, framing, pacing all pass; no foot slides. Should fix: (1) the walk read
+as a step-together shuffle — the far foot landed ~10 px beside the near one instead of passing it. Nits: a one-frame
+gap with no visible planted foot (f181), heads overlapping at the start of the two-shot, the fax's hand near
+Bigsby's elbow, a pale square behind the wall clock, dust dots outside the fax outline, hands on heads rather than
+literally on ears.
+
+**Cause of (1):** each foot's path was planned from its own hip, and the hips sit a hip-width apart; in this side
+view that put every far-foot landing a hip-width short.
+
+## v13 fixes
+
+- Foot paths planned from the body's centre line (each leg still reaches from its own hip): footfalls now alternate
+  evenly about 95 px apart (measured R 1299 → L 1205 → R 1101 → L 1007 → R 903, then feet together).
+- Clock drawn on a transparent panel (no pale square).

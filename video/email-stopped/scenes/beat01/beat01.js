@@ -43,7 +43,7 @@ Object.assign(T2.body, { color: '#c8643c', color2: '#a54e2c' }); Object.assign(T
 const WALK = { start: 169, cycle: 22, from: 0.25, strides: 2.25, close: 0.5 };   // from 0.25: both feet down, near foot forward (ready stance)
 WALK.end = WALK.start + Math.round((WALK.strides + WALK.close - WALK.from) * WALK.cycle);
 const B_START_X = 1.9, B_Z = 0.15;
-const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 32, LIFT = 26;
+const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 32, LIFT = 26, HIP_X = (BIG.body.hipW || BIG.body.torsoW) * 0.22;
 const HIP_H = Math.sqrt((2 * LEG_HALF) ** 2 - STRIDE_D ** 2) * 0.985;   // hip height that keeps the leg just short of straight at full stride
 function legIK(fx, fy) {                     // foot (fx forward, fy down) from the hip → [thigh, shin] angles (0 = down, + = forward)
   const d = Math.min(Math.hypot(fx, fy), 2 * LEG_HALF - 1e-6), phi = Math.atan2(fx, fy) * 180 / Math.PI;
@@ -66,8 +66,10 @@ function gait(phase) {
     fR = [STRIDE_D * (1 - u), HIP_H];
     fL = [-STRIDE_D + STRIDE_D * ease(u), HIP_H - LIFT * 0.8 * Math.sin(Math.PI * u)];
   }
+  // foot paths are planned from the body's centre line; each leg reaches from its own hip (±HIP_X), so in this side
+  // view the far foot would otherwise land a hip-width short every step and the walk reads as a shuffle
   return { lean: 6 * (1 - seq(phase, WALK.strides, WALK.strides + WALK.close)), bob: 0, head: 4, ...arms,
-    legL: legIK(...fL), legR: legIK(...fR), shoeL: 0, shoeR: 0 };
+    legL: legIK(fL[0] + HIP_X, fL[1]), legR: legIK(fR[0] - HIP_X, fR[1]), shoeL: 0, shoeR: 0 };
 }
 const WALK_LEGS_END = (() => { const g = gait(WALK.strides + WALK.close); return { legL: g.legL, legR: g.legR, shoeL: 0, shoeR: 0 }; })();   // feet together
 const walkPoseAt = n => gait(WALK.from + clamp(n - WALK.start, 0, WALK.end - WALK.start) / WALK.cycle);
@@ -248,12 +250,13 @@ function buildSet(stage) {
     x.fillText(down ? 'EMAIL: NOT CONNECTED' : 'MARKET OPENS 09:00', w / 2, 68);
   } });
   SIGNS.clock = panel(scene, { w: 1.3, h: 1.3, x: 5.2, y: 8.6, z: -6.98, px: 200, outline: 0, live: true, draw: (x, w, h, n) => {
-    x.clearRect(0, 0, w, h); x.fillStyle = '#e9dcc4'; x.fillRect(0, 0, w, h);
+    x.clearRect(0, 0, w, h);                                   // transparent: just the clock on the wall
     x.fillStyle = '#fffaf0'; x.strokeStyle = INK; x.lineWidth = 12; x.beginPath(); x.arc(100, 100, 88, 0, 7); x.fill(); x.stroke();
     const hand = (a, l, wd) => { x.lineWidth = wd; x.beginPath(); x.moveTo(100, 100); x.lineTo(100 + Math.sin(a) * l, 100 - Math.cos(a) * l); x.stroke(); };
     const sec = 47 * 60 + 12 + n / FPS;                                                                         // 08:47:12 at frame 0
     hand((8 + sec / 3600) / 12 * 2 * Math.PI, 46, 10); hand(sec / 3600 * 2 * Math.PI, 70, 7); x.strokeStyle = '#d9483b'; hand((sec % 60) / 60 * 2 * Math.PI, 74, 3);
   } });
+  SIGNS.clock.group.children[0].material.transparent = true;
   // desks: Bigsby's (front), two in the back row
   const desk = (x, z, w, d) => { box(scene, { w, h: 0.14, d, color: '#c9b79a', x, y: 2.0, z }); for (const sx of [-1, 1]) box(scene, { w: 0.14, h: 2.0, d: d * 0.9, color: '#8b7a64', x: x + sx * (w / 2 - 0.2), z }); };
   desk(DESK.x, -1.3, DESK.w, 1.6);
