@@ -1,0 +1,146 @@
+# 11 Days: beat sheet (version 1)
+
+65 beats · 1067 words · about 8 minutes at 150 words a minute with a breath per beat.
+
+**Link** says how each beat follows the one before: **BUT** (a complication) or **THEREFORE** (a consequence). The narration itself never says "but", "therefore" or "and then".
+
+**Flag:** FACT = named source · REPORTED = secondhand or sources disagree · STORY = invented scene or character · ANALYSIS = our reading · GENERAL = common knowledge, not checked for this video · **LEGEND = folklore, not fact**.
+
+## Sets
+
+- **BOARD**: Boardroom: long table, tall windows, a portrait-free wall, the CEO chair at the head
+- **TRADE**: Trading floor (Bigsby the investor, tickers, screens)
+- **NEWS**: Newsroom (Rita the reporter, screens, a breaking-news sign)
+- **CITY**: Washington street: a domed building, courthouse, government offices (all generic)
+- **CARD**: Cards: title, quote, chart and timeline cards (no real people drawn)
+
+## Cold open
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 1 | OPEN | Sunday the twenty-third of November, 2026. In a quiet boardroom, a chair that sat empty for eleven days is pushed back to the table. | 24 | The empty CEO chair, black jacket on its back, rolls up to the head of the table. | BOARD | Sun 23 Nov 2026 | FACT | 8K2 |
+| 2 | THEREFORE | Nvidia's board has just voted, unanimously, to reinstate Jensen Huang as president, chief executive and director, effective immediately. | 18 | Directors raise their hands one by one. A gavel lands. | BOARD | Vote: unanimous | FACT | 8K2 |
+| 3 | BUT | Six days earlier, the same board had said it did not intend to bring him back at all. | 18 | A flashback card: 17 Nov, a speech bubble crossed out. | CARD | 17 Nov: "does not intend to reinstate" | REPORTED | NPR YAH |
+| 4 | THEREFORE | Shares of the world's most valuable chip company jumped on the news, by more than thirty percent according to CNN. | 20 | Bigsby's screen: a green line rockets upward. | TRADE | +30%? (CNN) | REPORTED (one outlet; check the final figure) | CNN2 |
+| 5 | BUT | The investigation that started it all had not finished. The board said it would carry on to its conclusion. | 19 | A thick folder marked INVESTIGATION, still open, sits beside the chair. | BOARD | Investigation: ongoing | FACT | 8K2 |
+| 6 | THEREFORE | So how does a company lose its founder, refuse to take him back, and reverse itself in eleven days? | 19 | Title card over the empty chair. | CARD | 11 DAYS | ANALYSIS |  |
+
+## Act 1 · The founder
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 7 | THEREFORE | To understand the shock, start with what Huang meant to Nvidia: he co-founded it in 1993 and ran it ever since. | 21 | Chip the GPU mascot unrolls a long scroll of years. | CARD | 1993 | GENERAL (well documented) | WIKI |
+| 8 | BUT | Nvidia had become far more than a graphics company. Its chips power much of the world's artificial intelligence. | 18 | Chip stands proudly in front of a wall of servers. | CARD |  | GENERAL |  |
+| 9 | THEREFORE | Investors treated the founder and the company as almost the same thing. His black leather jacket became a symbol. | 19 | The jacket on its hanger glows under a spotlight. | BOARD |  | ANALYSIS |  |
+| 10 | BUT | A company that leans that hard on one person is exposed when that person is suddenly in trouble. | 18 | The chair wobbles on one leg. | BOARD |  | ANALYSIS |  |
+
+## Act 2 · The inquiry
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 11 | THEREFORE | On the eighth of November, according to CNN, the board opened an independent investigation involving its chief executive. | 18 | Directors close the boardroom door. A sign flips to PRIVATE. | BOARD | 8 Nov | REPORTED | CNN2 |
+| 12 | THEREFORE | Word got out. Nvidia shares fell about five percent as the inquiry became public, according to market reports. | 18 | Bigsby's screen: a red line dips. | TRADE | −5% | REPORTED | TP CB |
+| 13 | BUT | Nobody outside the room yet knew what the investigation was about. | 11 | Rita the reporter presses her ear to the boardroom door. | NEWS |  | ANALYSIS |  |
+| 14 | THEREFORE | Then the New York Times published its story, and the details landed all at once. | 15 | Newspaper slaps onto Rita's desk (generic masthead). | NEWS |  | REPORTED | WP VAR |
+| 15 | THEREFORE | The reports described extramarital affairs. Outlets differed on how many: Variety said several, the Washington Post cited two. | 18 | Two newspapers side by side, headlines blurred. | NEWS | Sources disagree | REPORTED (outlets differ) | VAR WP |
+| 16 | BUT | One allegation was far more serious than a personal scandal. It touched national security. | 14 | A red DOSSIER envelope slides across the desk. | NEWS |  | REPORTED | WP |
+| 17 | THEREFORE | The Times reported that one woman, a Chinese tech executive, had been recruited by China's Ministry of State Security. | 19 | A shadowy silhouette card, no face, labelled ALLEGED. | CARD | ALLEGED | ALLEGED (reported by the New York Times) | WP VAR |
+| 18 | THEREFORE | The reported aim was to learn more about Nvidia's AI chips, the most valuable technology the company has. | 18 | Chip the mascot hugs itself nervously. | CARD | ALLEGED | ALLEGED (reported) | WP |
+| 19 | BUT | These were allegations in press reports. The board said it had no reason to believe national security was compromised. | 19 | A board statement card, plain type. | CARD | "no reason to believe national security was compromised" | REPORTED (board statement as reported) | WP |
+| 20 | THEREFORE | Even the president was unsure. Donald Trump said it was unclear whether the woman was a spy at all. | 19 | A generic podium with a microphone (no person) and a question mark. | CITY |  | REPORTED | WP |
+
+## Act 3 · The fall
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 21 | BUT | Uncertainty is poison to a board. Directors had to decide quickly what Nvidia's leader could still do. | 17 | Directors around the table, the clock ticking loudly. | BOARD |  | ANALYSIS |  |
+| 22 | THEREFORE | On the eleventh, the board accepted Huang's resignation as president, chief executive and director, effective immediately. | 16 | The jacket is lifted off the chair. The chair is pushed back. | BOARD | 11 Nov | FACT | 8K1 |
+| 23 | THEREFORE | Nvidia announced it publicly on the twelfth, thanking him for what it called immeasurable contributions to the company. | 18 | A press-release card slides in. | CARD | "immeasurable contributions" | FACT | PR1 |
+| 24 | BUT | Somebody still had to run the company the next morning. | 10 | The empty chair, a spotlight on it, an alarm clock ringing. | BOARD |  | ANALYSIS |  |
+| 25 | THEREFORE | The board named chief financial officer Colette Kress interim chief executive while it searched for a permanent replacement. | 18 | A nameplate card: INTERIM CEO. No portrait. | CARD | Interim CEO: Colette Kress | FACT | PR1 AJ |
+| 26 | THEREFORE | It also created a new role. Harvey Jones became the first-ever chair of Nvidia's board. | 15 | A nameplate card: CHAIR OF THE BOARD. No portrait. | CARD | First board chair | REPORTED | AJ |
+| 27 | BUT | Markets do not wait for searches. Nvidia's stock fell about four percent that Thursday, the Washington Post reported. | 18 | Bigsby watches a red candle drop. | TRADE | −4% | REPORTED | WP |
+| 28 | THEREFORE | CNN put the loss in market value as high as one point seven six trillion dollars, likely over a longer stretch. | 21 | A huge stack of coins topples. | TRADE | $1.76T (CNN, period unclear) | REPORTED (figure may span several days) | CNN1 |
+
+## Act 4 · The refusal
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 29 | BUT | Washington was not finished either. Congress summoned Huang to testify, according to CNN. | 13 | A domed building with a summons envelope flying from it. | CITY | Summoned to testify | REPORTED | CNN1 |
+| 30 | THEREFORE | Inside the company, staff wondered whether the founder could ever return. | 11 | Dev the engineer stares at the empty chair through a glass door. | BOARD |  | ANALYSIS |  |
+| 31 | BUT | On the seventeenth, the answer seemed final. The board said it did not intend to reinstate him. | 17 | A board statement card stamped FINAL. | CARD | "does not intend to reinstate" | REPORTED | NPR YAH |
+| 32 | THEREFORE | The chairman repeated it on an earnings call, the Yahoo News timeline reported. | 13 | A speakerphone on the table; a speech bubble. | BOARD |  | REPORTED | YAH |
+| 33 | BUT | One Nvidia employee did not accept that. They built a website with an open letter. | 15 | Dev types fast; a web page appears: STAND WITH JENSEN. | NEWS | "Stand With Jensen" | REPORTED | FOR WIKI |
+| 34 | THEREFORE | The letter asked the board to bring him back while an independent investigation ran its course. | 16 | The letter scrolls on Dev's screen. | NEWS |  | REPORTED | WIKI |
+| 35 | THEREFORE | Signatures poured in: more than one hundred seventy-eight thousand in four days, according to Wikipedia's summary. | 16 | A counter spins upward. | CARD | 178,000+ in 4 days | REPORTED (counts vary) | WIKI |
+| 36 | BUT | Counts kept changing. Fortune later put it above two hundred six thousand names. | 13 | The counter ticks past 206,000. | CARD | 206,000+ | REPORTED (counts vary) | FOR |
+| 37 | THEREFORE | Tom's Guide reported over seventy-five hundred self-identified Nvidia employees among them, and Elon Musk too. | 15 | A wall of tiny name tags; one shaped like a rocket. | CARD | 7,500+ staff (self-identified) | REPORTED | TG |
+
+## Act 5 · The pressure
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 38 | BUT | Online petitions cannot verify who signs them, so these numbers are a mood, not a vote. | 16 | A ballot box with a question mark. | CARD | Unverified signatures | ANALYSIS |  |
+| 39 | THEREFORE | Money spoke too. Two well-known tech investors wrote to the board, Reuters reported. | 13 | Bigsby writes a letter with a fountain pen. | TRADE |  | REPORTED | SH |
+| 40 | THEREFORE | Brad Gerstner and Gavin Baker urged a deliberate process instead of a rushed replacement, keeping a return possible. | 18 | The letter folds into a paper plane and flies to the boardroom. | TRADE | "a deliberate process" | REPORTED | SH |
+| 41 | BUT | The loudest push came from Washington, on a weekend. | 9 | The red phone in the boardroom starts ringing. | BOARD |  | REPORTED | FOR BG |
+| 42 | THEREFORE | On Sunday, Trump posted on Truth Social calling for Huang to be rehired. | 13 | A phone screen card with a generic post bubble. | CARD | Truth Social post | REPORTED | FOR |
+| 43 | THEREFORE | On Monday he told CNBC he had been talking with the board and with Huang, and called the board reasonable. | 20 | A TV screen card with a quote bubble (no person drawn). | CARD | "reasonable" | REPORTED | FOR |
+| 44 | THEREFORE | The Verge reported he personally lobbied directors over that weekend. | 10 | The red phone rings at each director's seat in turn. | BOARD |  | REPORTED (via a summary of The Verge) | BG |
+
+## Act 6 · The return
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 45 | BUT | A president pressing a private company's board is highly unusual, and critics said so. | 14 | Rita reads a stack of opinion pages, eyebrows raised. | NEWS |  | ANALYSIS |  |
+| 46 | THEREFORE | On the twenty-third, the board met again, and this time the vote went the other way, unanimously. | 17 | The hands go up again. The jacket goes back on the chair. | BOARD | 23 Nov | FACT | 8K2 |
+| 47 | THEREFORE | Its filing said the board was satisfied with Huang's candor and ability to lead Nvidia. | 15 | Quote card from the filing. | CARD | "candor and ability to lead NVIDIA" | FACT | 8K2 |
+| 48 | BUT | The same filing added a striking line: the board had received input from senior levels of the United States government. | 20 | The red phone sits on the table, receiver off the hook. | CARD | "input from senior levels of the United States government" | FACT | 8K2 |
+| 49 | THEREFORE | Investors cheered. CNN reported the shares soared more than thirty percent, one of the stock's best days on record. | 19 | Bigsby throws ticker tape in the air. | TRADE | +30% (CNN) | REPORTED (one outlet) | CNN2 |
+| 50 | BUT | The cheer did not last. In later sessions the stock fell again, by between four and seven percent. | 18 | The ticker tape stops; Bigsby looks at a dipping line. | TRADE | −4.3% to −7.5% | REPORTED | CNN2 |
+
+## Act 7 · The questions
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 51 | THEREFORE | One estimate put that pullback at three to four hundred and fifty billion dollars in market value. | 17 | A melting stack of coins. | TRADE | $300–450B | REPORTED (one estimate) | CNN2 |
+| 52 | BUT | Returning to the job is not the same as being cleared. CBC stressed that Huang had not been exonerated. | 19 | The chair has a sticky note: NOT CLEARED. | BOARD | Not exonerated | REPORTED | CBC |
+| 53 | THEREFORE | The board's own investigation, opened on the eighth, had no announced end date. | 13 | The INVESTIGATION folder grows thicker; a calendar with no end. | BOARD | No end date | REPORTED | CNN2 |
+| 54 | THEREFORE | Reports listed the SEC, the FBI and California's attorney general among those involved in inquiries. | 15 | Three generic official seals (no real logos) on a card. | CARD | SEC · FBI · California AG | REPORTED (one source) | CNN2 |
+| 55 | BUT | Asked on Fox News whether Huang had been cleared, Attorney General Todd Blanche would not even acknowledge an investigation. | 19 | A podium card with a closed door. | CARD |  | REPORTED | CNN2 |
+| 56 | THEREFORE | Critics in Congress were furious. Hakeem Jeffries called the reinstatement indefensible, irresponsible and incomprehensible. | 14 | A quote card in red. | CARD | "indefensible, irresponsible and incomprehensible" | REPORTED | CNN2 |
+| 57 | BUT | Supporters saw it differently: a founder back at work, and a company steadied. | 13 | Dev and staff cheer quietly at their desks. | NEWS |  | ANALYSIS |  |
+| 58 | THEREFORE | The episode left an uneasy question about who really decides who runs a company: its board, its staff, or the government. | 21 | Three arrows point at the chair: BOARD, STAFF, WASHINGTON. | BOARD |  | ANALYSIS |  |
+| 59 | THEREFORE | Some analysts warned the precedent may outlast this one chief executive. | 11 | A long shadow stretches from the chair across the floor. | BOARD |  | REPORTED | BG |
+
+## Act 8 · What we know
+
+| # | Link | Narration | Words | Picture | Set | On-screen text | Flag | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 60 | BUT | Governance experts also note that a single irreplaceable leader is itself a risk the board must plan for. | 18 | Chip draws a succession chart with only one box. | CARD |  | ANALYSIS |  |
+| 61 | THEREFORE | So, what is confirmed? Nvidia's filings confirm the resignation, the interim leadership, and the unanimous reinstatement. | 16 | A checklist with three green ticks. | CARD | Confirmed by filings | FACT | 8K1 8K2 PR1 |
+| 62 | BUT | The spying claim remains an allegation from press reports, and investigations are still running. | 14 | A checklist line with a yellow question mark. | CARD | Alleged · ongoing | ANALYSIS | WP 8K2 |
+| 63 | THEREFORE | We found no public statement from Huang addressing the allegations in the sources we checked for this video. | 18 | A blank speech bubble over the empty chair. | CARD |  | REPORTED (absence in our sources) |  |
+| 64 | BUT | Eleven days were enough to show how fast a single story can move a trillion-dollar company. | 16 | A calendar flips through eleven pages in a blur. | CARD | 11 days | ANALYSIS |  |
+| 65 | THEREFORE | Back in the boardroom, the folder stays open on the table, right next to the chair. | 16 | Final shot: the jacket on the chair, the open folder beside it, lights dimming. | BOARD | 11 DAYS · Nov 2026 | STORY |  |
+
+## Sources
+
+- **8K1**: [Nvidia 8-K, 11 Nov (resignation)](https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000082/nvda-20261111.htm)
+- **PR1**: [Nvidia: CEO transition](https://nvidianews.nvidia.com/news/nvidia-announces-ceo-transition)
+- **8K2**: [Nvidia 8-K, 23 Nov (reinstatement)](https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000090/nov23pressrelease.htm)
+- **AJ**: [Al Jazeera: who is Colette Kress](https://www.aljazeera.com/news/2026/11/12/why-did-nvidia-ceo-jensen-huang-resign-and-who-is-colette-kress)
+- **WP**: [Washington Post, 12 Nov](https://www.washingtonpost.com/technology/2026/11/12/nvidia-board-weighs-jensen-huangs-future-after-affair-with-allege-chinese-spy/)
+- **VAR**: [Variety](https://variety.com/2026/biz/news/nvidia-ceo-jensen-huang-resigns-affairs-alleged-chinese-spy-1236945653/)
+- **CNN1**: [CNN live: summoned to testify](https://www.cnn.com/2026/11/11/business/live-news/nvidia-jensen-huang-investigation-fallout)
+- **NPR**: [NPR, 17 Nov](https://www.npr.org/2026/11/17/nx-s1-6044213/jensen-huang-nvidia-congress)
+- **YAH**: [Yahoo News timeline](https://www.yahoo.com/news/politics/article/from-spy-allegations-to-a-ceo-comeback-a-timeline-of-jensen-huangs-nvidia-scandal-212728393.html)
+- **WIKI**: [Wikipedia: Jensen Huang spying scandal](https://en.wikipedia.org/wiki/Jensen_Huang_spying_scandal)
+- **FOR**: [Fortune: the 11 days](https://fortune.com/2026/11/23/the-11-days-that-brought-jensen-huang-back-to-nvidia/)
+- **TG**: [Tom's Guide](https://www.tomsguide.com/computing/jensen-huang-is-back-as-nvidia-ceo-after-just-11-days-what-it-means-for-you)
+- **SH**: [Shattered (citing Reuters): investor letter](https://shattered.io/nvidia-reinstates-jensen-huang-ceo-11-days-after-resignation-trump-investors/)
+- **BG**: [BigGo Finance (summarising The Verge)](https://finance.biggo.com/news/5c0a79308df7a5a4)
+- **CNN2**: [CNN live, 23 Nov: shares soar](https://www.cnn.com/2026/11/23/business/live-news/jensen-huang-reinstated-as-ceo-of-nvidia)
+- **TP**: [TokenPost: shares fall 5% on inquiry](https://www.tokenpost.com/news/business/63052)
+- **CB**: [Crypto Briefing: shares fall on inquiry](https://cryptobriefing.com/nvidia-shares-fall-board-inquiry-jensen-huang/)
+- **CBC**: [CBC live](https://www.cbc.ca/news/business/livestory/nvidia-jensen-huang-reinstated-spy-scandal-9.7432391)

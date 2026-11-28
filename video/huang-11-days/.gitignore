@@ -1,0 +1,7 @@
+node_modules/
+out/step4/*/*/frames/
+out/step4/full/*/review/
+audio/*.wav
+audio/voice/
+audio/tts-model/
+.venv-tts/

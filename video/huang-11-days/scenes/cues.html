@@ -1,0 +1,2 @@
+<!doctype html><meta charset="utf-8"><script src="../lib/puppet.js"></script><script src="../lib/cast.js"></script>
+<script type="module">import { allCues } from './cues.js'; const narr = await (await fetch('./beats/narration.json')).json(); window.cues = allCues(narr); window.ready = true;</script>
