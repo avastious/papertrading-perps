@@ -19,7 +19,7 @@ export const EVENTS = [
   [0, 'open on the floor; Bigsby taps refresh'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
   [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [100, 'Bigsby jumps'],
   [128, 'Bigsby goes from shock to fear'], [150, 'Bigsby turns toward the noise'], [165, 'CUT to two-shot'], [169, 'Bigsby starts walking over'], [196, 'paper starts coming out'],
-  [238, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [248, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
+  [235, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
   [270, 'a trader points, another covers her ears'], [285, 'the page drops into the tray'],
 ];
 export const shotAt = n => SHOTS.find(s => n >= s.from && n < s.to);
@@ -40,8 +40,8 @@ Object.assign(T2.body, { color: '#c8643c', color2: '#a54e2c' }); Object.assign(T
 //   planted foot: slides straight back along the floor from +D to -D (so the body moves forward by exactly that);
 //   swinging foot: lifts in an arc and only ever moves forward, from -D to +D.
 // walkTrack then moves the body by exactly how far the planted foot pushes back, so nothing slides.
-const WALK = { start: 169, cycle: 25, strides: 2.25, close: 0.5 };
-WALK.end = WALK.start + Math.round((WALK.strides + WALK.close) * WALK.cycle);
+const WALK = { start: 169, cycle: 22, from: -0.25, strides: 2.25, close: 0.5 };   // from -0.25: both feet on the floor (ready stance)
+WALK.end = WALK.start + Math.round((WALK.strides + WALK.close - WALK.from) * WALK.cycle);
 const B_START_X = 2.4, B_Z = 0.15;
 const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 32, LIFT = 26;
 const HIP_H = Math.sqrt((2 * LEG_HALF) ** 2 - STRIDE_D ** 2) * 0.985;   // hip height that keeps the leg just short of straight at full stride
@@ -70,7 +70,7 @@ function gait(phase) {
     legL: legIK(...fL), legR: legIK(...fR), shoeL: 0, shoeR: 0 };
 }
 const WALK_LEGS_END = (() => { const g = gait(WALK.strides + WALK.close); return { legL: g.legL, legR: g.legR, shoeL: 0, shoeR: 0 }; })();   // feet together
-const walkPoseAt = n => gait(clamp(n - WALK.start, 0, WALK.end - WALK.start) / WALK.cycle);
+const walkPoseAt = n => gait(WALK.from + clamp(n - WALK.start, 0, WALK.end - WALK.start) / WALK.cycle);
 let BX, B_STOP_X, FAX_X;
 const FAX_Z = -0.55, TABLE_H = 1.35;
 
@@ -81,8 +81,8 @@ const POSE = {
   phoneB: { lean: 4, armR: [40, 138], armL: [62, 112], ...STANCE, head: -6, propHand: 'R' },
   shake: { lean: 8, armR: [52, 150], armL: [60, 100], ...STANCE, head: -10, propHand: 'R' },
   flinch: { lean: -9, bob: -6, armR: [18, 140], armL: [-24, 40], ...STANCE, head: -10, propHand: 'R' },
-  jump: { ...P.POSES.surprised, ...gait(0), lean: -8, head: -6, armL: P.POSES.surprised.armL, armR: P.POSES.surprised.armR, propHand: 'R' },   // lands in walk-ready stance (legs move in the air)
-  fear: { lean: -6, bob: 0, armR: [30, 120], armL: [-20, 60], legL: gait(0).legL, legR: gait(0).legR, shoeL: 0, shoeR: 0, head: 6, propHand: 'R' },
+  jump: { ...P.POSES.surprised, ...gait(WALK.from), lean: -8, head: -6, armL: P.POSES.surprised.armL, armR: P.POSES.surprised.armR, propHand: 'R' },   // lands in walk-ready stance (legs move in the air)
+  fear: { lean: -6, bob: 0, armR: [30, 120], armL: [-20, 60], legL: gait(WALK.from).legL, legR: gait(WALK.from).legR, shoeL: 0, shoeR: 0, head: 6, propHand: 'R' },
   lean: { lean: 16, bob: 0, armR: [30, 80], armL: [40, 70], ...WALK_LEGS_END, head: 10, propHand: 'R' },
   point: { lean: 6, bob: 0, armR: [88, 96], armL: [-10, -4], ...WALK_LEGS_END, head: 2, propHand: 'R' },          // jabs the phone at the page
   cheer: { lean: 2, bob: 0, armR: [150, 175], armL: [-30, -60], ...WALK_LEGS_END, head: -4, propHand: 'R' },
@@ -95,9 +95,9 @@ function bigsbyPose(n) {
   else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); face = n < 76 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }  // flinches at the shriek
   else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 1.6; turn = 0.8; }
   else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = n >= 140 && n < 143 ? 'blink' : 'scared'; look = 1.6; turn = n < 150 ? 0.3 : 0.3 + 0.5 * ease(seq(n, 150, 156)); if (n >= 150) pose = { ...pose, head: lerp(pose.head || 0, 14, ease(seq(n, 150, 156))) }; }
-  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) pose = lerpPose(POSE.fear, pose, ease(seq(n, WALK.start, WALK.start + 6))); face = 'scared'; look = 1.6; turn = 0.8; }
-  else if (n < 248) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = n < 243 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }
-  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 248, 254))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 248) / 5) % 4]; look = 1.6; turn = 0.8; }
+  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) { const w = pose; pose = { ...lerpPose(POSE.fear, w, ease(seq(n, WALK.start, WALK.start + 6))), legL: w.legL, legR: w.legR, shoeL: 0, shoeR: 0 }; } face = 'scared'; look = 1.6; turn = 0.8; }   // blend the upper body only; legs stay on their planned paths
+  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 6))); face = n < 241 ? 'surprised' : 'scared'; look = 1.6; turn = 0.8; }
+  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 1.6; turn = 0.8; }
   else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = 1.6; turn = 0.8; }        // the page lands: he cheers
   return { pose, face, look, turn };
 }
@@ -183,7 +183,7 @@ function sfxAt(n) {
 
 // ---------------- camera per shot ----------------
 export const EXTRAS = { t2: 1.8, t2b: 3.9, t1: 5.2 };   // trader 2 starts at her screen, then steps along the desk (behind it) to see
-export const C_CAM = { dx: 2.2, z: 10.6 }, D_CAM = { x: 0.5, z: 15, lx: -1.1, ly: 3.6 };
+export const C_CAM = { dx: 2.6, z: 10.6 }, D_CAM = { x: 0.5, z: 15, lx: -1.1, ly: 3.6 };
 export const B_CAM = { dx: 0.8, lx: 1.0, z: 6.9 };
 function cameraAt(n) {
   const s = shotAt(n), t = (n - s.from) / (s.to - s.from), bx = BX[n];

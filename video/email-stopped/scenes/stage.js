@@ -180,7 +180,9 @@ export function walkTrack(P, spec, { from, to, frames, start, cycle, dir, scale 
   for (let n = 0; n < frames; n++) {
     if (n > start && n <= to) {
       const a = poseAt(n - 1), b = poseAt(n);
-      const leg = reach(a.legL) >= reach(a.legR) ? 'L' : 'R';
+      // planted leg = the one reaching the floor; on a tie (both feet down), the one still down in the next frame
+      const dl = reach(a.legL) - reach(a.legR), dn = reach(b.legL) - reach(b.legR);
+      const leg = Math.abs(dl) > 1e-6 ? (dl > 0 ? 'L' : 'R') : (dn >= 0 ? 'L' : 'R');
       x += -(foot(b, leg) - foot(a, leg)) * S * scale * dir;   // planted foot goes back → body goes forward
     }
     xs[n] = x;

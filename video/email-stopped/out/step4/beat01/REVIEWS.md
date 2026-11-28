@@ -103,3 +103,15 @@ offset (about 4 px) was also too small to read.
 - Walk starts on screen in the two-shot (frame 169) after a beat of standing, so the cut matches.
 - Colleagues re-spaced (3.9 and 5.2) so neither hides behind Bigsby at rest; plant pot removed.
 - v6 review: the fresh reviewer could not run (account spend limit reached). Not yet reviewed.
+
+## v6 — self-review (fresh reviewer blocked by the account's spend limit)
+
+Found: at the cut into the two-shot Bigsby stood on one foot (his ready stance was taken from mid-stride).
+
+## v7 fixes
+
+- The walk starts from a phase where both feet are on the floor (ready stance), steps off at frame 169, and still ends
+  with feet together (frame 235). Walk tracking breaks ties (both feet down) by which foot stays down next frame.
+- Entering the walk blends only the upper body; legs stay on their planned paths (no 0.6 px slip).
+- Two-shot camera re-aimed (the longer walk moved the fax left). All automated checks pass.
+- Fresh no-context review of v7 still to run once the limit resets (07:20 UTC).
