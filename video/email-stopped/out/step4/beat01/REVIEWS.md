@@ -51,7 +51,7 @@ lift-off dragged the foot back along the floor (180 px back, 10 px up). My v2 ch
 
 ## v4 fixes
 
-- Walk rebuilt from **planned foot paths** (two-bone IK): the planted foot slides straight back along the floor, the
+- Walk rebuilt from **planned foot paths** (two-bone IK): relative to the hip the planted foot moves straight back along the floor (so in the room it stays put), the
   swinging foot lifts in an arc (about 43 px) and only ever moves forward. Two 30-frame cycles; body moved by walkTrack.
 - New check: **any foot touching the floor must not move** on screen (both feet, every frame, all shots where visible).
 - One standing stance for every grounded pose in the wide shot; Bigsby's legs change only while he's in the air or off
