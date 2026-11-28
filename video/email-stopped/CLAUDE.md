@@ -23,6 +23,9 @@ A cartoon recap (now 10–15 minutes; first planned as 60 seconds) of the Micros
 ## Rules
 - Original characters only. No real people, no caricatures of executives, no Microsoft or other company logos (use a generic envelope/mail icon).
 - Style: flat 2D, big heads, simple faces, thick ink outlines (`#1d1a24`, 6 px).
+- Sound comes last: add music and effects only after the user approves the picture. Use only audio we hold a licence
+  for: sound made in code here (we own it), or files whose licence allows this use (e.g. CC0), with each file's source,
+  author and licence written down next to it (`audio/LICENCES.md`). No unlicensed or "found" audio.
 - Keep every version. Write new renders to new folders (`out/step4/v2/`, ...); never overwrite old ones.
 
 ## Story facts (checked 28 Nov 2026; flag anything unverified in the script; the sources list in `script/beats.py` is the fuller, newer version)
