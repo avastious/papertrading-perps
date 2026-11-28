@@ -305,14 +305,15 @@
     return s;
   }
 
-  function leg(spec, hip, a, back) {
+  // shoeAng: optional shoe tilt in degrees (default follows the shin); walk cycles pass 0 to keep a planted shoe flat.
+  function leg(spec, hip, a, back, shoeAng) {
     const L = spec.legs;
     const [kx, ky] = end(hip[0], hip[1], a[0], L.len / 2);
     const [ax, ay] = end(kx, ky, a[1], L.len / 2);
     const pants = back ? shade(L.color, -0.18) : L.color;
     let s = strokePath([hip, [kx, ky], [ax, ay]], L.w, pants);
     const shoe = back ? shade(L.shoe, -0.18) : L.shoe;
-    s += `<g transform="rotate(${f(-a[1])} ${f(ax)} ${f(ay)})"><path d="M${f(ax - L.w * 0.55)} ${f(ay + L.shoeH * 0.55)} L${f(ax - L.w * 0.55)} ${f(ay - L.shoeH * 0.2)} Q${f(ax + L.shoeLen * 0.3)} ${f(ay - L.shoeH * 0.75)} ${f(ax + L.shoeLen * 0.62)} ${f(ay + L.shoeH * 0.3)} L${f(ax + L.shoeLen * 0.62)} ${f(ay + L.shoeH * 0.55)} Z" fill="${shoe}" stroke="${INK}" stroke-width="${OW}" stroke-linejoin="round"/></g>`;
+    s += `<g transform="rotate(${f(shoeAng != null ? shoeAng : -a[1])} ${f(ax)} ${f(ay)})"><path d="M${f(ax - L.w * 0.55)} ${f(ay + L.shoeH * 0.55)} L${f(ax - L.w * 0.55)} ${f(ay - L.shoeH * 0.2)} Q${f(ax + L.shoeLen * 0.3)} ${f(ay - L.shoeH * 0.75)} ${f(ax + L.shoeLen * 0.62)} ${f(ay + L.shoeH * 0.3)} L${f(ax + L.shoeLen * 0.62)} ${f(ay + L.shoeH * 0.55)} Z" fill="${shoe}" stroke="${INK}" stroke-width="${OW}" stroke-linejoin="round"/></g>`;
     return s;
   }
 
@@ -372,8 +373,8 @@
     let s = `<g transform="translate(${f(opts.x || 0)} ${f(opts.y || 0)}) scale(${f(flip * (opts.scale || 1))} ${f(opts.scale || 1)})">`;
     if (opts.shadow !== false) s += `<ellipse cx="0" cy="4" rx="${f(Math.max(b.torsoW, b.hipW || 0) * 0.75)}" ry="12" fill="#000" opacity="0.18"/>`;
     s += `<g transform="translate(0 ${f(-hipH)})">`;
-    s += leg(spec, [-hipX, -4], p.legL, true);
-    s += leg(spec, [hipX, -4], p.legR, false);
+    s += leg(spec, [-hipX, -4], p.legL, true, p.shoeL);
+    s += leg(spec, [hipX, -4], p.legR, false, p.shoeR);
     s += `<g transform="rotate(${f(-(p.lean || 0))})">`;
     const H = b.torsoH;
     const shY = -H + (b.shoulderDrop != null ? b.shoulderDrop : spec.arms.w * 0.55) - (p.lift || 0);

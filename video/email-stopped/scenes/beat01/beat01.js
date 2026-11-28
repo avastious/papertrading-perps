@@ -19,7 +19,7 @@ export const EVENTS = [
   [0, 'open on the floor; Bigsby taps refresh'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
   [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [100, 'Bigsby jumps'],
   [128, 'Bigsby goes from shock to fear'], [156, 'Bigsby starts walking over'], [165, 'CUT to two-shot'], [196, 'paper starts coming out'],
-  [216, 'Bigsby stops and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
+  [228, 'Bigsby stops, feet together, and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
   [270, 'a trader points, another covers her ears'], [285, 'the page drops into the tray'],
 ];
 export const shotAt = n => SHOTS.find(s => n >= s.from && n < s.to);
@@ -34,14 +34,16 @@ const T2 = JSON.parse(JSON.stringify(CAST.penny));
 Object.assign(T2, { name: 'Trader 2', skin: '#f0c7a4' }); T2.hair.color = '#7a4a24';
 Object.assign(T2.body, { color: '#c8643c', color2: '#a54e2c' }); Object.assign(T2.arms, { color: '#c8643c', hand: '#f0c7a4' }); T2.legs.color = '#3b3f4a'; T2.prop = 'phone'; T2.face.browColor = '#7a4a24';
 
-// Bigsby: a hurried walk from his desk to the fax, frames 156-216 (two stride cycles of 30 frames).
+// Bigsby: a hurried walk from his desk to the fax, frames 156-228: two stride cycles of 26 frames, then the last step
+// lands and the back foot is brought up beside it, so he ends standing on both feet.
 // The feet are planned first and the leg angles worked back from them (two-bone IK):
 //   planted foot: slides straight back along the floor from +D to -D (so the body moves forward by exactly that);
 //   swinging foot: lifts in an arc and only ever moves forward, from -D to +D.
 // walkTrack then moves the body by exactly how far the planted foot pushes back, so nothing slides.
-const WALK = { start: 156, end: 216, cycle: 30 };
+const WALK = { start: 156, cycle: 26, strides: 2.25, close: 0.5 };
+WALK.end = WALK.start + Math.round((WALK.strides + WALK.close) * WALK.cycle);
 const B_START_X = 2.4, B_Z = 0.15;
-const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 38, LIFT = 26;
+const LEG_HALF = BIG.legs.len / 2, STRIDE_D = 32, LIFT = 26;
 const HIP_H = Math.sqrt((2 * LEG_HALF) ** 2 - STRIDE_D ** 2) * 0.985;   // hip height that keeps the leg just short of straight at full stride
 function legIK(fx, fy) {                     // foot (fx forward, fy down) from the hip → [thigh, shin] angles (0 = down, + = forward)
   const d = Math.min(Math.hypot(fx, fy), 2 * LEG_HALF - 1e-6), phi = Math.atan2(fx, fy) * 180 / Math.PI;
@@ -55,12 +57,19 @@ function footAt(q) {                         // q in [0,1): 0-0.5 planted, 0.5-1
   return [-STRIDE_D + 2 * STRIDE_D * ease(u), HIP_H - LIFT * Math.sin(Math.PI * u)];
 }
 function gait(phase) {
-  const qR = phase + 0.75, qL = phase + 0.25;            // phase 0: left foot planted mid-stride, right foot mid-swing
-  const sw = Math.sin(phase * 2 * Math.PI);
-  return { lean: 6, bob: 0, head: 4, armL: [26 * sw, 26 * sw + 22], armR: [-26 * sw, -26 * sw + 22],
-    legL: legIK(...footAt(qL)), legR: legIK(...footAt(qR)) };
+  const sw = Math.sin(Math.min(phase, WALK.strides) * 2 * Math.PI) * (1 - ease(seq(phase, WALK.strides, WALK.strides + WALK.close)));
+  const arms = { armL: [26 * sw, 26 * sw + 22], armR: [-26 * sw, -26 * sw + 22] };
+  let fL, fR;
+  if (phase <= WALK.strides) { fL = footAt(phase + 0.25); fR = footAt(phase + 0.75); }   // phase 0: left planted mid-stride, right mid-swing
+  else {                                   // closing step: right foot planted at the front, left foot swings up beside it
+    const u = clamp((phase - WALK.strides) / WALK.close);
+    fR = [STRIDE_D * (1 - u), HIP_H];
+    fL = [-STRIDE_D + STRIDE_D * ease(u), HIP_H - LIFT * 0.8 * Math.sin(Math.PI * u)];
+  }
+  return { lean: 6 * (1 - seq(phase, WALK.strides, WALK.strides + WALK.close)), bob: 0, head: 4, ...arms,
+    legL: legIK(...fL), legR: legIK(...fR), shoeL: 0, shoeR: 0 };
 }
-const WALK_LEGS_END = (() => { const g = gait((WALK.end - WALK.start) / WALK.cycle); return { legL: g.legL, legR: g.legR }; })();
+const WALK_LEGS_END = (() => { const g = gait(WALK.strides + WALK.close); return { legL: g.legL, legR: g.legR, shoeL: 0, shoeR: 0 }; })();   // feet together
 const walkPoseAt = n => gait(clamp(n - WALK.start, 0, WALK.end - WALK.start) / WALK.cycle);
 let BX, B_STOP_X, FAX_X;
 const FAX_Z = -0.55, TABLE_H = 1.35;
@@ -73,23 +82,23 @@ const POSE = {
   shake: { lean: 8, armR: [52, 150], armL: [60, 100], ...STANCE, head: -10, propHand: 'R' },
   flinch: { lean: -9, bob: -6, armR: [18, 140], armL: [-24, 40], ...STANCE, head: -10, propHand: 'R' },
   jump: { ...P.POSES.surprised, ...gait(0), lean: -8, head: -6, armL: P.POSES.surprised.armL, armR: P.POSES.surprised.armR, propHand: 'R' },   // lands in walk-ready stance (legs move in the air)
-  fear: { lean: -6, bob: 0, armR: [30, 120], armL: [-20, 60], legL: gait(0).legL, legR: gait(0).legR, head: 6, propHand: 'R' },
+  fear: { lean: -6, bob: 0, armR: [30, 120], armL: [-20, 60], legL: gait(0).legL, legR: gait(0).legR, shoeL: 0, shoeR: 0, head: 6, propHand: 'R' },
   lean: { lean: 16, bob: 0, armR: [30, 80], armL: [40, 70], ...WALK_LEGS_END, head: 10, propHand: 'R' },
   point: { lean: 6, bob: 0, armR: [88, 96], armL: [-10, -4], ...WALK_LEGS_END, head: 2, propHand: 'R' },          // jabs the phone at the page
   cheer: { lean: 2, bob: 0, armR: [150, 175], armL: [-30, -60], ...WALK_LEGS_END, head: -4, propHand: 'R' },
 };
 
 function bigsbyPose(n) {
-  let pose, face = 'neutral', look = 0.6;
+  let pose, face = 'neutral', look = -0.6;   // negative = toward screen-left once flipped (toward his phone/desk, then the fax)
   if (n < 30) { pose = Math.floor(n / 5) % 2 ? POSE.phoneA : POSE.phoneB; }                                  // jab, jab: nothing
   else if (n < 66) { pose = lerpPose(POSE.shake, POSE.phoneB, (Math.sin(n * 1.3) + 1) / 2 * 0.7); face = 'angry'; }  // shakes the phone
-  else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); face = n < 76 ? 'surprised' : 'scared'; look = 1; }  // flinches at the shriek
-  else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 1; }
-  else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = n >= 140 && n < 143 ? 'blink' : 'scared'; look = 1; }
-  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) pose = lerpPose(POSE.fear, pose, ease(seq(n, WALK.start, WALK.start + 6))); face = 'scared'; look = 1; }
-  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 8))); face = n < 238 ? 'surprised' : 'scared'; look = 1; }
-  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 1; }
-  else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = 1; }        // the page lands: he cheers
+  else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); face = n < 76 ? 'surprised' : 'scared'; look = -1; }  // flinches at the shriek
+  else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = -1; }
+  else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = n >= 140 && n < 143 ? 'blink' : 'scared'; look = -1; }
+  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) pose = lerpPose(POSE.fear, pose, ease(seq(n, WALK.start, WALK.start + 6))); face = 'scared'; look = -1; }
+  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 8))); face = n < 238 ? 'surprised' : 'scared'; look = -1; }
+  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = -1; }
+  else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = -1; }        // the page lands: he cheers
   return { pose, face, look };
 }
 function bigsbyAt(n) {
@@ -158,14 +167,14 @@ function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
     pose = { ...base, armL: [base.armL[0] + w, base.armL[1] + w], armR: [base.armR[0] - w, base.armR[1] - w], head: (base.head || 0) + Math.sin(n * 0.2) * 4 };
     face = n >= react2At ? (react2 === 'point' ? ['talkA', 'talkB'][Math.floor(n / 6) % 2] : 'happy') : 'surprised';
   }
-  return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1 : 0.5, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
+  return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? -1 : 0.5, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
 }
 
 // "SKREEEE!" sound word over Faxie: bounces in at the shriek, jitters, gone once Faxie grins.
 function sfxAt(n) {
   const on = (n >= 66 && n < 90) || (n >= 165 && n < 238);
   if (!on) return { svg: '', visible: false };
-  const t = seq(n, n < 90 ? 66 : 165, n < 90 ? 72 : 170), k = 0.4 + 0.6 * ease(t) + 0.06 * Math.sin(n * 1.9);
+  const t = n < 90 ? seq(n, 66, 72) : 1, k = 0.4 + 0.6 * ease(t) + 0.06 * Math.sin(n * 1.9);
   const jx = Math.sin(n * 3.1) * 4, jy = Math.cos(n * 2.7) * 3;
   const word = n < 90 ? 'SKREEEE!' : 'SKREE!';
   const txt = (fill, sw) => `<text x="0" y="0" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="64" font-style="italic" letter-spacing="2" fill="${fill}" stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round" paint-order="stroke">${word}</text>`;
@@ -181,7 +190,7 @@ function cameraAt(n) {
   switch (s.id) {
     case 'A': return { pos: [lerp(-0.6, -0.8, t), 3.3, lerp(14.2, 13.2, ease(t))], look: [-0.8, 2.95, -1.4], fov: 36 };
     case 'B': { const ax = BX[90]; return { pos: [ax + B_CAM.dx, 3.6, B_CAM.z], look: [ax + B_CAM.lx, 3.3, 0], fov: 32 }; }
-    case 'C': { const cx = FAX_X + C_CAM.dx; return { pos: [cx + 0.2, 3.25, C_CAM.z], look: [cx, 2.6, -0.2], fov: 34 }; }
+    case 'C': { const cx = FAX_X + C_CAM.dx; return { pos: [cx, 3.25, C_CAM.z], look: [cx, 2.6, -0.2], fov: 34 }; }   // square to the set: cards and walk share one axis
     case 'D': return { pos: [lerp(D_CAM.x, D_CAM.x - 0.3, t), 3.5, lerp(D_CAM.z, D_CAM.z - 0.5, t)], look: [D_CAM.lx, D_CAM.ly, -1.6], fov: 36 };
   }
 }
@@ -219,8 +228,9 @@ function buildSet(stage) {
   // market clock + ticker board on the back wall
   SIGNS.ticker = panel(scene, { w: 7, h: 0.8, x: 0.5, y: 8.6, z: -6.98, px: 90, outline: 0.06, live: true, draw: (x, w, h, n) => {
     x.fillStyle = '#16141c'; x.fillRect(0, 0, w, h); x.font = 'bold 56px Arial, sans-serif'; x.fillStyle = '#ffb347';
-    const msgs = ['MARKET OPENS 09:00', 'EMAIL: NOT CONNECTED'];                    // swap every 1.5 s, never cut mid-word
-    x.textAlign = 'center'; x.fillStyle = Math.floor(n / 45) % 2 ? '#ff6b5a' : '#ffb347'; x.fillText(msgs[Math.floor(n / 45) % 2], w / 2, 68);
+    const down = n >= 45;                                                            // from 1.5 s: email is down, and stays down
+    x.textAlign = 'center'; x.fillStyle = down ? (Math.floor(n / 12) % 2 ? '#ff6b5a' : '#c9453a') : '#ffb347';
+    x.fillText(down ? 'EMAIL: NOT CONNECTED' : 'MARKET OPENS 09:00', w / 2, 68);
   } });
   SIGNS.clock = panel(scene, { w: 1.3, h: 1.3, x: 5.2, y: 8.6, z: -6.98, px: 200, outline: 0, live: true, draw: (x, w, h, n) => {
     x.clearRect(0, 0, w, h); x.fillStyle = '#e9dcc4'; x.fillRect(0, 0, w, h);
@@ -234,7 +244,8 @@ function buildSet(stage) {
   desk(DESK.x, -1.3, DESK.w, 1.6);
   desk(EXTRAS.t2 + 0.5, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: EXTRAS.t2 + 0.5, z: -2.82 });
   desk(10.0, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: 10.0, z: -2.82 });
-  desk(9.0, -0.6, 3.0, 1.4);            // modesty panels hide back-row legs
+  desk(9.0, -0.6, 3.0, 1.4);
+  box(scene, { w: 13.6, h: 1.9, d: 0.06, color: '#b6a385', x: 5.3, z: -2.8 });                      // one modesty panel along the whole back row            // modesty panels hide back-row legs
   desk(6.2, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: 6.2, z: -2.82 });
   const screen = (x, z, ry, live) => panel(scene, { w: 1.5, h: 0.95, x, y: 2.75, z, ry, px: 180, live, outline: 0.07, draw: (c, w, h, n) => {
     c.fillStyle = '#1e2a38'; c.fillRect(0, 0, w, h);
@@ -249,7 +260,7 @@ function buildSet(stage) {
   for (const [x, z, ry] of SCREENS) box(scene, { w: 0.16, h: 0.26, d: 0.12, color: '#2b2f3a', x: x - 0.16 * Math.sin(ry), y: 2.14, z: z - 0.16 * Math.cos(ry), ry });   // stand sits behind its screen
   box(scene, { w: 1.0, h: 0.08, d: 0.45, color: '#3b3f4a', x: DESK.x + 0.4, y: 2.14, z: -0.8, ry: 0.2 });                            // keyboard
   // Faxie's corner: pillar, side table, filing cabinet, a dead plant
-  box(scene, { w: 1.2, h: 8, d: 1.2, color: '#d8cab0', x: FAX_X - 2.4, z: -1.6 });
+  box(scene, { w: 1.2, h: 11, d: 1.2, color: '#d8cab0', x: FAX_X - 2.4, z: -1.6 });
   box(scene, { w: 2.8, h: TABLE_H, d: 1.5, color: '#9c8b72', x: FAX_X, z: FAX_Z - 0.1 });
   box(scene, { w: 1.4, h: 2.6, d: 1.4, color: '#7d8796', x: FAX_X - 2.4, z: 0.2 });
   for (let i = 0; i < 3; i++) box(scene, { w: 1.0, h: 0.06, d: 0.02, color: INK, x: FAX_X - 2.4, y: 0.6 + i * 0.8, z: 0.92, outline: 0 });
@@ -311,10 +322,18 @@ function footScreen(n, leg) {
   const hipH = Math.max(reach(p.legL), reach(p.legR)) + BIG.legs.shoeH * 0.55 - (p.bob || 0);
   const fx = (leg === 'L' ? -hipX : hipX) + half * (Math.sin(a[0] * r) + Math.sin(a[1] * r));
   const fy = -hipH - 4 + reach(a);
+  // the sole: heel and toe of the shoe, after the shoe's tilt (as the rig draws it)
+  const L = BIG.legs, sh = (leg === 'L' ? p.shoeL : p.shoeR), ang = (sh != null ? sh : -a[1]) * r;
+  const rot = (dx, dy) => [fx + dx * Math.cos(ang) - dy * Math.sin(ang), fy + dx * Math.sin(ang) + dy * Math.cos(ang)];
+  const pts = [rot(-L.w * 0.55, L.shoeH * 0.55), rot(L.shoeLen * 0.62, L.shoeH * 0.55)];
+  cards.bigsby.group.updateMatrixWorld(true);
+  // sole points in the room, in puppet pixels (1 px = 0.01 world units): a planted shoe must not move here, whatever the camera does
+  const proj = ([x, y]) => { const v = new stage.THREE.Vector3(-x * S, -y * S, 0).applyMatrix4(cards.bigsby.group.matrixWorld); return [v.x / S, v.y / S, v.z / S]; };
+  const sole = pts.map(proj);
   const v = new stage.THREE.Vector3(-fx * S, -fy * S, 0);          // flipped puppet: x mirrors
-  cards.bigsby.group.updateMatrixWorld(true); v.applyMatrix4(cards.bigsby.group.matrixWorld).project(stage.camera);
+  v.applyMatrix4(cards.bigsby.group.matrixWorld).project(stage.camera);
   const grounded = Math.abs(hipH - (p.bob ? 0 : 0) - reach(a) - BIG.legs.shoeH * 0.55 + (p.bob || 0)) < 1.0 && !(p.bob < -0.5);
-  return { leg, grounded, px: [(v.x + 1) / 2 * 1920, (1 - v.y) / 2 * 1080] };
+  return { leg, grounded, sole, px: [(v.x + 1) / 2 * 1920, (1 - v.y) / 2 * 1080] };
 }
 
 export function feet(n) { return { L: footScreen(n, 'L').px.map(Math.round), R: footScreen(n, 'R').px.map(Math.round), planted: footScreen(n).leg }; }
@@ -336,8 +355,19 @@ export function checkAll() {
     for (const leg of ['L', 'R']) {
       const a = footScreen(n - 1, leg), b = footScreen(n, leg);
       if (!a.grounded || !b.grounded || a.px[1] > 1080 || b.px[1] > 1080) continue;
-      const d = Math.hypot(a.px[0] - b.px[0], a.px[1] - b.px[1]);
-      if (d > 1.5) out.push(`${n}: ${leg === 'L' ? 'far' : 'near'} foot slides ${d.toFixed(1)} px along the floor`);
+      const d = Math.max(...[0, 1].map(i => Math.hypot(...[0, 1, 2].map(k => a.sole[i][k] - b.sole[i][k]))));   // heel and toe, in the room
+      if (d > 0.5) out.push(`${n}: ${leg === 'L' ? 'far' : 'near'} shoe slides ${d.toFixed(1)} px along the floor`);
+    }
+  }
+  // and no slow creep: while a shoe stays on the floor within one shot, it may not wander more than 2 px in total
+  for (const leg of ['L', 'R']) {
+    let anchor = null;
+    for (let n = 0; n < FRAMES; n++) {
+      const f = footScreen(n, leg);
+      if (!f.grounded || f.px[1] > 1080 || (n && shotAt(n) !== shotAt(n - 1))) { anchor = f.grounded ? f : null; continue; }
+      if (!anchor) { anchor = f; continue; }
+      const d = Math.max(...[0, 1].map(i => Math.hypot(...[0, 1, 2].map(k => anchor.sole[i][k] - f.sole[i][k]))));
+      if (d > 1) { out.push(`${n}: ${leg === 'L' ? 'far' : 'near'} shoe has crept ${d.toFixed(1)} px since it was planted`); anchor = f; }
     }
   }
   // wall signs: fully in or fully out of frame

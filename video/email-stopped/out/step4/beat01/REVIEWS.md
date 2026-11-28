@@ -60,3 +60,25 @@ lift-off dragged the foot back along the floor (180 px back, 10 px up). My v2 ch
 - Ticker swaps two whole messages every 1.5 s (MARKET OPENS 09:00 / EMAIL: NOT CONNECTED) instead of crawling.
 - Colleague 2 reacts with both arms up (no floating hand); both colleagues keep moving a little and cheer at the end.
 - Bigsby points and cheers with his phone hand; the far arm hangs relaxed (no stub at the shoulder).
+
+## v4 — fresh reviewer (no context): DON'T SEND
+
+Must fix: (1) Bigsby froze mid-stride after the walk (rear foot on tiptoe for 2.8 s); (2) the wall sign flipped back to
+"MARKET OPENS", implying email was back. Should fix: (3) the planted shoe crept ~14 px over a step; (4) Bigsby's eyes
+looked away from the fax; (5) a trouser leg showed through a gap between desks; (6) the pillar stopped short of the
+ceiling in the final wide. Nits: colleague popping into view across the first cut; a lone fist in the two-shot;
+the SKREE word popping in small at the cut.
+
+**Cause of (3):** the ankle was locked, but the rig tilted the shoe with the shin, so heel and toe rolled along the
+floor. My check measured the ankle, not the sole.
+
+## v5 fixes
+
+- Walk ends properly: the last stride lands and the back foot is brought up beside it (closing step), so he stands
+  on both feet from frame 228; arms settle; legs then stay put.
+- Shoes stay flat while walking (rig: new optional `shoeL`/`shoeR` tilt). Checks now measure the **heel and toe in
+  the room** (not on screen, so camera moves don't count): a shoe on the floor may not move 0.5 px in a frame or creep
+  1 px over a whole planted spell. The two-shot camera is square to the set.
+- Eyelines: the rig's `look` is mirrored by `flip`; Bigsby and the turned colleagues now look screen-left, at the fax.
+- Sign: once email goes down (frame 45) it stays "EMAIL: NOT CONNECTED", flashing.
+- One continuous modesty panel along the back row; pillar runs to the ceiling; SKREE is full size after the cut.
