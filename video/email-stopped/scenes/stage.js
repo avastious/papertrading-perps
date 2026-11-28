@@ -115,7 +115,9 @@ export function createCard(scene, name) {
     shadow.scale.set(shadowW * lift, shadowW * 0.38 * lift, 1);
     shadow.material.opacity = lift;
   };
-  card.face = cam => { group.rotation.y = Math.atan2(cam.position.x - group.position.x, cam.position.z - group.position.z); };
+  // Face the camera: the card turns (about the vertical only) to lie parallel to the picture plane, so a puppet
+  // walking across the frame keeps the same angle to the lens and its planted foot stays put on screen.
+  card.face = cam => { const f = new THREE.Vector3(); cam.getWorldDirection(f); group.rotation.y = Math.atan2(-f.x, -f.z); };
   card.load = async () => {
     if (!card.visible) { mesh.visible = shadow.visible = false; return; }
     mesh.visible = shadow.visible = true;
@@ -154,6 +156,11 @@ export function checkFrame(n, cards, cam, rules) {
     const c = cards[name];
     c.group.updateMatrixWorld(true);
     const s = c.screenBox(cam), m = 0.004;
+    if (sides === 'x') {                                     // background extra: fully in frame or fully out, never half
+      const outside = s.r < 0 || s.l > 1 || s.b < 0 || s.t > 1, inside = s.l >= 0 && s.r <= 1 && s.t >= 0 && s.b <= 1;
+      if (!outside && !inside) out.push(`${n}: ${name} is half in frame at an edge`);
+      continue;
+    }
     if (sides.includes('l') && s.l < m) out.push(`${n}: ${name} cut off on the left`);
     if (sides.includes('r') && s.r > 1 - m) out.push(`${n}: ${name} cut off on the right`);
     if (sides.includes('t') && s.t < m) out.push(`${n}: ${name} cut off at the top`);

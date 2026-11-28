@@ -18,8 +18,8 @@ export const SHOTS = [
 export const EVENTS = [
   [0, 'open on the floor; Bigsby taps refresh'], [30, 'Bigsby gets cross with his screen'], [48, "Faxie's light flickers on"],
   [66, 'Faxie shakes off the dust and shrieks'], [78, 'back-row traders turn'], [90, 'CUT to close-up'], [100, 'Bigsby jumps'],
-  [128, 'Bigsby goes from shock to fear'], [146, 'Bigsby starts walking over'], [165, 'CUT to two-shot'], [196, 'paper starts coming out'],
-  [218, 'Bigsby stops and leans in'], [236, 'Faxie grins'], [244, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
+  [128, 'Bigsby goes from shock to fear'], [156, 'Bigsby starts walking over'], [165, 'CUT to two-shot'], [196, 'paper starts coming out'],
+  [228, 'Bigsby stops and leans in'], [240, 'Faxie grins'], [246, 'Bigsby points: "a fax?!"'], [255, 'CUT to wide'],
   [270, 'a trader points, another covers her ears'], [285, 'the page drops into the tray'],
 ];
 export const shotAt = n => SHOTS.find(s => n >= s.from && n < s.to);
@@ -34,9 +34,9 @@ const T2 = JSON.parse(JSON.stringify(CAST.penny));
 Object.assign(T2, { name: 'Trader 2', skin: '#f0c7a4' }); T2.hair.color = '#7a4a24';
 Object.assign(T2.body, { color: '#c8643c', color2: '#a54e2c' }); Object.assign(T2.arms, { color: '#c8643c', hand: '#f0c7a4' }); T2.legs.color = '#3b3f4a'; T2.prop = 'phone'; T2.face.browColor = '#7a4a24';
 
-// Bigsby: a hurried walk from his desk to the fax, frames 146-218 (three stride cycles of 24 frames).
+// Bigsby: a hurried walk from his desk to the fax, frames 156-228 (three stride cycles of 24 frames).
 // The body moves exactly as far as the planted foot pushes back (walkTrack), so the feet never slide.
-const WALK = { start: 146, end: 218, cycle: 24 };
+const WALK = { start: 156, end: 228, cycle: 24 };
 const B_START_X = 2.4, B_Z = 0.15;
 function gait(phase) {                     // like Puppet.walkPose, with a longer stride for a hurried walk
   const a = -phase * 2 * Math.PI, s = Math.sin(a), c = Math.cos(a), k = x => Math.max(0, x);
@@ -49,24 +49,28 @@ const FAX_Z = -0.55, TABLE_H = 1.35;
 
 // pose helpers (angles: 0 = down, +90 = forward, 180 = up; Bigsby is flipped to face screen-left)
 const POSE = {
-  tapA: { lean: 4, armL: [62, 160], armR: [62, 92], legL: [-4, -3], legR: [4, 3], head: -4, propHand: 'L' },    // phone at ear, tapping keys
-  tapB: { lean: 4, armL: [62, 160], armR: [56, 80], legL: [-4, -3], legR: [4, 3], head: -4, propHand: 'L' },
-  cross: { lean: 7, armL: [62, 160], armR: [70, 104], legL: [-4, -3], legR: [4, 3], head: -9, propHand: 'L' },
-  jump: { ...P.POSES.surprised, propHand: 'L' },
-  fear: { lean: -6, bob: 0, armL: [-20, 60], armR: [30, 120], legL: [-8, -5], legR: [8, 5], head: 6, propHand: 'L' },
-  lean: { lean: 16, bob: 0, armL: [10, 30], armR: [40, 70], legL: [-10, -6], legR: [10, 6], head: 10, propHand: 'L' },
-  point: { ...P.POSES.point, lean: 8, head: 4, propHand: 'L' },
+  phoneA: { lean: 4, armR: [40, 150], armL: [55, 95], legL: [-4, -3], legR: [4, 3], head: -4, propHand: 'R' },     // staring at the phone, jabbing keys
+  phoneB: { lean: 4, armR: [40, 138], armL: [62, 112], legL: [-4, -3], legR: [4, 3], head: -6, propHand: 'R' },
+  shake: { lean: 8, armR: [52, 150], armL: [60, 100], legL: [-6, -3], legR: [6, 3], head: -10, propHand: 'R' },
+  flinch: { lean: -9, bob: -6, armR: [18, 140], armL: [-24, 40], legL: [-8, -4], legR: [8, 4], head: -10, propHand: 'R' },
+  jump: { ...P.POSES.surprised, propHand: 'R' },
+  fear: { lean: -6, bob: 0, armR: [30, 120], armL: [-20, 60], legL: [-8, -5], legR: [8, 5], head: 6, propHand: 'R' },
+  lean: { lean: 16, bob: 0, armR: [30, 80], armL: [40, 70], legL: [-10, -6], legR: [10, 6], head: 10, propHand: 'R' },
+  point: { lean: 6, bob: 0, armL: [93, 93], handL: 'point', armR: [22, 70], legL: [-6, -4], legR: [8, 5], head: 2, propHand: 'R' },
+  cheer: { lean: 2, bob: 0, armL: [93, 93], handL: 'point', armR: [150, 175], legL: [-6, -4], legR: [8, 5], head: -4, propHand: 'R' },
 };
 
 function bigsbyPose(n) {
   let pose, face = 'neutral', look = 0.6;
-  if (n < 30) { pose = Math.floor(n / 6) % 2 ? POSE.tapA : POSE.tapB; }
-  else if (n < 100) { pose = Math.floor(n / 5) % 2 ? POSE.cross : lerpPose(POSE.cross, POSE.tapB, 0.6); face = n < 70 ? 'angry' : (n < 80 ? 'blink' : 'angry'); }
-  else if (n < 128) { const t = seq(n, 100, 106); pose = lerpPose(POSE.cross, POSE.jump, ease(t)); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 1; }
+  if (n < 30) { pose = Math.floor(n / 5) % 2 ? POSE.phoneA : POSE.phoneB; }                                  // jab, jab: nothing
+  else if (n < 66) { pose = lerpPose(POSE.shake, POSE.phoneB, (Math.sin(n * 1.3) + 1) / 2 * 0.7); face = 'angry'; }  // shakes the phone
+  else if (n < 100) { pose = lerpPose(POSE.shake, POSE.flinch, ease(seq(n, 66, 71))); face = n < 76 ? 'surprised' : 'scared'; look = 1; }  // flinches at the shriek
+  else if (n < 128) { pose = lerpPose(POSE.flinch, POSE.jump, ease(seq(n, 100, 106))); pose.bob = -26 * Math.sin(Math.PI * seq(n, 100, 116)); face = 'surprised'; look = 1; }
   else if (n < WALK.start) { pose = lerpPose(POSE.jump, POSE.fear, ease(seq(n, 128, 136))); face = n >= 140 && n < 143 ? 'blink' : 'scared'; look = 1; }
-  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'L' }; if (n < WALK.start + 6) pose = lerpPose(POSE.fear, pose, ease(seq(n, WALK.start, WALK.start + 6))); face = 'scared'; look = 1; }
-  else if (n < 244) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'L' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 8))); face = n < 230 ? 'surprised' : 'scared'; look = 1; }
-  else { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 244, 250))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 244) / 5) % 4]; look = 1; }
+  else if (n < WALK.end) { pose = { ...walkPoseAt(n), propHand: 'R' }; if (n < WALK.start + 6) pose = lerpPose(POSE.fear, pose, ease(seq(n, WALK.start, WALK.start + 6))); face = 'scared'; look = 1; }
+  else if (n < 246) { pose = lerpPose({ ...walkPoseAt(WALK.end), propHand: 'R' }, POSE.lean, ease(seq(n, WALK.end, WALK.end + 8))); face = n < 238 ? 'surprised' : 'scared'; look = 1; }
+  else if (n < 284) { pose = lerpPose(POSE.lean, POSE.point, ease(seq(n, 246, 252))); face = ['talkA', 'talkB', 'surprised', 'talkA'][Math.floor((n - 246) / 5) % 4]; look = 1; }
+  else { pose = lerpPose(POSE.point, POSE.cheer, ease(seq(n, 284, 290))); face = 'happy'; look = 1; }        // the page lands: he cheers
   return { pose, face, look };
 }
 function bigsbyAt(n) {
@@ -81,8 +85,8 @@ FAX_X = B_STOP_X - 2.75;
 // Faxie: asleep and dusty → light flickers → shakes the dust off and shrieks → prints → grins.
 function faxieAt(n) {
   const awake = n >= 48, shriek = n >= 66;
-  const face = !awake ? 'blink' : !shriek ? 'surprised' : n >= 236 ? 'happy' : ['talkA', 'surprised', 'talkA', 'talkB'][Math.floor(n / 3) % 4];
-  const hop = shriek && n < 236 ? Math.abs(Math.sin(n * 0.9)) * 10 : 0;
+  const face = !awake ? 'blink' : !shriek ? 'surprised' : n >= 240 ? 'happy' : (Math.floor(n / 4) % 3 ? 'shriek' : 'surprised');
+  const hop = shriek && n < 240 ? Math.abs(Math.sin(n * 0.9)) * 10 : 0;
   const shake = shriek ? Math.sin(n * 2.3) * 5 : 0;
   const pose = { lean: shriek ? Math.sin(n * 1.7) * 3 : 0, bob: -hop, armL: shriek ? [-60 - 30 * Math.sin(n * 0.8), -120] : [-6, -4], armR: shriek ? [60 + 30 * Math.sin(n * 0.8), 120] : [6, 4], legL: [-6, -4], legR: [6, 4], propHand: 'none' };
   let svg = P.renderCharacter(FAX, { pose, face, look: 0, shadow: false, x: shake });
@@ -101,22 +105,28 @@ function faxieAt(n) {
   const on = n >= 60 || (n >= 48 && [0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1][n - 48]);
   svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="8" fill="${on ? '#7cf29a' : '#5b6352'}" stroke="${INK}" stroke-width="4"/>`;
   if (on) svg += `<circle cx="${(-W / 2 + 26 + shake).toFixed(1)}" cy="${(top + 30).toFixed(1)}" r="16" fill="#7cf29a" opacity="0.3"/>`;
-  // shriek waves on both sides
-  if (shriek && n < 290) {
-    for (let k = 0; k < 3; k++) {
-      const ph = ((n * 0.09 + k / 3) % 1), rr = 40 + ph * 120, op = (1 - ph) * 0.9;
-      for (const sd of [-1, 1]) svg += `<path d="M${(sd * (W / 2 + 10 + ph * 60)).toFixed(1)} ${(top + H * 0.2 - rr * 0.4).toFixed(1)} q${(sd * rr * 0.35).toFixed(1)} ${(rr * 0.4).toFixed(1)} 0 ${(rr * 0.8).toFixed(1)}" fill="none" stroke="#e85d4a" stroke-width="7" stroke-linecap="round" opacity="${op.toFixed(2)}"/>`;
-    }
-  }
   // the page coming out of the front slot (from 196), dropping into the tray at 285
   const out = ease(seq(n, 196, 250)), drop = ease(seq(n, 285, 292));
   if (out > 0) {
-    const len = 18 + out * 92, y0 = -(FAX.legs.len + 30) - 16 + drop * 30;
+    const len = 18 + out * 70, y0 = -(FAX.legs.len + FAX.legs.shoeH * 0.55) - 12 + drop * 22;
     svg += `<g transform="translate(${shake.toFixed(1)} 0)"><path d="M-46 ${y0.toFixed(1)} L46 ${y0.toFixed(1)} L50 ${(y0 + len).toFixed(1)} L-42 ${(y0 + len + 4).toFixed(1)} Z" fill="#fffdf6" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
       `<path d="M-30 ${(y0 + 18).toFixed(1)} h56 M-30 ${(y0 + 32).toFixed(1)} h44 M-30 ${(y0 + 46).toFixed(1)} h52" stroke="#9aa4b1" stroke-width="4" opacity="${clamp(len / 60).toFixed(2)}"/>` +
-      (out > 0.85 ? `<text x="-30" y="${(y0 + 80).toFixed(1)}" font-family="Arial, sans-serif" font-weight="700" font-size="17" fill="#d9483b">CONFIRM</text>` : '') + '</g>';
+      (out > 0.85 ? `<text x="4" y="${(y0 + 66).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="14" letter-spacing="0.5" fill="#d9483b">CONFIRM</text>` : '') + '</g>';
   }
   return { svg, x: FAX_X, z: FAX_Z, y: TABLE_H };
+}
+// Shriek waves: an effect on its own card, so they may enter a close-up from off-screen (the noise is off-camera).
+function wavesAt(n) {
+  const W = FAX.body.torsoW, H = FAX.body.torsoH, top = -(FAX.legs.len + 30 + H);
+  const shriek = n >= 66;
+  let svg = '<rect x="0" y="0" width="1" height="1" fill="none"/>';
+  if (shriek && n < 290) {
+    for (let k = 0; k < 3; k++) {
+      const ph = ((n * 0.11 + k / 3) % 1), rr = 60 + ph * 190, op = (1 - ph * ph) * 0.95;
+      for (const sd of [-1, 1]) svg += `<path d="M${(sd * (W / 2 + 14 + ph * 110)).toFixed(1)} ${(top + H * 0.3 - rr * 0.45).toFixed(1)} q${(sd * rr * 0.4).toFixed(1)} ${(rr * 0.45).toFixed(1)} 0 ${(rr * 0.9).toFixed(1)}" fill="none" stroke="#e85d4a" stroke-width="${(12 - ph * 6).toFixed(1)}" stroke-linecap="round" opacity="${op.toFixed(2)}"/>`;
+    }
+  }
+  return svg;
 }
 
 // Back-row traders (behind desks, so only their top halves show).
@@ -128,46 +138,68 @@ function traderAt(spec, n, { x, flipStart, turnAt, react, react2, react2At }) {
   return { svg: P.renderCharacter(spec, { pose: { ...pose, propHand: 'none' }, face, look: turned ? 1 : 0.5, flip: turned ? true : flipStart, shadow: false }), x, z: -4.3 };
 }
 
+// "SKREEEE!" sound word over Faxie: bounces in at the shriek, jitters, gone once Faxie grins.
+function sfxAt(n) {
+  const on = (n >= 66 && n < 90) || (n >= 165 && n < 238);
+  if (!on) return { svg: '', visible: false };
+  const t = seq(n, n < 90 ? 66 : 165, n < 90 ? 72 : 170), k = 0.4 + 0.6 * ease(t) + 0.06 * Math.sin(n * 1.9);
+  const jx = Math.sin(n * 3.1) * 4, jy = Math.cos(n * 2.7) * 3;
+  const word = n < 90 ? 'SKREEEE!' : 'SKREE!';
+  const txt = (fill, sw) => `<text x="0" y="0" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="64" font-style="italic" letter-spacing="2" fill="${fill}" stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round" paint-order="stroke">${word}</text>`;
+  return { visible: true, svg: `<g transform="translate(${jx.toFixed(1)} ${(-310 + jy).toFixed(1)}) rotate(-6) scale(${k.toFixed(3)})">${txt('#ffd23f', 12)}</g>` };
+}
+
 // ---------------- camera per shot ----------------
+export const EXTRAS = { t2: 1.8, t2b: 3.4 };   // trader 2 starts at her screen, then steps along the desk (behind it) to see
+export const C_CAM = { dx: 2.2, z: 10.6 }, D_CAM = { x: 0.5, z: 15, lx: -1.1, ly: 3.6 };
+export const B_CAM = { dx: 0.8, lx: 1.0, z: 6.9 };
 function cameraAt(n) {
   const s = shotAt(n), t = (n - s.from) / (s.to - s.from), bx = BX[n];
   switch (s.id) {
     case 'A': return { pos: [lerp(-0.6, -0.8, t), 3.3, lerp(14.2, 13.2, ease(t))], look: [-0.8, 2.95, -1.4], fov: 36 };
-    case 'B': return { pos: [bx + 1.2, 3.7, 7.4], look: [bx + 0.2, 3.25, 0], fov: 32 };
-    case 'C': { const cx = lerp(FAX_X + 2.6, FAX_X + 1.55, ease(t)); return { pos: [cx + 0.2, 3.25, lerp(10.6, 9.8, ease(t))], look: [cx, 2.6, -0.2], fov: 34 }; }
-    case 'D': return { pos: [lerp(-6.2, -5.6, t), 4.2, 13.6], look: [-1.5, 2.3, -1.8], fov: 38 };
+    case 'B': { const ax = BX[90]; return { pos: [ax + B_CAM.dx, 3.6, B_CAM.z], look: [ax + B_CAM.lx, 3.3, 0], fov: 32 }; }
+    case 'C': { const cx = FAX_X + C_CAM.dx; return { pos: [cx + 0.2, 3.25, C_CAM.z], look: [cx, 2.6, -0.2], fov: 34 }; }
+    case 'D': return { pos: [lerp(D_CAM.x, D_CAM.x - 0.3, t), 3.5, lerp(D_CAM.z, D_CAM.z - 0.5, t)], look: [D_CAM.lx, D_CAM.ly, -1.6], fov: 36 };
   }
 }
 // Which edges of which characters must stay in frame, per shot (close-ups crop at the waist on purpose).
 const FRAME_RULES = {
-  A: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'lrt', t2: 'lrt' },
-  B: { bigsby: 'lrt' },
-  C: { bigsby: 'lrtb', faxie: 'lrtb' },
+  A: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'lrt', t2: 'lrt', sfx: 'lrtb' },
+  B: { bigsby: 'lrt', faxie: 'x', t1: 'x', t2: 'x' },
+  C: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'x', t2: 'x', sfx: 'lrtb' },
   D: { bigsby: 'lrtb', faxie: 'lrtb', t1: 'lrt', t2: 'lrt' },
 };
 
 // ---------------- the set ----------------
 const DESK = { x: 0.95, w: 2.5 };
+const SIGNS = {};                           // wall signs: must be fully in frame or fully out, never sliced
 function buildSet(stage) {
   const { scene } = stage;
   scene.background = new stage.THREE.Color('#efe3cf');
-  box(scene, { w: 40, h: 0.1, d: 26, color: '#6f7f8f', y: -0.1, z: -1, outline: 0 });                         // carpet
-  box(scene, { w: 40, h: 8, d: 0.3, color: '#e9dcc4', z: -7.2, outline: 0 });                                // back wall
+  {                                                                                                          // carpet tiles (so camera moves read)
+    const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+    x.fillStyle = '#6f7f8f'; x.fillRect(0, 0, 256, 256); x.fillStyle = '#67778a'; x.fillRect(0, 0, 128, 128); x.fillRect(128, 128, 128, 128);
+    x.strokeStyle = 'rgba(29,26,36,0.25)'; x.lineWidth = 3; x.strokeRect(0, 0, 256, 256); x.beginPath(); x.moveTo(128, 0); x.lineTo(128, 256); x.moveTo(0, 128); x.lineTo(256, 128); x.stroke();
+    const tex = new stage.THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = stage.THREE.RepeatWrapping; tex.repeat.set(20, 13); tex.colorSpace = stage.THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const floor = new stage.THREE.Mesh(new stage.THREE.PlaneGeometry(40, 26), new stage.THREE.MeshLambertMaterial({ map: tex }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, -1); scene.add(floor);
+  }
+  box(scene, { w: 40, h: 11, d: 0.3, color: '#e9dcc4', z: -7.2, outline: 0 });                                // back wall
   const r = rng(3);
-  panel(scene, { w: 22, h: 4.2, x: 1, y: 4.6, z: -7.0, px: 420, outline: 0.08, draw: (x, w, h) => {      // windows: early-morning city
+  panel(scene, { w: 30, h: 4.2, x: 3, y: 4.6, z: -7.0, px: 420, outline: 0.08, draw: (x, w, h) => {      // windows: early-morning city
     const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f6c9a0'); g.addColorStop(0.7, '#fbe6c8'); x.fillStyle = g; x.fillRect(0, 0, w, h);
     x.fillStyle = '#ffd98a'; x.beginPath(); x.arc(w * 0.78, h * 0.62, h * 0.1, 0, 7); x.fill();
-    for (let i = 0; i < 26; i++) { const bw = 40 + r() * 70, bh = h * (0.25 + r() * 0.6), bx = i * (w / 26) + r() * 10; x.fillStyle = i % 3 ? '#9a8fa8' : '#86799a'; x.fillRect(bx, h - bh, bw, bh);
+    for (let i = 0; i < 34; i++) { const bw = 40 + r() * 70, bh = h * (0.25 + r() * 0.6), bx = i * (w / 34) + r() * 10; x.fillStyle = i % 3 ? '#9a8fa8' : '#86799a'; x.fillRect(bx, h - bh, bw, bh);
       x.fillStyle = '#f7e2b0'; for (let yy = h - bh + 12; yy < h - 10; yy += 22) for (let xx = bx + 8; xx < bx + bw - 10; xx += 16) if (r() > 0.55) x.fillRect(xx, yy, 7, 10); }
-    x.fillStyle = INK; for (let i = 1; i < 6; i++) x.fillRect(i * w / 6 - 4, 0, 8, h);                         // mullions
+    x.fillStyle = INK; for (let i = 1; i < 8; i++) x.fillRect(i * w / 8 - 4, 0, 8, h);                         // mullions
   } });
   // market clock + ticker board on the back wall
-  panel(scene, { w: 7, h: 0.8, x: -2.5, y: 7.2, z: -6.98, px: 90, outline: 0.06, live: true, draw: (x, w, h, n) => {
+  SIGNS.ticker = panel(scene, { w: 7, h: 0.8, x: 0.5, y: 8.6, z: -6.98, px: 90, outline: 0.06, live: true, draw: (x, w, h, n) => {
     x.fillStyle = '#16141c'; x.fillRect(0, 0, w, h); x.font = 'bold 56px Arial, sans-serif'; x.fillStyle = '#ffb347';
     const msg = 'MARKET OPENS 09:00   ·   EMAIL: NOT CONNECTED   ·   ';
     const off = (n * 6) % (x.measureText(msg).width); x.fillText(msg + msg, -off, 66);
   } });
-  panel(scene, { w: 1.3, h: 1.3, x: 6.5, y: 6.6, z: -6.98, px: 200, outline: 0, live: true, draw: (x, w, h, n) => {
+  SIGNS.clock = panel(scene, { w: 1.3, h: 1.3, x: 5.2, y: 8.6, z: -6.98, px: 200, outline: 0, live: true, draw: (x, w, h, n) => {
     x.clearRect(0, 0, w, h); x.fillStyle = '#e9dcc4'; x.fillRect(0, 0, w, h);
     x.fillStyle = '#fffaf0'; x.strokeStyle = INK; x.lineWidth = 12; x.beginPath(); x.arc(100, 100, 88, 0, 7); x.fill(); x.stroke();
     const hand = (a, l, wd) => { x.lineWidth = wd; x.beginPath(); x.moveTo(100, 100); x.lineTo(100 + Math.sin(a) * l, 100 - Math.cos(a) * l); x.stroke(); };
@@ -177,7 +209,9 @@ function buildSet(stage) {
   // desks: Bigsby's (front), two in the back row
   const desk = (x, z, w, d) => { box(scene, { w, h: 0.14, d, color: '#c9b79a', x, y: 2.0, z }); for (const sx of [-1, 1]) box(scene, { w: 0.14, h: 2.0, d: d * 0.9, color: '#8b7a64', x: x + sx * (w / 2 - 0.2), z }); };
   desk(DESK.x, -1.3, DESK.w, 1.6);
-  desk(-1.3, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: -1.3, z: -2.82 });            // modesty panels hide back-row legs
+  desk(EXTRAS.t2 + 0.5, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: EXTRAS.t2 + 0.5, z: -2.82 });
+  desk(10.0, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: 10.0, z: -2.82 });
+  desk(9.0, -0.6, 3.0, 1.4);            // modesty panels hide back-row legs
   desk(5.6, -3.5, 3.6, 1.4); box(scene, { w: 3.6, h: 1.9, d: 0.08, color: '#b6a385', x: 5.6, z: -2.82 });
   const screen = (x, z, ry, live) => panel(scene, { w: 1.5, h: 0.95, x, y: 2.75, z, ry, px: 180, live, outline: 0.07, draw: (c, w, h, n) => {
     c.fillStyle = '#1e2a38'; c.fillRect(0, 0, w, h);
@@ -186,8 +220,9 @@ function buildSet(stage) {
     c.fillStyle = '#e8e2d4'; c.font = 'bold 22px Arial, sans-serif'; c.textAlign = 'center'; c.fillText('CANNOT CONNECT', w / 2, h * 0.84);
     const a = (n || 0) * 0.25; c.strokeStyle = '#6ef0ff'; c.lineWidth = 6; c.beginPath(); c.arc(w * 0.18, h * 0.4, 16, a, a + 4.2); c.stroke();
   } });
-  const SCREENS = [[DESK.x - 0.5, -1.4, 0.75], [-0.2, -3.7, -0.3], [6.0, -3.7, -0.3]];
+  const SCREENS = [[DESK.x - 0.5, -1.4, 0.75], [EXTRAS.t2 + 1.0, -3.7, -0.3], [6.0, -3.7, -0.3]];
   for (const [x, z, ry] of SCREENS) screen(x, z, ry, true);
+  screen(10.4, -3.7, -0.3, false); screen(9.2, -0.8, -0.5, false);
   for (const [x, z, ry] of SCREENS) box(scene, { w: 0.16, h: 0.3, d: 0.16, color: '#2b2f3a', x, y: 2.14, z: z - 0.05, ry });
   box(scene, { w: 1.0, h: 0.08, d: 0.45, color: '#3b3f4a', x: DESK.x + 0.4, y: 2.14, z: -0.8, ry: 0.2 });                            // keyboard
   // Faxie's corner: pillar, side table, filing cabinet, a dead plant
@@ -208,7 +243,7 @@ export async function setup(canvas) {
   stage = createStage(canvas);
   LIVE.length = 0;
   buildSet(stage);
-  cards = { faxie: createCard(stage.scene, 'faxie'), t1: createCard(stage.scene, 't1'), t2: createCard(stage.scene, 't2'), bigsby: createCard(stage.scene, 'bigsby') };
+  cards = { waves: createCard(stage.scene, 'waves'), sfx: createCard(stage.scene, 'sfx'), faxie: createCard(stage.scene, 'faxie'), t1: createCard(stage.scene, 't1'), t2: createCard(stage.scene, 't2'), bigsby: createCard(stage.scene, 'bigsby') };
 }
 
 function place(n) {
@@ -216,9 +251,13 @@ function place(n) {
   c.position.set(...cam.pos); c.fov = cam.fov; c.updateProjectionMatrix(); c.lookAt(...cam.look); c.updateMatrixWorld();
   const b = bigsbyAt(n); cards.bigsby.set(b.svg, { x: b.x, z: b.z, shadowW: 1.5 });
   const f = faxieAt(n); cards.faxie.set(f.svg, { x: f.x, y: f.y, z: f.z, ground: TABLE_H, shadowW: 2.3 });
+  cards.waves.set(wavesAt(n), { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.01, ground: TABLE_H, shadowW: 0 });
   cards.t1.set(traderAt(T1, n, { x: 4.9, flipStart: false, turnAt: 78, react: 'surprised', react2: 'point', react2At: 270 }).svg, { x: 4.9, z: -4.3, shadowW: 0 });
-  cards.t2.set(traderAt(T2, n, { x: -1.0, flipStart: false, turnAt: 84, react: 'shrug', react2: 'surprised', react2At: 270 }).svg, { x: -1.0, z: -4.3, shadowW: 0 });
+  const t2x = lerp(EXTRAS.t2, EXTRAS.t2b, ease(seq(n, 80, 88)));
+  cards.t2.set(traderAt(T2, n, { x: t2x, flipStart: false, turnAt: 84, react: 'shrug', react2: 'surprised', react2At: 270 }).svg, { x: t2x, z: -4.3, shadowW: 0 });
+  const fx = sfxAt(n); cards.sfx.set(fx.svg || '<rect width="1" height="1" fill="none"/>', { x: FAX_X, y: TABLE_H, z: FAX_Z + 0.4, ground: TABLE_H, shadowW: 0 });
   for (const k in cards) { cards[k].face(c); cards[k].visible = true; }
+  cards.sfx.visible = fx.visible;
   return cam;
 }
 
@@ -238,6 +277,22 @@ function overlay(n) {
   el.style.transform = `translateX(${((1 - ease(seq(n, 8, 18))) * -40).toFixed(1)}px)`;
 }
 
+// Screen position (px) of Bigsby's planted ankle at frame n (leg = force which leg).
+function footScreen(n, leg) {
+  place(n);
+  const { pose } = bigsbyPose(n), p = { ...P.POSES.stand, ...pose };
+  const half = BIG.legs.len / 2, r = Math.PI / 180, hipX = (BIG.body.hipW || BIG.body.torsoW) * 0.22;
+  const reach = a => half * (Math.cos(a[0] * r) + Math.cos(a[1] * r));
+  leg = leg || (reach(p.legL) >= reach(p.legR) ? 'L' : 'R');
+  const a = leg === 'L' ? p.legL : p.legR;
+  const hipH = Math.max(reach(p.legL), reach(p.legR)) + BIG.legs.shoeH * 0.55 - (p.bob || 0);
+  const fx = (leg === 'L' ? -hipX : hipX) + half * (Math.sin(a[0] * r) + Math.sin(a[1] * r));
+  const fy = -hipH - 4 + reach(a);
+  const v = new stage.THREE.Vector3(-fx * S, -fy * S, 0);          // flipped puppet: x mirrors
+  cards.bigsby.group.updateMatrixWorld(true); v.applyMatrix4(cards.bigsby.group.matrixWorld).project(stage.camera);
+  return { leg, px: [(v.x + 1) / 2 * 1920, (1 - v.y) / 2 * 1080] };
+}
+
 // Full rules check over every frame: framing, events spacing, no foot slide.
 export function checkAll() {
   const out = [];
@@ -248,6 +303,24 @@ export function checkAll() {
   for (let i = 1; i <= EVENTS.length; i++) {
     const a = EVENTS[i - 1][0], b = i < EVENTS.length ? EVENTS[i][0] : FRAMES;
     if (b - a > 60) out.push(`nothing changes between frame ${a} and ${b} (${((b - a) / FPS).toFixed(1)} s)`);
+  }
+  // planted foot must hold still on screen while walking (within a shot): measured in pixels
+  for (let n = WALK.start + 1; n <= WALK.end + 8; n++) {
+    if (shotAt(n) !== shotAt(n - 1)) continue;
+    const a = footScreen(n - 1), b = footScreen(n, a.leg);
+    const d = Math.hypot(a.px[0] - b.px[0], a.px[1] - b.px[1]);
+    if (d > 1.5) out.push(`${n}: planted foot slides ${d.toFixed(1)} px on screen`);
+  }
+  // wall signs: fully in or fully out of frame
+  for (let n = 0; n < FRAMES; n++) {
+    place(n);
+    for (const [name, sg] of Object.entries(SIGNS)) {
+      const g = sg.group, m = g.children[0]; g.updateMatrixWorld(true);
+      const pts = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => { const w = m.geometry.parameters.width / 2, h = m.geometry.parameters.height / 2;
+        const v = new stage.THREE.Vector3(a * w, b * h, 0).applyMatrix4(g.matrixWorld).project(stage.camera); return [(v.x + 1) / 2, (1 - v.y) / 2]; });
+      const inside = pts.every(([x, y]) => x >= 0 && x <= 1 && y >= 0 && y <= 1), outside = pts.every(p => p[1] < 0) || pts.every(p => p[1] > 1) || pts.every(p => p[0] < 0) || pts.every(p => p[0] > 1);
+      if (!inside && !outside) out.push(`${n}: the ${name} sign is sliced by the frame edge`);
+    }
   }
   // camera side: every camera sits on the +z side of the action line (z = B_Z)
   for (let n = 0; n < FRAMES; n++) if (cameraAt(n).pos[2] <= B_Z) out.push(`${n}: camera crossed the line`);

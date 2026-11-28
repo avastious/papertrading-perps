@@ -74,6 +74,7 @@
     blink: { eyes: 'closed', open: 1, pupil: 1, brow: 0, raise: 0, mouth: 'smallSmile' },
     talkA: { eyes: 'open', open: 1, pupil: 1, brow: 0, raise: 3, mouth: 'talkA' },
     talkB: { eyes: 'open', open: 1, pupil: 1, brow: 0, raise: 1, mouth: 'talkB' },
+    shriek: { eyes: 'open', open: 1.35, pupil: 0.45, brow: 16, raise: 8, mouth: 'shriek' },   // added for beat 1: a full-volume scream
   };
 
   function drawEye(fc, side, e, look) {
@@ -133,6 +134,9 @@
       case 'talkA':
         return g(`<path d="M-17 -4 Q0 -8 17 -4 Q16 20 0 21 Q-16 20 -17 -4 Z" fill="${dark}" stroke="${line}" stroke-width="5" stroke-linejoin="round"/>` +
           (led ? '' : `<ellipse cx="0" cy="13" rx="9" ry="5" fill="#e0707a"/>`));
+      case 'shriek':
+        return g(`<path d="M-30 -10 L30 -10 L22 26 Q0 34 -22 26 Z" fill="${dark}" stroke="${line}" stroke-width="5" stroke-linejoin="round"/>` +
+          (led ? '' : `<path d="M-27 -8 L27 -8 L25 -1 L-25 -1 Z" fill="#fff"/><path d="M-16 24 L16 24 L13 19 L-13 19 Z" fill="#fff"/><ellipse cx="0" cy="13" rx="11" ry="5" fill="#e0707a"/>`));
       case 'talkB':
         return g(`<ellipse cx="0" cy="2" rx="11" ry="7" fill="${dark}" stroke="${line}" stroke-width="5"/>`);
       default:
